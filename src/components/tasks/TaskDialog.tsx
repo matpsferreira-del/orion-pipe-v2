@@ -161,11 +161,12 @@ export function TaskDialog({
 
             <div className="space-y-2">
               <Label htmlFor="responsavel">Responsável *</Label>
-              <Select value={responsavelId} onValueChange={setResponsavelId}>
+              <Select value={responsavelId || "unassigned"} onValueChange={(v) => setResponsavelId(v === "unassigned" ? "" : v)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="unassigned">Selecione um responsável</SelectItem>
                   {profiles.map(p => (
                     <SelectItem key={p.id} value={p.id}>
                       {p.name}
