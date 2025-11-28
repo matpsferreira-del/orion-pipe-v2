@@ -186,14 +186,15 @@ export function ActivityDialog({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="company">Empresa *</Label>
-              <Select value={companyId} onValueChange={(value) => {
-                setCompanyId(value);
+              <Select value={companyId || "none"} onValueChange={(value) => {
+                setCompanyId(value === "none" ? "" : value);
                 setOpportunityId('');
               }}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione a empresa" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="none">Selecione uma empresa</SelectItem>
                   {companies.map(company => (
                     <SelectItem key={company.id} value={company.id}>
                       {company.nome_fantasia}
