@@ -7,19 +7,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { mockInvoices, getCompanyById } from '@/data/mockData';
-import { Invoice } from '@/types/crm';
-import { Plus, Search, Filter, MoreHorizontal, Upload, Download, DollarSign, Clock, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { useInvoices, useUpdateInvoiceStatus } from '@/hooks/useInvoices';
+import { useCompanies } from '@/hooks/useCompanies';
+import { InvoiceDialog } from '@/components/invoices/InvoiceDialog';
+import { Plus, Search, Filter, MoreHorizontal, Upload, Download, DollarSign, Clock, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-const statusConfig = {
+const statusConfig: Record<string, { label: string; className: string }> = {
   a_receber: { label: 'A Receber', className: 'bg-warning/10 text-warning border-warning/20' },
   recebido: { label: 'Recebido', className: 'bg-success/10 text-success border-success/20' },
   em_atraso: { label: 'Em Atraso', className: 'bg-destructive/10 text-destructive border-destructive/20' },
   cancelado: { label: 'Cancelado', className: 'bg-muted text-muted-foreground' },
 };
 
-const paymentLabels = {
+const paymentLabels: Record<string, string> = {
   boleto: 'Boleto',
   pix: 'PIX',
   transferencia: 'Transferência',
@@ -30,33 +31,38 @@ const paymentLabels = {
 export default function Faturamento() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [showNewDialog, setShowNewDialog] = useState(false);
+
+  const { data: invoices = [], isLoading } = useInvoices();
+  const { data: companies = [] } = useCompanies();
+  const updateStatus = useUpdateInvoiceStatus();
 
   const filteredInvoices = useMemo(() => {
-    return mockInvoices.filter(invoice => {
-      const company = getCompanyById(invoice.companyId);
+    return invoices.filter(invoice => {
+      const company = companies.find(c => c.id === invoice.company_id);
       const matchesSearch = searchTerm === '' ||
-        invoice.numeroNota.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        company?.nomeFantasia.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        invoice.cnpjCliente.includes(searchTerm);
+        invoice.numero_nota.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        company?.nome_fantasia.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        invoice.cnpj_cliente.includes(searchTerm);
       const matchesStatus = filterStatus === 'all' || invoice.status === filterStatus;
       return matchesSearch && matchesStatus;
     });
-  }, [searchTerm, filterStatus]);
+  }, [invoices, companies, searchTerm, filterStatus]);
 
   const stats = useMemo(() => {
-    const received = mockInvoices
+    const received = invoices
       .filter(i => i.status === 'recebido')
-      .reduce((sum, i) => sum + i.valor, 0);
-    const pending = mockInvoices
+      .reduce((sum, i) => sum + Number(i.valor), 0);
+    const pending = invoices
       .filter(i => i.status === 'a_receber')
-      .reduce((sum, i) => sum + i.valor, 0);
-    const overdue = mockInvoices
+      .reduce((sum, i) => sum + Number(i.valor), 0);
+    const overdue = invoices
       .filter(i => i.status === 'em_atraso')
-      .reduce((sum, i) => sum + i.valor, 0);
-    const total = mockInvoices.reduce((sum, i) => sum + i.valor, 0);
+      .reduce((sum, i) => sum + Number(i.valor), 0);
+    const total = invoices.reduce((sum, i) => sum + Number(i.valor), 0);
 
     return { received, pending, overdue, total };
-  }, []);
+  }, [invoices]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -65,9 +71,21 @@ export default function Faturamento() {
     }).format(value);
   };
 
-  const formatDate = (date: Date) => {
+  const formatDate = (date: string) => {
     return new Date(date).toLocaleDateString('pt-BR');
   };
+
+  const handleMarkAsReceived = (id: string) => {
+    updateStatus.mutate({ id, status: 'recebido' });
+  };
+
+  if (isLoading) {
+    return (
+      <div className="p-6 flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -84,7 +102,7 @@ export default function Faturamento() {
               <Download className="h-4 w-4 mr-2" />
               Exportar
             </Button>
-            <Button>
+            <Button onClick={() => setShowNewDialog(true)}>
               <Plus className="h-4 w-4 mr-2" />
               Nova Fatura
             </Button>
@@ -163,52 +181,65 @@ export default function Faturamento() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredInvoices.map((invoice) => {
-              const company = getCompanyById(invoice.companyId);
-              const status = statusConfig[invoice.status];
+            {filteredInvoices.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                  Nenhuma fatura encontrada
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredInvoices.map((invoice) => {
+                const company = companies.find(c => c.id === invoice.company_id);
+                const status = statusConfig[invoice.status] || statusConfig.a_receber;
 
-              return (
-                <TableRow key={invoice.id}>
-                  <TableCell className="font-medium">{invoice.numeroNota}</TableCell>
-                  <TableCell>
-                    <div>
-                      <p className="font-medium">{company?.nomeFantasia}</p>
-                      <p className="text-xs text-muted-foreground">{invoice.cnpjCliente}</p>
-                    </div>
-                  </TableCell>
-                  <TableCell className="max-w-[200px]">
-                    <p className="truncate text-muted-foreground">{invoice.descricaoServico}</p>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">{formatDate(invoice.dataEmissao)}</TableCell>
-                  <TableCell className="text-muted-foreground">{formatDate(invoice.dataVencimento)}</TableCell>
-                  <TableCell className="font-medium">{formatCurrency(invoice.valor)}</TableCell>
-                  <TableCell className="text-muted-foreground">{paymentLabels[invoice.formaPagamento]}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className={cn(status.className)}>
-                      {status.label}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem>Ver detalhes</DropdownMenuItem>
-                        <DropdownMenuItem>Marcar como recebido</DropdownMenuItem>
-                        <DropdownMenuItem>Editar</DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive">Cancelar</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
+                return (
+                  <TableRow key={invoice.id}>
+                    <TableCell className="font-medium">{invoice.numero_nota}</TableCell>
+                    <TableCell>
+                      <div>
+                        <p className="font-medium">{company?.nome_fantasia || 'N/A'}</p>
+                        <p className="text-xs text-muted-foreground">{invoice.cnpj_cliente}</p>
+                      </div>
+                    </TableCell>
+                    <TableCell className="max-w-[200px]">
+                      <p className="truncate text-muted-foreground">{invoice.descricao_servico}</p>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">{formatDate(invoice.data_emissao)}</TableCell>
+                    <TableCell className="text-muted-foreground">{formatDate(invoice.data_vencimento)}</TableCell>
+                    <TableCell className="font-medium">{formatCurrency(Number(invoice.valor))}</TableCell>
+                    <TableCell className="text-muted-foreground">{paymentLabels[invoice.forma_pagamento] || invoice.forma_pagamento}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className={cn(status.className)}>
+                        {status.label}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem>Ver detalhes</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleMarkAsReceived(invoice.id)}>
+                            Marcar como recebido
+                          </DropdownMenuItem>
+                          <DropdownMenuItem>Editar</DropdownMenuItem>
+                          <DropdownMenuItem className="text-destructive">Cancelar</DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
+            )}
           </TableBody>
         </Table>
       </div>
+
+      {/* New Invoice Dialog */}
+      <InvoiceDialog open={showNewDialog} onOpenChange={setShowNewDialog} />
     </div>
   );
 }

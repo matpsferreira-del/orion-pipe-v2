@@ -1,18 +1,34 @@
-import { Opportunity } from '@/types/crm';
-import { getCompanyById, getContactById, getUserById } from '@/data/mockData';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Calendar, DollarSign } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+interface ExtendedOpportunity {
+  id: string;
+  companyId: string;
+  contactId: string;
+  responsavelId: string;
+  stage: string;
+  valorPotencial: number;
+  probabilidade: number;
+  createdAt: Date;
+  dataPrevisaoFechamento: Date;
+  origemLead: string;
+  tipoServico: string;
+  observacoes?: string;
+  _company?: { nome_fantasia: string } | null;
+  _contact?: { nome: string; cargo: string } | null;
+  _responsavel?: { name: string; avatar?: string | null } | null;
+}
+
 interface KanbanCardProps {
-  opportunity: Opportunity;
+  opportunity: ExtendedOpportunity;
   onClick: () => void;
 }
 
 export function KanbanCard({ opportunity, onClick }: KanbanCardProps) {
-  const company = getCompanyById(opportunity.companyId);
-  const contact = getContactById(opportunity.contactId);
-  const responsavel = getUserById(opportunity.responsavelId);
+  const company = opportunity._company;
+  const contact = opportunity._contact;
+  const responsavel = opportunity._responsavel;
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -49,6 +65,10 @@ export function KanbanCard({ opportunity, onClick }: KanbanCardProps) {
     e.currentTarget.classList.remove('dragging');
   };
 
+  const getInitials = (name: string) => {
+    return name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+  };
+
   return (
     <div
       className="kanban-card"
@@ -59,7 +79,7 @@ export function KanbanCard({ opportunity, onClick }: KanbanCardProps) {
     >
       <div className="flex items-start justify-between mb-2">
         <h4 className="font-medium text-sm text-foreground truncate flex-1">
-          {company?.nomeFantasia}
+          {company?.nome_fantasia || 'Empresa não encontrada'}
         </h4>
         <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
           {opportunity.probabilidade}%
@@ -90,7 +110,7 @@ export function KanbanCard({ opportunity, onClick }: KanbanCardProps) {
         <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border">
           <Avatar className="h-5 w-5">
             <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
-              {responsavel.avatar}
+              {responsavel.avatar || getInitials(responsavel.name)}
             </AvatarFallback>
           </Avatar>
           <span className="text-xs text-muted-foreground truncate">
