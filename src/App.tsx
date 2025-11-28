@@ -13,6 +13,7 @@ import Faturamento from "./pages/Faturamento";
 import Relatorios from "./pages/Relatorios";
 import Equipe from "./pages/Equipe";
 import Configuracoes from "./pages/Configuracoes";
+import Tarefas from "./pages/Tarefas";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import { Loader2 } from "lucide-react";
@@ -77,6 +78,7 @@ const App = () => (
               <Route path="/pipeline" element={<Pipeline />} />
               <Route path="/empresas" element={<Empresas />} />
               <Route path="/oportunidades" element={<Oportunidades />} />
+              <Route path="/tarefas" element={<Tarefas />} />
               <Route path="/faturamento" element={<Faturamento />} />
               <Route path="/relatorios" element={<Relatorios />} />
               <Route path="/equipe" element={<Equipe />} />
