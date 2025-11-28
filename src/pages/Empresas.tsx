@@ -8,11 +8,14 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { useCompanies, useDeleteCompany, CompanyRow } from '@/hooks/useCompanies';
 import { useContacts } from '@/hooks/useContacts';
 import { useOpportunities } from '@/hooks/useOpportunities';
-import { Plus, Search, Filter, MoreHorizontal, Building2, Eye, Pencil, Trash2, Download, Loader2 } from 'lucide-react';
+import { useInvoices } from '@/hooks/useInvoices';
+import { useProfiles } from '@/hooks/useProfiles';
+import { Plus, Search, Filter, MoreHorizontal, Building2, Eye, Pencil, Trash2, Download, Loader2, UserPlus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { CompanyDetail } from '@/components/companies/CompanyDetail';
 import { CompanyDialog } from '@/components/companies/CompanyDialog';
+import { ContactDialog } from '@/components/contacts/ContactDialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 
@@ -36,12 +39,15 @@ export default function Empresas() {
   const [filterSegmento, setFilterSegmento] = useState<string>('all');
   const [selectedCompany, setSelectedCompany] = useState<CompanyRow | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [contactDialogOpen, setContactDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [companyToDelete, setCompanyToDelete] = useState<CompanyRow | null>(null);
 
   const { data: companies = [], isLoading } = useCompanies();
   const { data: contacts = [] } = useContacts();
   const { data: opportunities = [] } = useOpportunities();
+  const { data: invoices = [] } = useInvoices();
+  const { data: profiles = [] } = useProfiles();
   const deleteCompany = useDeleteCompany();
 
   const segmentos = useMemo(() => {
@@ -103,6 +109,10 @@ export default function Empresas() {
             <Button variant="outline">
               <Download className="h-4 w-4 mr-2" />
               Exportar
+            </Button>
+            <Button variant="outline" onClick={() => setContactDialogOpen(true)}>
+              <UserPlus className="h-4 w-4 mr-2" />
+              Novo Contato
             </Button>
             <Button onClick={() => setDialogOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
@@ -241,12 +251,23 @@ export default function Empresas() {
           <SheetHeader>
             <SheetTitle>Detalhes da Empresa</SheetTitle>
           </SheetHeader>
-          {selectedCompany && <CompanyDetail company={selectedCompany as any} />}
+          {selectedCompany && (
+            <CompanyDetail 
+              company={selectedCompany} 
+              contacts={contacts}
+              opportunities={opportunities}
+              invoices={invoices}
+              profiles={profiles}
+            />
+          )}
         </SheetContent>
       </Sheet>
 
       {/* Company Dialog */}
       <CompanyDialog open={dialogOpen} onOpenChange={setDialogOpen} />
+
+      {/* Contact Dialog */}
+      <ContactDialog open={contactDialogOpen} onOpenChange={setContactDialogOpen} />
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

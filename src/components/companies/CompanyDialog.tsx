@@ -1,11 +1,12 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useCreateCompany, CompanyInsert } from '@/hooks/useCompanies';
-import { Loader2 } from 'lucide-react';
+import { useCreateCompany, useCompanies, CompanyInsert } from '@/hooks/useCompanies';
+import { Loader2, AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const porteOptions = [
   { value: 'micro', label: 'Micro' },
@@ -55,11 +56,43 @@ export function CompanyDialog({ open, onOpenChange }: CompanyDialogProps) {
   const [cidade, setCidade] = useState('');
   const [estado, setEstado] = useState('');
   const [status, setStatus] = useState('prospect');
+  const [cnpjError, setCnpjError] = useState<string | null>(null);
 
+  const { data: companies = [] } = useCompanies();
   const createCompany = useCreateCompany();
+
+  // Normalize CNPJ for comparison (remove formatting)
+  const normalizeCnpj = (value: string) => value.replace(/\D/g, '');
+
+  // Check if CNPJ already exists
+  const cnpjExists = useMemo(() => {
+    if (!cnpj) return false;
+    const normalizedInput = normalizeCnpj(cnpj);
+    return companies.some(c => normalizeCnpj(c.cnpj) === normalizedInput);
+  }, [cnpj, companies]);
+
+  const handleCnpjChange = (value: string) => {
+    setCnpj(value);
+    const normalizedInput = normalizeCnpj(value);
+    if (normalizedInput.length >= 14) {
+      const exists = companies.some(c => normalizeCnpj(c.cnpj) === normalizedInput);
+      if (exists) {
+        const existingCompany = companies.find(c => normalizeCnpj(c.cnpj) === normalizedInput);
+        setCnpjError(`CNPJ já cadastrado para a empresa "${existingCompany?.nome_fantasia}"`);
+      } else {
+        setCnpjError(null);
+      }
+    } else {
+      setCnpjError(null);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (cnpjExists) {
+      return;
+    }
     
     const company: CompanyInsert = {
       razao_social: razaoSocial,
@@ -131,9 +164,18 @@ export function CompanyDialog({ open, onOpenChange }: CompanyDialogProps) {
                 id="cnpj"
                 placeholder="00.000.000/0001-00"
                 value={cnpj}
-                onChange={(e) => setCnpj(e.target.value)}
+                onChange={(e) => handleCnpjChange(e.target.value)}
+                className={cnpjError ? 'border-destructive' : ''}
                 required
               />
+              {cnpjError && (
+                <Alert variant="destructive" className="py-2">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription className="text-xs ml-2">
+                    {cnpjError}
+                  </AlertDescription>
+                </Alert>
+              )}
             </div>
             
             <div className="space-y-2">
@@ -230,7 +272,7 @@ export function CompanyDialog({ open, onOpenChange }: CompanyDialogProps) {
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={createCompany.isPending}>
+            <Button type="submit" disabled={createCompany.isPending || !!cnpjError}>
               {createCompany.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Criar Empresa
             </Button>

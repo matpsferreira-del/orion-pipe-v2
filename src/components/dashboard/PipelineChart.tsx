@@ -3,12 +3,14 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useOpportunities } from '@/hooks/useOpportunities';
 
+// All pipeline stages matching the commercial funnel
 const pipelineStages = [
   { key: 'lead_identificado', label: 'Lead Identificado', color: '#6b7280' },
   { key: 'contato_inicial', label: 'Contato Inicial', color: '#3b82f6' },
   { key: 'diagnostico_spin', label: 'Diagnóstico SPIN', color: '#8b5cf6' },
   { key: 'proposta_enviada', label: 'Proposta Enviada', color: '#f59e0b' },
   { key: 'negociacao', label: 'Negociação', color: '#0ea5e9' },
+  { key: 'fechado_ganhou', label: 'Fechado - Ganhou', color: '#22c55e' },
 ];
 
 export function PipelineChart() {
