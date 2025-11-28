@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   LayoutDashboard,
   Kanban,
@@ -58,6 +59,7 @@ const NavItem = ({ to, icon: Icon, label, collapsed }: NavItemProps) => {
 
 export function AppSidebar() {
   const [collapsed, setCollapsed] = useState(false);
+  const { profile, signOut } = useAuth();
 
   const navItems = [
     { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
@@ -69,6 +71,20 @@ export function AppSidebar() {
     { to: '/equipe', icon: Users, label: 'Equipe' },
     { to: '/configuracoes', icon: Settings, label: 'Configurações' },
   ];
+
+  const getInitials = (name: string) => {
+    return name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+  };
+
+  const roleLabels: Record<string, string> = {
+    admin: 'Administrador',
+    gestor: 'Gestor Comercial',
+    consultor: 'Consultor',
+  };
+
+  const handleLogout = async () => {
+    await signOut();
+  };
 
   return (
     <aside
@@ -117,21 +133,51 @@ export function AppSidebar() {
         )}>
           <Avatar className="h-8 w-8">
             <AvatarFallback className="bg-sidebar-primary text-sidebar-primary-foreground text-sm">
-              CS
+              {profile?.name ? getInitials(profile.name) : '?'}
             </AvatarFallback>
           </Avatar>
           {!collapsed && (
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-sidebar-foreground truncate">Carlos Silva</p>
-              <p className="text-xs text-sidebar-foreground/60 truncate">Admin</p>
+              <p className="text-sm font-medium text-sidebar-foreground truncate">
+                {profile?.name || 'Usuário'}
+              </p>
+              <p className="text-xs text-sidebar-foreground/60 truncate">
+                {roleLabels[profile?.role || ''] || profile?.role || 'Consultor'}
+              </p>
             </div>
           )}
           {!collapsed && (
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent">
-              <LogOut className="h-4 w-4" />
-            </Button>
+            <Tooltip delayDuration={0}>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-8 w-8 text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+                  onClick={handleLogout}
+                >
+                  <LogOut className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="right">Sair</TooltipContent>
+            </Tooltip>
           )}
         </div>
+
+        {collapsed && (
+          <Tooltip delayDuration={0}>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-8 w-8 text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+                onClick={handleLogout}
+              >
+                <LogOut className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="right">Sair</TooltipContent>
+          </Tooltip>
+        )}
 
         {/* Collapse button */}
         <Button

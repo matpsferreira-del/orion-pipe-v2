@@ -5,26 +5,34 @@ import { RevenueChart } from '@/components/dashboard/RevenueChart';
 import { LeadSourceChart } from '@/components/dashboard/LeadSourceChart';
 import { RecentActivities } from '@/components/dashboard/RecentActivities';
 import { TasksList } from '@/components/dashboard/TasksList';
-import { mockOpportunities, mockInvoices, mockCompanies } from '@/data/mockData';
-import { Target, TrendingUp, DollarSign, Building2, Clock, CheckCircle2 } from 'lucide-react';
+import { useOpportunities } from '@/hooks/useOpportunities';
+import { useInvoices } from '@/hooks/useInvoices';
+import { useCompanies } from '@/hooks/useCompanies';
+import { Target, TrendingUp, DollarSign, Building2, Clock, CheckCircle2, Loader2 } from 'lucide-react';
 import { useMemo } from 'react';
 
 export default function Dashboard() {
+  const { data: opportunities = [], isLoading: loadingOpps } = useOpportunities();
+  const { data: invoices = [], isLoading: loadingInvoices } = useInvoices();
+  const { data: companies = [], isLoading: loadingCompanies } = useCompanies();
+
+  const isLoading = loadingOpps || loadingInvoices || loadingCompanies;
+
   const stats = useMemo(() => {
-    const activeOpps = mockOpportunities.filter(o => 
+    const activeOpps = opportunities.filter(o => 
       !['fechado_ganhou', 'fechado_perdeu'].includes(o.stage)
     );
-    const wonOpps = mockOpportunities.filter(o => o.stage === 'fechado_ganhou');
-    const totalPipeline = activeOpps.reduce((sum, o) => sum + o.valorPotencial, 0);
-    const wonValue = wonOpps.reduce((sum, o) => sum + o.valorPotencial, 0);
+    const wonOpps = opportunities.filter(o => o.stage === 'fechado_ganhou');
+    const totalPipeline = activeOpps.reduce((sum, o) => sum + Number(o.valor_potencial), 0);
+    const wonValue = wonOpps.reduce((sum, o) => sum + Number(o.valor_potencial), 0);
     
-    const receivedInvoices = mockInvoices.filter(i => i.status === 'recebido');
-    const totalRevenue = receivedInvoices.reduce((sum, i) => sum + i.valor, 0);
+    const receivedInvoices = invoices.filter(i => i.status === 'recebido');
+    const totalRevenue = receivedInvoices.reduce((sum, i) => sum + Number(i.valor), 0);
     
-    const pendingInvoices = mockInvoices.filter(i => i.status === 'a_receber');
-    const pendingValue = pendingInvoices.reduce((sum, i) => sum + i.valor, 0);
+    const pendingInvoices = invoices.filter(i => i.status === 'a_receber');
+    const pendingValue = pendingInvoices.reduce((sum, i) => sum + Number(i.valor), 0);
 
-    const activeClients = mockCompanies.filter(c => c.status === 'cliente_ativo').length;
+    const activeClients = companies.filter(c => c.status === 'cliente_ativo').length;
 
     return {
       activeOpportunities: activeOpps.length,
@@ -34,9 +42,9 @@ export default function Dashboard() {
       totalRevenue,
       pendingValue,
       activeClients,
-      conversionRate: Math.round((wonOpps.length / mockOpportunities.length) * 100),
+      conversionRate: opportunities.length > 0 ? Math.round((wonOpps.length / opportunities.length) * 100) : 0,
     };
-  }, []);
+  }, [opportunities, invoices, companies]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -46,6 +54,14 @@ export default function Dashboard() {
       maximumFractionDigits: 1,
     }).format(value);
   };
+
+  if (isLoading) {
+    return (
+      <div className="p-6 flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -61,7 +77,6 @@ export default function Dashboard() {
           value={stats.activeOpportunities}
           icon={Target}
           variant="primary"
-          trend={{ value: 12, isPositive: true }}
         />
         <StatCard
           title="Pipeline Total"
@@ -71,18 +86,17 @@ export default function Dashboard() {
           subtitle={`${stats.wonDeals} negócios fechados`}
         />
         <StatCard
-          title="Faturado (2024)"
+          title="Faturado"
           value={formatCurrency(stats.totalRevenue)}
           icon={DollarSign}
           variant="success"
-          trend={{ value: 23, isPositive: true }}
         />
         <StatCard
           title="Clientes Ativos"
           value={stats.activeClients}
           icon={Building2}
           variant="warning"
-          subtitle={`${mockCompanies.length} empresas cadastradas`}
+          subtitle={`${companies.length} empresas cadastradas`}
         />
       </div>
 

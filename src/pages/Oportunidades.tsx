@@ -6,15 +6,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { mockOpportunities, mockUsers, pipelineStages, getCompanyById, getContactById, getUserById } from '@/data/mockData';
-import { Opportunity } from '@/types/crm';
-import { Plus, Search, Filter, MoreHorizontal, Target, Eye, Pencil, Trash2, Download } from 'lucide-react';
+import { pipelineStages } from '@/data/mockData';
+import { useOpportunities, useDeleteOpportunity, OpportunityRow } from '@/hooks/useOpportunities';
+import { useCompanies } from '@/hooks/useCompanies';
+import { useContacts } from '@/hooks/useContacts';
+import { useProfiles } from '@/hooks/useProfiles';
+import { OpportunityDialog } from '@/components/opportunities/OpportunityDialog';
+import { Plus, Search, Filter, MoreHorizontal, Target, Eye, Pencil, Trash2, Download, Loader2 } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { OpportunityDetail } from '@/components/opportunities/OpportunityDetail';
+import { PipelineStage } from '@/types/crm';
 
-const sourceLabels = {
+const sourceLabels: Record<string, string> = {
   indicacao: 'Indicação',
   inbound: 'Inbound',
   outbound: 'Outbound',
@@ -23,7 +28,7 @@ const sourceLabels = {
   outro: 'Outro',
 };
 
-const serviceLabels = {
+const serviceLabels: Record<string, string> = {
   recrutamento_pontual: 'Pontual',
   programa_recorrente: 'Recorrente',
   rpo: 'RPO',
@@ -31,22 +36,64 @@ const serviceLabels = {
   consultoria: 'Consultoria',
 };
 
+function adaptOpportunityForDetail(opp: OpportunityRow) {
+  return {
+    id: opp.id,
+    companyId: opp.company_id,
+    contactId: opp.contact_id,
+    responsavelId: opp.responsavel_id,
+    stage: opp.stage as PipelineStage,
+    valorPotencial: Number(opp.valor_potencial),
+    probabilidade: opp.probabilidade,
+    createdAt: new Date(opp.created_at),
+    dataPrevisaoFechamento: new Date(opp.data_previsao_fechamento),
+    origemLead: opp.origem_lead as any,
+    tipoServico: opp.tipo_servico as any,
+    observacoes: opp.observacoes || undefined,
+    spin: opp.spin_situacao_como_contrata ? {
+      situacao: {
+        comoContrata: opp.spin_situacao_como_contrata || '',
+        timeInterno: opp.spin_situacao_time_interno || '',
+      },
+      problema: {
+        dificuldades: opp.spin_problema_dificuldades || '',
+        tempoMedio: opp.spin_problema_tempo_medio || '',
+      },
+      implicacao: {
+        impactoNegocios: opp.spin_implicacao_impacto || '',
+        perdaReceita: opp.spin_implicacao_perda || '',
+      },
+      necessidade: {
+        cenarioIdeal: opp.spin_necessidade_cenario || '',
+        urgencia: opp.spin_necessidade_urgencia || '',
+      },
+    } : undefined,
+  };
+}
+
 export default function Oportunidades() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStage, setFilterStage] = useState<string>('all');
   const [filterResponsavel, setFilterResponsavel] = useState<string>('all');
-  const [selectedOpportunity, setSelectedOpportunity] = useState<Opportunity | null>(null);
+  const [selectedOpportunity, setSelectedOpportunity] = useState<OpportunityRow | null>(null);
+  const [showNewDialog, setShowNewDialog] = useState(false);
+
+  const { data: opportunities = [], isLoading } = useOpportunities();
+  const { data: companies = [] } = useCompanies();
+  const { data: contacts = [] } = useContacts();
+  const { data: profiles = [] } = useProfiles();
+  const deleteOpportunity = useDeleteOpportunity();
 
   const filteredOpportunities = useMemo(() => {
-    return mockOpportunities.filter(opp => {
-      const company = getCompanyById(opp.companyId);
+    return opportunities.filter(opp => {
+      const company = companies.find(c => c.id === opp.company_id);
       const matchesSearch = searchTerm === '' ||
-        company?.nomeFantasia.toLowerCase().includes(searchTerm.toLowerCase());
+        company?.nome_fantasia.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesStage = filterStage === 'all' || opp.stage === filterStage;
-      const matchesResponsavel = filterResponsavel === 'all' || opp.responsavelId === filterResponsavel;
+      const matchesResponsavel = filterResponsavel === 'all' || opp.responsavel_id === filterResponsavel;
       return matchesSearch && matchesStage && matchesResponsavel;
     });
-  }, [searchTerm, filterStage, filterResponsavel]);
+  }, [opportunities, companies, searchTerm, filterStage, filterResponsavel]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -55,9 +102,23 @@ export default function Oportunidades() {
     }).format(value);
   };
 
-  const formatDate = (date: Date) => {
+  const formatDate = (date: string) => {
     return new Date(date).toLocaleDateString('pt-BR');
   };
+
+  const handleDelete = (id: string) => {
+    if (confirm('Tem certeza que deseja excluir esta oportunidade?')) {
+      deleteOpportunity.mutate(id);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="p-6 flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -70,7 +131,7 @@ export default function Oportunidades() {
               <Download className="h-4 w-4 mr-2" />
               Exportar
             </Button>
-            <Button>
+            <Button onClick={() => setShowNewDialog(true)}>
               <Plus className="h-4 w-4 mr-2" />
               Nova Oportunidade
             </Button>
@@ -107,8 +168,8 @@ export default function Oportunidades() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos</SelectItem>
-            {mockUsers.map(user => (
-              <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
+            {profiles.map(profile => (
+              <SelectItem key={profile.id} value={profile.id}>{profile.name}</SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -132,85 +193,96 @@ export default function Oportunidades() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredOpportunities.map((opp) => {
-              const company = getCompanyById(opp.companyId);
-              const contact = getContactById(opp.contactId);
-              const responsavel = getUserById(opp.responsavelId);
-              const stage = pipelineStages.find(s => s.key === opp.stage);
+            {filteredOpportunities.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
+                  Nenhuma oportunidade encontrada
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredOpportunities.map((opp) => {
+                const company = companies.find(c => c.id === opp.company_id);
+                const contact = contacts.find(c => c.id === opp.contact_id);
+                const responsavel = profiles.find(p => p.id === opp.responsavel_id);
+                const stage = pipelineStages.find(s => s.key === opp.stage);
 
-              return (
-                <TableRow 
-                  key={opp.id} 
-                  className="cursor-pointer hover:bg-muted/50"
-                  onClick={() => setSelectedOpportunity(opp)}
-                >
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center">
-                        <Target className="h-4 w-4 text-primary" />
+                return (
+                  <TableRow 
+                    key={opp.id} 
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => setSelectedOpportunity(opp)}
+                  >
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center">
+                          <Target className="h-4 w-4 text-primary" />
+                        </div>
+                        <span className="font-medium">{company?.nome_fantasia || 'N/A'}</span>
                       </div>
-                      <span className="font-medium">{company?.nomeFantasia}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div>
-                      <p className="text-sm">{contact?.nome}</p>
-                      <p className="text-xs text-muted-foreground">{contact?.cargo}</p>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{stage?.label}</Badge>
-                  </TableCell>
-                  <TableCell className="font-medium">{formatCurrency(opp.valorPotencial)}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Progress value={opp.probabilidade} className="w-16 h-2" />
-                      <span className="text-sm text-muted-foreground">{opp.probabilidade}%</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="secondary">{serviceLabels[opp.tipoServico]}</Badge>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">{sourceLabels[opp.origemLead]}</TableCell>
-                  <TableCell className="text-muted-foreground">{formatDate(opp.dataPrevisaoFechamento)}</TableCell>
-                  <TableCell>
-                    {responsavel && (
+                    </TableCell>
+                    <TableCell>
+                      <div>
+                        <p className="text-sm">{contact?.nome || 'N/A'}</p>
+                        <p className="text-xs text-muted-foreground">{contact?.cargo || ''}</p>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{stage?.label || opp.stage}</Badge>
+                    </TableCell>
+                    <TableCell className="font-medium">{formatCurrency(Number(opp.valor_potencial))}</TableCell>
+                    <TableCell>
                       <div className="flex items-center gap-2">
-                        <Avatar className="h-6 w-6">
-                          <AvatarFallback className="text-xs bg-primary/10 text-primary">
-                            {responsavel.avatar}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span className="text-sm">{responsavel.name}</span>
+                        <Progress value={opp.probabilidade} className="w-16 h-2" />
+                        <span className="text-sm text-muted-foreground">{opp.probabilidade}%</span>
                       </div>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setSelectedOpportunity(opp); }}>
-                          <Eye className="h-4 w-4 mr-2" />
-                          Ver detalhes
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={(e) => e.stopPropagation()}>
-                          <Pencil className="h-4 w-4 mr-2" />
-                          Editar
-                        </DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive" onClick={(e) => e.stopPropagation()}>
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Excluir
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="secondary">{serviceLabels[opp.tipo_servico] || opp.tipo_servico}</Badge>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">{sourceLabels[opp.origem_lead] || opp.origem_lead}</TableCell>
+                    <TableCell className="text-muted-foreground">{formatDate(opp.data_previsao_fechamento)}</TableCell>
+                    <TableCell>
+                      {responsavel && (
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-6 w-6">
+                            <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                              {responsavel.name?.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="text-sm">{responsavel.name}</span>
+                        </div>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setSelectedOpportunity(opp); }}>
+                            <Eye className="h-4 w-4 mr-2" />
+                            Ver detalhes
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={(e) => e.stopPropagation()}>
+                            <Pencil className="h-4 w-4 mr-2" />
+                            Editar
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            className="text-destructive" 
+                            onClick={(e) => { e.stopPropagation(); handleDelete(opp.id); }}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Excluir
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
+            )}
           </TableBody>
         </Table>
       </div>
@@ -222,10 +294,13 @@ export default function Oportunidades() {
             <SheetTitle>Detalhes da Oportunidade</SheetTitle>
           </SheetHeader>
           {selectedOpportunity && (
-            <OpportunityDetail opportunity={selectedOpportunity} />
+            <OpportunityDetail opportunity={adaptOpportunityForDetail(selectedOpportunity)} />
           )}
         </SheetContent>
       </Sheet>
+
+      {/* New Opportunity Dialog */}
+      <OpportunityDialog open={showNewDialog} onOpenChange={setShowNewDialog} />
     </div>
   );
 }

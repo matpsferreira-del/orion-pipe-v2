@@ -1,7 +1,24 @@
 import { cn } from '@/lib/utils';
 import { PipelineStage } from '@/types/crm';
 import { KanbanCard } from './KanbanCard';
-import { Opportunity } from '@/types/crm';
+
+interface ExtendedOpportunity {
+  id: string;
+  companyId: string;
+  contactId: string;
+  responsavelId: string;
+  stage: string;
+  valorPotencial: number;
+  probabilidade: number;
+  createdAt: Date;
+  dataPrevisaoFechamento: Date;
+  origemLead: string;
+  tipoServico: string;
+  observacoes?: string;
+  _company?: { nome_fantasia: string } | null;
+  _contact?: { nome: string; cargo: string } | null;
+  _responsavel?: { name: string; avatar?: string | null } | null;
+}
 
 interface KanbanColumnProps {
   stage: {
@@ -9,9 +26,9 @@ interface KanbanColumnProps {
     label: string;
     color: string;
   };
-  opportunities: Opportunity[];
+  opportunities: ExtendedOpportunity[];
   onDrop: (opportunityId: string, newStage: PipelineStage) => void;
-  onCardClick: (opportunity: Opportunity) => void;
+  onCardClick: (opportunity: ExtendedOpportunity) => void;
 }
 
 const stageColors: Record<string, string> = {
