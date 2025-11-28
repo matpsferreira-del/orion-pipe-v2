@@ -205,12 +205,12 @@ export function ActivityDialog({
 
             <div className="space-y-2">
               <Label htmlFor="opportunity">Oportunidade (opcional)</Label>
-              <Select value={opportunityId} onValueChange={setOpportunityId} disabled={!companyId}>
+              <Select value={opportunityId || "none"} onValueChange={(v) => setOpportunityId(v === "none" ? "" : v)} disabled={!companyId}>
                 <SelectTrigger>
                   <SelectValue placeholder="Vincular a oportunidade" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Nenhuma</SelectItem>
+                  <SelectItem value="none">Nenhuma</SelectItem>
                   {filteredOpportunities.map(opp => (
                     <SelectItem key={opp.id} value={opp.id}>
                       R$ {Number(opp.valor_potencial).toLocaleString('pt-BR')}
