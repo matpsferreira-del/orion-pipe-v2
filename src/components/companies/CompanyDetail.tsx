@@ -1,5 +1,8 @@
-import { Company } from '@/types/crm';
-import { getContactsByCompany, getOpportunitiesByCompany, getUserById, getInvoicesByCompany, pipelineStages } from '@/data/mockData';
+import { CompanyRow } from '@/hooks/useCompanies';
+import { ContactRow } from '@/hooks/useContacts';
+import { OpportunityRow } from '@/hooks/useOpportunities';
+import { InvoiceRow } from '@/hooks/useInvoices';
+import { ProfileRow } from '@/hooks/useProfiles';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -7,18 +10,23 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Globe, Mail, Phone, User, Target, Receipt, Building2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { pipelineStages } from '@/data/mockData';
 
 interface CompanyDetailProps {
-  company: Company;
+  company: CompanyRow;
+  contacts: ContactRow[];
+  opportunities: OpportunityRow[];
+  invoices: InvoiceRow[];
+  profiles: ProfileRow[];
 }
 
-const statusConfig = {
+const statusConfig: Record<string, { label: string; className: string }> = {
   prospect: { label: 'Prospect', className: 'status-badge prospect' },
   cliente_ativo: { label: 'Cliente Ativo', className: 'status-badge active' },
   cliente_inativo: { label: 'Cliente Inativo', className: 'status-badge inactive' },
 };
 
-const porteLabels = {
+const porteLabels: Record<string, string> = {
   micro: 'Micro',
   pequena: 'Pequena',
   media: 'Média',
@@ -26,12 +34,14 @@ const porteLabels = {
   enterprise: 'Enterprise',
 };
 
-export function CompanyDetail({ company }: CompanyDetailProps) {
-  const contacts = getContactsByCompany(company.id);
-  const opportunities = getOpportunitiesByCompany(company.id);
-  const invoices = getInvoicesByCompany(company.id);
-  const responsavel = company.responsavelId ? getUserById(company.responsavelId) : null;
-  const status = statusConfig[company.status];
+export function CompanyDetail({ company, contacts, opportunities, invoices, profiles }: CompanyDetailProps) {
+  const companyContacts = contacts.filter(c => c.company_id === company.id);
+  const companyOpportunities = opportunities.filter(o => o.company_id === company.id);
+  const companyInvoices = invoices.filter(i => i.company_id === company.id);
+  const responsavel = company.responsavel_id 
+    ? profiles.find(p => p.id === company.responsavel_id) 
+    : null;
+  const status = statusConfig[company.status] || statusConfig.prospect;
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -40,17 +50,17 @@ export function CompanyDetail({ company }: CompanyDetailProps) {
     }).format(value);
   };
 
-  const formatDate = (date: Date) => {
+  const formatDate = (date: string) => {
     return new Date(date).toLocaleDateString('pt-BR');
   };
 
-  const totalFaturado = invoices
+  const totalFaturado = companyInvoices
     .filter(i => i.status === 'recebido')
-    .reduce((sum, i) => sum + i.valor, 0);
+    .reduce((sum, i) => sum + Number(i.valor), 0);
 
-  const totalPipeline = opportunities
+  const totalPipeline = companyOpportunities
     .filter(o => !['fechado_ganhou', 'fechado_perdeu'].includes(o.stage))
-    .reduce((sum, o) => sum + o.valorPotencial, 0);
+    .reduce((sum, o) => sum + Number(o.valor_potencial), 0);
 
   return (
     <div className="mt-6 space-y-6">
@@ -61,8 +71,8 @@ export function CompanyDetail({ company }: CompanyDetailProps) {
             <Building2 className="h-6 w-6 text-primary" />
           </div>
           <div>
-            <h3 className="text-xl font-semibold text-foreground">{company.nomeFantasia}</h3>
-            <p className="text-sm text-muted-foreground">{company.razaoSocial}</p>
+            <h3 className="text-xl font-semibold text-foreground">{company.nome_fantasia}</h3>
+            <p className="text-sm text-muted-foreground">{company.razao_social}</p>
           </div>
         </div>
         <span className={cn(status.className)}>{status.label}</span>
@@ -85,9 +95,9 @@ export function CompanyDetail({ company }: CompanyDetailProps) {
       <Tabs defaultValue="info" className="w-full">
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="info">Info</TabsTrigger>
-          <TabsTrigger value="contacts">Contatos ({contacts.length})</TabsTrigger>
-          <TabsTrigger value="opportunities">Oportunidades ({opportunities.length})</TabsTrigger>
-          <TabsTrigger value="invoices">Faturas ({invoices.length})</TabsTrigger>
+          <TabsTrigger value="contacts">Contatos ({companyContacts.length})</TabsTrigger>
+          <TabsTrigger value="opportunities">Oportunidades ({companyOpportunities.length})</TabsTrigger>
+          <TabsTrigger value="invoices">Faturas ({companyInvoices.length})</TabsTrigger>
         </TabsList>
 
         <TabsContent value="info" className="space-y-4 mt-4">
@@ -107,7 +117,7 @@ export function CompanyDetail({ company }: CompanyDetailProps) {
                 </div>
                 <div>
                   <p className="text-muted-foreground">Porte</p>
-                  <p className="font-medium">{porteLabels[company.porte]}</p>
+                  <p className="font-medium">{porteLabels[company.porte] || company.porte}</p>
                 </div>
                 <div>
                   <p className="text-muted-foreground">Localização</p>
@@ -126,7 +136,7 @@ export function CompanyDetail({ company }: CompanyDetailProps) {
                 <div className="flex items-center gap-2 pt-2 border-t">
                   <Avatar className="h-6 w-6">
                     <AvatarFallback className="text-xs bg-primary/10 text-primary">
-                      {responsavel.avatar}
+                      {responsavel.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
                     </AvatarFallback>
                   </Avatar>
                   <span className="text-muted-foreground">Responsável:</span>
@@ -138,9 +148,9 @@ export function CompanyDetail({ company }: CompanyDetailProps) {
         </TabsContent>
 
         <TabsContent value="contacts" className="mt-4">
-          {contacts.length > 0 ? (
+          {companyContacts.length > 0 ? (
             <div className="space-y-3">
-              {contacts.map(contact => (
+              {companyContacts.map(contact => (
                 <Card key={contact.id}>
                   <CardContent className="py-4">
                     <div className="flex items-start gap-3">
@@ -152,7 +162,7 @@ export function CompanyDetail({ company }: CompanyDetailProps) {
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
                           <p className="font-medium">{contact.nome}</p>
-                          {contact.isPrimary && (
+                          {contact.is_primary && (
                             <Badge variant="secondary" className="text-xs">Principal</Badge>
                           )}
                         </div>
@@ -186,9 +196,9 @@ export function CompanyDetail({ company }: CompanyDetailProps) {
         </TabsContent>
 
         <TabsContent value="opportunities" className="mt-4">
-          {opportunities.length > 0 ? (
+          {companyOpportunities.length > 0 ? (
             <div className="space-y-3">
-              {opportunities.map(opp => {
+              {companyOpportunities.map(opp => {
                 const stage = pipelineStages.find(s => s.key === opp.stage);
                 return (
                   <Card key={opp.id}>
@@ -197,14 +207,14 @@ export function CompanyDetail({ company }: CompanyDetailProps) {
                         <div className="flex items-center gap-3">
                           <Target className="h-5 w-5 text-primary" />
                           <div>
-                            <p className="font-medium">{formatCurrency(opp.valorPotencial)}</p>
+                            <p className="font-medium">{formatCurrency(Number(opp.valor_potencial))}</p>
                             <p className="text-sm text-muted-foreground">{opp.probabilidade}% de probabilidade</p>
                           </div>
                         </div>
                         <div className="text-right">
-                          <Badge variant="outline">{stage?.label}</Badge>
+                          <Badge variant="outline">{stage?.label || opp.stage}</Badge>
                           <p className="text-xs text-muted-foreground mt-1">
-                            Previsão: {formatDate(opp.dataPrevisaoFechamento)}
+                            Previsão: {formatDate(opp.data_previsao_fechamento)}
                           </p>
                         </div>
                       </div>
@@ -224,23 +234,23 @@ export function CompanyDetail({ company }: CompanyDetailProps) {
         </TabsContent>
 
         <TabsContent value="invoices" className="mt-4">
-          {invoices.length > 0 ? (
+          {companyInvoices.length > 0 ? (
             <div className="space-y-3">
-              {invoices.map(invoice => (
+              {companyInvoices.map(invoice => (
                 <Card key={invoice.id}>
                   <CardContent className="py-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <Receipt className="h-5 w-5 text-primary" />
                         <div>
-                          <p className="font-medium">{invoice.numeroNota}</p>
+                          <p className="font-medium">{invoice.numero_nota}</p>
                           <p className="text-sm text-muted-foreground truncate max-w-[200px]">
-                            {invoice.descricaoServico}
+                            {invoice.descricao_servico}
                           </p>
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="font-medium">{formatCurrency(invoice.valor)}</p>
+                        <p className="font-medium">{formatCurrency(Number(invoice.valor))}</p>
                         <Badge 
                           variant="outline" 
                           className={cn(
