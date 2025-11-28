@@ -141,15 +141,15 @@ export function TaskDialog({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="company">Empresa</Label>
-              <Select value={companyId} onValueChange={(value) => {
-                setCompanyId(value);
+              <Select value={companyId || "none"} onValueChange={(value) => {
+                setCompanyId(value === "none" ? "" : value);
                 setOpportunityId('');
               }}>
                 <SelectTrigger>
                   <SelectValue placeholder="Vincular empresa" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Nenhuma</SelectItem>
+                  <SelectItem value="none">Nenhuma</SelectItem>
                   {companies.map(company => (
                     <SelectItem key={company.id} value={company.id}>
                       {company.nome_fantasia}
@@ -179,12 +179,12 @@ export function TaskDialog({
           {companyId && filteredOpportunities.length > 0 && (
             <div className="space-y-2">
               <Label htmlFor="opportunity">Oportunidade</Label>
-              <Select value={opportunityId} onValueChange={setOpportunityId}>
+              <Select value={opportunityId || "none"} onValueChange={(v) => setOpportunityId(v === "none" ? "" : v)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Vincular oportunidade" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Nenhuma</SelectItem>
+                  <SelectItem value="none">Nenhuma</SelectItem>
                   {filteredOpportunities.map(opp => (
                     <SelectItem key={opp.id} value={opp.id}>
                       R$ {Number(opp.valor_potencial).toLocaleString('pt-BR')}
