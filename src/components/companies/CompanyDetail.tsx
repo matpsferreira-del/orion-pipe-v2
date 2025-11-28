@@ -1,16 +1,23 @@
+import { useState } from 'react';
 import { CompanyRow } from '@/hooks/useCompanies';
 import { ContactRow } from '@/hooks/useContacts';
 import { OpportunityRow } from '@/hooks/useOpportunities';
 import { InvoiceRow } from '@/hooks/useInvoices';
 import { ProfileRow } from '@/hooks/useProfiles';
+import { useActivitiesByCompany, ActivityRow } from '@/hooks/useActivities';
+import { useTasksByCompany, TaskRow as TaskRowType } from '@/hooks/useTasks';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Globe, Mail, Phone, User, Target, Receipt, Building2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Globe, Mail, Phone, User, Target, Receipt, Building2, Plus, Calendar, Clock, MessageSquare, PhoneCall, Send, FileText, MoreHorizontal, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { pipelineStages } from '@/data/mockData';
+import { format, isToday, isTomorrow, isPast } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { ActivityDialog } from '@/components/activities/ActivityDialog';
 
 interface CompanyDetailProps {
   company: CompanyRow;
@@ -34,7 +41,30 @@ const porteLabels: Record<string, string> = {
   enterprise: 'Enterprise',
 };
 
+const activityTypeIcons: Record<string, React.ElementType> = {
+  ligacao: PhoneCall,
+  reuniao: Calendar,
+  email: Send,
+  proposta: FileText,
+  followup: Clock,
+  outro: MessageSquare,
+};
+
+const activityTypeLabels: Record<string, string> = {
+  ligacao: 'Ligação',
+  reuniao: 'Reunião',
+  email: 'Email',
+  proposta: 'Proposta',
+  followup: 'Follow-up',
+  outro: 'Outro',
+};
+
 export function CompanyDetail({ company, contacts, opportunities, invoices, profiles }: CompanyDetailProps) {
+  const [activityDialogOpen, setActivityDialogOpen] = useState(false);
+  
+  const { data: activities = [] } = useActivitiesByCompany(company.id);
+  const { data: tasks = [] } = useTasksByCompany(company.id);
+  
   const companyContacts = contacts.filter(c => c.company_id === company.id);
   const companyOpportunities = opportunities.filter(o => o.company_id === company.id);
   const companyInvoices = invoices.filter(i => i.company_id === company.id);
@@ -42,6 +72,8 @@ export function CompanyDetail({ company, contacts, opportunities, invoices, prof
     ? profiles.find(p => p.id === company.responsavel_id) 
     : null;
   const status = statusConfig[company.status] || statusConfig.prospect;
+
+  const pendingTasks = tasks.filter(t => t.status === 'pendente' || t.status === 'em_andamento');
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -52,6 +84,17 @@ export function CompanyDetail({ company, contacts, opportunities, invoices, prof
 
   const formatDate = (date: string) => {
     return new Date(date).toLocaleDateString('pt-BR');
+  };
+
+  const formatActivityDate = (date: string) => {
+    const d = new Date(date);
+    if (isToday(d)) return 'Hoje';
+    if (isTomorrow(d)) return 'Amanhã';
+    return format(d, "dd/MM/yyyy", { locale: ptBR });
+  };
+
+  const getUserName = (userId: string) => {
+    return profiles.find(p => p.id === userId)?.name || 'Usuário';
   };
 
   const totalFaturado = companyInvoices
@@ -93,10 +136,11 @@ export function CompanyDetail({ company, contacts, opportunities, invoices, prof
       <Separator />
 
       <Tabs defaultValue="info" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="info">Info</TabsTrigger>
+          <TabsTrigger value="activities">Atividades ({activities.length})</TabsTrigger>
           <TabsTrigger value="contacts">Contatos ({companyContacts.length})</TabsTrigger>
-          <TabsTrigger value="opportunities">Oportunidades ({companyOpportunities.length})</TabsTrigger>
+          <TabsTrigger value="opportunities">Oport. ({companyOpportunities.length})</TabsTrigger>
           <TabsTrigger value="invoices">Faturas ({companyInvoices.length})</TabsTrigger>
         </TabsList>
 
@@ -145,6 +189,101 @@ export function CompanyDetail({ company, contacts, opportunities, invoices, prof
               )}
             </CardContent>
           </Card>
+
+          {/* Pending Tasks Quick View */}
+          {pendingTasks.length > 0 && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  Próximas Tarefas
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {pendingTasks.slice(0, 3).map(task => (
+                  <div key={task.id} className="flex items-center gap-2 text-sm">
+                    <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
+                    <span className="flex-1 truncate">{task.titulo}</span>
+                    <span className={cn(
+                      "text-xs",
+                      isPast(new Date(task.due_date)) && !isToday(new Date(task.due_date)) && "text-destructive"
+                    )}>
+                      {formatActivityDate(task.due_date)}
+                    </span>
+                  </div>
+                ))}
+                {pendingTasks.length > 3 && (
+                  <p className="text-xs text-muted-foreground text-center">
+                    +{pendingTasks.length - 3} tarefas
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        <TabsContent value="activities" className="mt-4 space-y-4">
+          <div className="flex justify-end">
+            <Button size="sm" onClick={() => setActivityDialogOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Nova Atividade
+            </Button>
+          </div>
+
+          {activities.length > 0 ? (
+            <div className="space-y-3">
+              {activities.map(activity => {
+                const Icon = activityTypeIcons[activity.type] || MessageSquare;
+                return (
+                  <Card key={activity.id}>
+                    <CardContent className="py-4">
+                      <div className="flex items-start gap-3">
+                        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                          <Icon className="h-4 w-4 text-primary" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium">{activity.titulo}</p>
+                            <Badge variant="outline" className="text-xs">
+                              {activityTypeLabels[activity.type] || activity.type}
+                            </Badge>
+                          </div>
+                          {activity.descricao && (
+                            <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                              {activity.descricao}
+                            </p>
+                          )}
+                          <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
+                            <span className="flex items-center gap-1">
+                              <Calendar className="h-3 w-3" />
+                              {formatActivityDate(activity.data)}
+                            </span>
+                            <span>• {getUserName(activity.user_id)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          ) : (
+            <Card>
+              <CardContent className="py-8 text-center">
+                <MessageSquare className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                <p className="text-muted-foreground">Nenhuma atividade registrada</p>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="mt-3"
+                  onClick={() => setActivityDialogOpen(true)}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Registrar Atividade
+                </Button>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         <TabsContent value="contacts" className="mt-4">
@@ -278,6 +417,13 @@ export function CompanyDetail({ company, contacts, opportunities, invoices, prof
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Activity Dialog */}
+      <ActivityDialog 
+        open={activityDialogOpen} 
+        onOpenChange={setActivityDialogOpen}
+        preSelectedCompanyId={company.id}
+      />
     </div>
   );
 }
