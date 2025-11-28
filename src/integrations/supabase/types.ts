@@ -14,7 +14,428 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      activities: {
+        Row: {
+          company_id: string
+          created_at: string
+          data: string
+          descricao: string | null
+          id: string
+          opportunity_id: string | null
+          titulo: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          data: string
+          descricao?: string | null
+          id?: string
+          opportunity_id?: string | null
+          titulo: string
+          type?: string
+          user_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          data?: string
+          descricao?: string | null
+          id?: string
+          opportunity_id?: string | null
+          titulo?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activities_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activities_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activities_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      companies: {
+        Row: {
+          cidade: string
+          cnpj: string
+          created_at: string
+          estado: string
+          id: string
+          nome_fantasia: string
+          porte: string
+          razao_social: string
+          responsavel_id: string | null
+          segmento: string
+          site: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          cidade: string
+          cnpj: string
+          created_at?: string
+          estado: string
+          id?: string
+          nome_fantasia: string
+          porte?: string
+          razao_social: string
+          responsavel_id?: string | null
+          segmento: string
+          site?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          cidade?: string
+          cnpj?: string
+          created_at?: string
+          estado?: string
+          id?: string
+          nome_fantasia?: string
+          porte?: string
+          razao_social?: string
+          responsavel_id?: string | null
+          segmento?: string
+          site?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "companies_responsavel_id_fkey"
+            columns: ["responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contacts: {
+        Row: {
+          cargo: string
+          company_id: string
+          created_at: string
+          email: string
+          id: string
+          is_primary: boolean | null
+          nome: string
+          observacoes: string | null
+          telefone: string | null
+          whatsapp: string | null
+        }
+        Insert: {
+          cargo: string
+          company_id: string
+          created_at?: string
+          email: string
+          id?: string
+          is_primary?: boolean | null
+          nome: string
+          observacoes?: string | null
+          telefone?: string | null
+          whatsapp?: string | null
+        }
+        Update: {
+          cargo?: string
+          company_id?: string
+          created_at?: string
+          email?: string
+          id?: string
+          is_primary?: boolean | null
+          nome?: string
+          observacoes?: string | null
+          telefone?: string | null
+          whatsapp?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contacts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoices: {
+        Row: {
+          cnpj_cliente: string
+          company_id: string
+          created_at: string
+          data_emissao: string
+          data_vencimento: string
+          descricao_servico: string
+          forma_pagamento: string
+          id: string
+          numero_nota: string
+          opportunity_id: string | null
+          status: string
+          valor: number
+        }
+        Insert: {
+          cnpj_cliente: string
+          company_id: string
+          created_at?: string
+          data_emissao: string
+          data_vencimento: string
+          descricao_servico: string
+          forma_pagamento?: string
+          id?: string
+          numero_nota: string
+          opportunity_id?: string | null
+          status?: string
+          valor?: number
+        }
+        Update: {
+          cnpj_cliente?: string
+          company_id?: string
+          created_at?: string
+          data_emissao?: string
+          data_vencimento?: string
+          descricao_servico?: string
+          forma_pagamento?: string
+          id?: string
+          numero_nota?: string
+          opportunity_id?: string | null
+          status?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      opportunities: {
+        Row: {
+          company_id: string
+          contact_id: string
+          created_at: string
+          data_previsao_fechamento: string
+          id: string
+          observacoes: string | null
+          origem_lead: string
+          probabilidade: number
+          responsavel_id: string
+          spin_implicacao_impacto: string | null
+          spin_implicacao_perda: string | null
+          spin_necessidade_cenario: string | null
+          spin_necessidade_urgencia: string | null
+          spin_problema_dificuldades: string | null
+          spin_problema_tempo_medio: string | null
+          spin_situacao_como_contrata: string | null
+          spin_situacao_time_interno: string | null
+          stage: string
+          tipo_servico: string
+          updated_at: string
+          valor_potencial: number
+        }
+        Insert: {
+          company_id: string
+          contact_id: string
+          created_at?: string
+          data_previsao_fechamento: string
+          id?: string
+          observacoes?: string | null
+          origem_lead?: string
+          probabilidade?: number
+          responsavel_id: string
+          spin_implicacao_impacto?: string | null
+          spin_implicacao_perda?: string | null
+          spin_necessidade_cenario?: string | null
+          spin_necessidade_urgencia?: string | null
+          spin_problema_dificuldades?: string | null
+          spin_problema_tempo_medio?: string | null
+          spin_situacao_como_contrata?: string | null
+          spin_situacao_time_interno?: string | null
+          stage?: string
+          tipo_servico?: string
+          updated_at?: string
+          valor_potencial?: number
+        }
+        Update: {
+          company_id?: string
+          contact_id?: string
+          created_at?: string
+          data_previsao_fechamento?: string
+          id?: string
+          observacoes?: string | null
+          origem_lead?: string
+          probabilidade?: number
+          responsavel_id?: string
+          spin_implicacao_impacto?: string | null
+          spin_implicacao_perda?: string | null
+          spin_necessidade_cenario?: string | null
+          spin_necessidade_urgencia?: string | null
+          spin_problema_dificuldades?: string | null
+          spin_problema_tempo_medio?: string | null
+          spin_situacao_como_contrata?: string | null
+          spin_situacao_time_interno?: string | null
+          stage?: string
+          tipo_servico?: string
+          updated_at?: string
+          valor_potencial?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "opportunities_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunities_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunities_responsavel_id_fkey"
+            columns: ["responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar: string | null
+          created_at: string
+          email: string
+          id: string
+          name: string
+          role: string
+          team_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar?: string | null
+          created_at?: string
+          email: string
+          id?: string
+          name: string
+          role?: string
+          team_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string
+          role?: string
+          team_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      tasks: {
+        Row: {
+          company_id: string | null
+          created_at: string
+          descricao: string | null
+          due_date: string
+          id: string
+          opportunity_id: string | null
+          priority: string
+          responsavel_id: string
+          status: string
+          titulo: string
+          user_id: string
+        }
+        Insert: {
+          company_id?: string | null
+          created_at?: string
+          descricao?: string | null
+          due_date: string
+          id?: string
+          opportunity_id?: string | null
+          priority?: string
+          responsavel_id: string
+          status?: string
+          titulo: string
+          user_id: string
+        }
+        Update: {
+          company_id?: string | null
+          created_at?: string
+          descricao?: string | null
+          due_date?: string
+          id?: string
+          opportunity_id?: string | null
+          priority?: string
+          responsavel_id?: string
+          status?: string
+          titulo?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_responsavel_id_fkey"
+            columns: ["responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
