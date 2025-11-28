@@ -4,22 +4,25 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { mockCompanies, mockContacts, getUserById, getOpportunitiesByCompany } from '@/data/mockData';
-import { Company } from '@/types/crm';
-import { Plus, Search, Filter, MoreHorizontal, Building2, Eye, Pencil, Trash2, Download } from 'lucide-react';
+import { useCompanies, useDeleteCompany, CompanyRow } from '@/hooks/useCompanies';
+import { useContacts } from '@/hooks/useContacts';
+import { useOpportunities } from '@/hooks/useOpportunities';
+import { Plus, Search, Filter, MoreHorizontal, Building2, Eye, Pencil, Trash2, Download, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { CompanyDetail } from '@/components/companies/CompanyDetail';
+import { CompanyDialog } from '@/components/companies/CompanyDialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { toast } from 'sonner';
 
-const statusConfig = {
+const statusConfig: Record<string, { label: string; className: string }> = {
   prospect: { label: 'Prospect', className: 'status-badge prospect' },
   cliente_ativo: { label: 'Cliente Ativo', className: 'status-badge active' },
   cliente_inativo: { label: 'Cliente Inativo', className: 'status-badge inactive' },
 };
 
-const porteLabels = {
+const porteLabels: Record<string, string> = {
   micro: 'Micro',
   pequena: 'Pequena',
   media: 'Média',
@@ -31,31 +34,64 @@ export default function Empresas() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterSegmento, setFilterSegmento] = useState<string>('all');
-  const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
+  const [selectedCompany, setSelectedCompany] = useState<CompanyRow | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [companyToDelete, setCompanyToDelete] = useState<CompanyRow | null>(null);
+
+  const { data: companies = [], isLoading } = useCompanies();
+  const { data: contacts = [] } = useContacts();
+  const { data: opportunities = [] } = useOpportunities();
+  const deleteCompany = useDeleteCompany();
 
   const segmentos = useMemo(() => {
-    return [...new Set(mockCompanies.map(c => c.segmento))];
-  }, []);
+    return [...new Set(companies.map(c => c.segmento))];
+  }, [companies]);
 
   const filteredCompanies = useMemo(() => {
-    return mockCompanies.filter(company => {
+    return companies.filter(company => {
       const matchesSearch = searchTerm === '' ||
-        company.nomeFantasia.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        company.razaoSocial.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        company.nome_fantasia.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        company.razao_social.toLowerCase().includes(searchTerm.toLowerCase()) ||
         company.cnpj.includes(searchTerm);
       const matchesStatus = filterStatus === 'all' || company.status === filterStatus;
       const matchesSegmento = filterSegmento === 'all' || company.segmento === filterSegmento;
       return matchesSearch && matchesStatus && matchesSegmento;
     });
-  }, [searchTerm, filterStatus, filterSegmento]);
+  }, [companies, searchTerm, filterStatus, filterSegmento]);
 
   const getContactsCount = (companyId: string) => {
-    return mockContacts.filter(c => c.companyId === companyId).length;
+    return contacts.filter(c => c.company_id === companyId).length;
   };
 
   const getOpportunitiesCount = (companyId: string) => {
-    return getOpportunitiesByCompany(companyId).length;
+    return opportunities.filter(o => o.company_id === companyId).length;
   };
+
+  const handleDeleteClick = (company: CompanyRow, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCompanyToDelete(company);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (companyToDelete) {
+      deleteCompany.mutate(companyToDelete.id, {
+        onSuccess: () => {
+          setDeleteDialogOpen(false);
+          setCompanyToDelete(null);
+        },
+      });
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="p-6 flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -68,7 +104,7 @@ export default function Empresas() {
               <Download className="h-4 w-4 mr-2" />
               Exportar
             </Button>
-            <Button>
+            <Button onClick={() => setDialogOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
               Nova Empresa
             </Button>
@@ -129,62 +165,72 @@ export default function Empresas() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredCompanies.map((company) => {
-              const responsavel = company.responsavelId ? getUserById(company.responsavelId) : null;
-              const status = statusConfig[company.status];
-              
-              return (
-                <TableRow 
-                  key={company.id} 
-                  className="cursor-pointer hover:bg-muted/50"
-                  onClick={() => setSelectedCompany(company)}
-                >
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center">
-                        <Building2 className="h-4 w-4 text-primary" />
+            {filteredCompanies.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                  Nenhuma empresa encontrada
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredCompanies.map((company) => {
+                const status = statusConfig[company.status] || statusConfig.prospect;
+                
+                return (
+                  <TableRow 
+                    key={company.id} 
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => setSelectedCompany(company)}
+                  >
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center">
+                          <Building2 className="h-4 w-4 text-primary" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-foreground">{company.nome_fantasia}</p>
+                          <p className="text-xs text-muted-foreground">{company.razao_social}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-medium text-foreground">{company.nomeFantasia}</p>
-                        <p className="text-xs text-muted-foreground">{responsavel?.name}</p>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">{company.cnpj}</TableCell>
-                  <TableCell>{company.segmento}</TableCell>
-                  <TableCell>{porteLabels[company.porte]}</TableCell>
-                  <TableCell className="text-muted-foreground">{company.cidade}/{company.estado}</TableCell>
-                  <TableCell>
-                    <span className={cn(status.className)}>{status.label}</span>
-                  </TableCell>
-                  <TableCell className="text-center">{getContactsCount(company.id)}</TableCell>
-                  <TableCell className="text-center">{getOpportunitiesCount(company.id)}</TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setSelectedCompany(company); }}>
-                          <Eye className="h-4 w-4 mr-2" />
-                          Ver detalhes
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={(e) => e.stopPropagation()}>
-                          <Pencil className="h-4 w-4 mr-2" />
-                          Editar
-                        </DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive" onClick={(e) => e.stopPropagation()}>
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Excluir
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">{company.cnpj}</TableCell>
+                    <TableCell>{company.segmento}</TableCell>
+                    <TableCell>{porteLabels[company.porte] || company.porte}</TableCell>
+                    <TableCell className="text-muted-foreground">{company.cidade}/{company.estado}</TableCell>
+                    <TableCell>
+                      <span className={cn(status.className)}>{status.label}</span>
+                    </TableCell>
+                    <TableCell className="text-center">{getContactsCount(company.id)}</TableCell>
+                    <TableCell className="text-center">{getOpportunitiesCount(company.id)}</TableCell>
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setSelectedCompany(company); }}>
+                            <Eye className="h-4 w-4 mr-2" />
+                            Ver detalhes
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={(e) => e.stopPropagation()}>
+                            <Pencil className="h-4 w-4 mr-2" />
+                            Editar
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            className="text-destructive" 
+                            onClick={(e) => handleDeleteClick(company, e)}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Excluir
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
+            )}
           </TableBody>
         </Table>
       </div>
@@ -195,9 +241,38 @@ export default function Empresas() {
           <SheetHeader>
             <SheetTitle>Detalhes da Empresa</SheetTitle>
           </SheetHeader>
-          {selectedCompany && <CompanyDetail company={selectedCompany} />}
+          {selectedCompany && <CompanyDetail company={selectedCompany as any} />}
         </SheetContent>
       </Sheet>
+
+      {/* Company Dialog */}
+      <CompanyDialog open={dialogOpen} onOpenChange={setDialogOpen} />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir a empresa "{companyToDelete?.nome_fantasia}"? 
+              Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleConfirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteCompany.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                'Excluir'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
