@@ -17,7 +17,6 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { OpportunityDetail } from '@/components/opportunities/OpportunityDetail';
-import { PipelineStage } from '@/types/crm';
 
 const sourceLabels: Record<string, string> = {
   indicacao: 'Indicação',
@@ -36,40 +35,6 @@ const serviceLabels: Record<string, string> = {
   consultoria: 'Consultoria',
 };
 
-function adaptOpportunityForDetail(opp: OpportunityRow) {
-  return {
-    id: opp.id,
-    companyId: opp.company_id,
-    contactId: opp.contact_id,
-    responsavelId: opp.responsavel_id,
-    stage: opp.stage as PipelineStage,
-    valorPotencial: Number(opp.valor_potencial),
-    probabilidade: opp.probabilidade,
-    createdAt: new Date(opp.created_at),
-    dataPrevisaoFechamento: new Date(opp.data_previsao_fechamento),
-    origemLead: opp.origem_lead as any,
-    tipoServico: opp.tipo_servico as any,
-    observacoes: opp.observacoes || undefined,
-    spin: opp.spin_situacao_como_contrata ? {
-      situacao: {
-        comoContrata: opp.spin_situacao_como_contrata || '',
-        timeInterno: opp.spin_situacao_time_interno || '',
-      },
-      problema: {
-        dificuldades: opp.spin_problema_dificuldades || '',
-        tempoMedio: opp.spin_problema_tempo_medio || '',
-      },
-      implicacao: {
-        impactoNegocios: opp.spin_implicacao_impacto || '',
-        perdaReceita: opp.spin_implicacao_perda || '',
-      },
-      necessidade: {
-        cenarioIdeal: opp.spin_necessidade_cenario || '',
-        urgencia: opp.spin_necessidade_urgencia || '',
-      },
-    } : undefined,
-  };
-}
 
 export default function Oportunidades() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -294,7 +259,7 @@ export default function Oportunidades() {
             <SheetTitle>Detalhes da Oportunidade</SheetTitle>
           </SheetHeader>
           {selectedOpportunity && (
-            <OpportunityDetail opportunity={adaptOpportunityForDetail(selectedOpportunity)} />
+            <OpportunityDetail opportunity={selectedOpportunity} />
           )}
         </SheetContent>
       </Sheet>

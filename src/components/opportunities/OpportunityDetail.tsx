@@ -1,17 +1,26 @@
-import { Opportunity } from '@/types/crm';
-import { getCompanyById, getContactById, getUserById, pipelineStages, getActivitiesByOpportunity } from '@/data/mockData';
+import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Building2, User, Calendar, DollarSign, Target, Phone, Mail } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Building2, User, Calendar, DollarSign, Target, Phone, Mail, Plus, MessageSquare } from 'lucide-react';
+import { OpportunityRow } from '@/hooks/useOpportunities';
+import { useCompanies } from '@/hooks/useCompanies';
+import { useContacts } from '@/hooks/useContacts';
+import { useProfiles } from '@/hooks/useProfiles';
+import { useActivitiesByOpportunity } from '@/hooks/useActivities';
+import { ActivityDialog } from '@/components/activities/ActivityDialog';
+import { pipelineStages } from '@/data/mockData';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 interface OpportunityDetailProps {
-  opportunity: Opportunity;
+  opportunity: OpportunityRow;
 }
 
-const sourceLabels = {
+const sourceLabels: Record<string, string> = {
   indicacao: 'Indicação',
   inbound: 'Inbound',
   outbound: 'Outbound',
@@ -20,7 +29,7 @@ const sourceLabels = {
   outro: 'Outro',
 };
 
-const serviceLabels = {
+const serviceLabels: Record<string, string> = {
   recrutamento_pontual: 'Recrutamento Pontual',
   programa_recorrente: 'Programa Recorrente',
   rpo: 'RPO',
@@ -28,12 +37,27 @@ const serviceLabels = {
   consultoria: 'Consultoria',
 };
 
+const activityTypeLabels: Record<string, string> = {
+  ligacao: 'Ligação',
+  reuniao: 'Reunião',
+  email: 'Email',
+  proposta: 'Proposta',
+  followup: 'Follow-up',
+  outro: 'Outro',
+};
+
 export function OpportunityDetail({ opportunity }: OpportunityDetailProps) {
-  const company = getCompanyById(opportunity.companyId);
-  const contact = getContactById(opportunity.contactId);
-  const responsavel = getUserById(opportunity.responsavelId);
+  const [showActivityDialog, setShowActivityDialog] = useState(false);
+  
+  const { data: companies = [] } = useCompanies();
+  const { data: contacts = [] } = useContacts();
+  const { data: profiles = [] } = useProfiles();
+  const { data: activities = [] } = useActivitiesByOpportunity(opportunity.id);
+
+  const company = companies.find(c => c.id === opportunity.company_id);
+  const contact = contacts.find(c => c.id === opportunity.contact_id);
+  const responsavel = profiles.find(p => p.id === opportunity.responsavel_id);
   const stage = pipelineStages.find(s => s.key === opportunity.stage);
-  const activities = getActivitiesByOpportunity(opportunity.id);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -42,20 +66,25 @@ export function OpportunityDetail({ opportunity }: OpportunityDetailProps) {
     }).format(value);
   };
 
-  const formatDate = (date: Date) => {
+  const formatDate = (date: string) => {
     return new Date(date).toLocaleDateString('pt-BR');
   };
+
+  const hasSpin = opportunity.spin_situacao_como_contrata || 
+                  opportunity.spin_problema_dificuldades || 
+                  opportunity.spin_implicacao_impacto || 
+                  opportunity.spin_necessidade_cenario;
 
   return (
     <div className="mt-6 space-y-6">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h3 className="text-xl font-semibold text-foreground">{company?.nomeFantasia}</h3>
-          <p className="text-sm text-muted-foreground">{company?.razaoSocial}</p>
+          <h3 className="text-xl font-semibold text-foreground">{company?.nome_fantasia || 'N/A'}</h3>
+          <p className="text-sm text-muted-foreground">{company?.razao_social}</p>
         </div>
         <Badge variant="outline" className="text-sm">
-          {stage?.label}
+          {stage?.label || opportunity.stage}
         </Badge>
       </div>
 
@@ -65,7 +94,7 @@ export function OpportunityDetail({ opportunity }: OpportunityDetailProps) {
           <DollarSign className="h-5 w-5 text-primary" />
           <div>
             <p className="text-xs text-muted-foreground">Valor Potencial</p>
-            <p className="font-semibold text-foreground">{formatCurrency(opportunity.valorPotencial)}</p>
+            <p className="font-semibold text-foreground">{formatCurrency(Number(opportunity.valor_potencial))}</p>
           </div>
         </div>
         <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
@@ -83,7 +112,7 @@ export function OpportunityDetail({ opportunity }: OpportunityDetailProps) {
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="info">Informações</TabsTrigger>
           <TabsTrigger value="spin">SPIN Selling</TabsTrigger>
-          <TabsTrigger value="activities">Atividades</TabsTrigger>
+          <TabsTrigger value="activities">Atividades ({activities.length})</TabsTrigger>
         </TabsList>
 
         <TabsContent value="info" className="space-y-4 mt-4">
@@ -137,15 +166,15 @@ export function OpportunityDetail({ opportunity }: OpportunityDetailProps) {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
-              <p><span className="text-muted-foreground">Criada em:</span> {formatDate(opportunity.createdAt)}</p>
-              <p><span className="text-muted-foreground">Previsão de fechamento:</span> {formatDate(opportunity.dataPrevisaoFechamento)}</p>
-              <p><span className="text-muted-foreground">Origem:</span> {sourceLabels[opportunity.origemLead]}</p>
-              <p><span className="text-muted-foreground">Tipo de serviço:</span> {serviceLabels[opportunity.tipoServico]}</p>
+              <p><span className="text-muted-foreground">Criada em:</span> {formatDate(opportunity.created_at)}</p>
+              <p><span className="text-muted-foreground">Previsão de fechamento:</span> {formatDate(opportunity.data_previsao_fechamento)}</p>
+              <p><span className="text-muted-foreground">Origem:</span> {sourceLabels[opportunity.origem_lead] || opportunity.origem_lead}</p>
+              <p><span className="text-muted-foreground">Tipo de serviço:</span> {serviceLabels[opportunity.tipo_servico] || opportunity.tipo_servico}</p>
               {responsavel && (
                 <div className="flex items-center gap-2 mt-3 pt-3 border-t">
                   <Avatar className="h-6 w-6">
                     <AvatarFallback className="text-xs bg-primary/10 text-primary">
-                      {responsavel.avatar}
+                      {responsavel.name?.split(' ').map(n => n[0]).join('').slice(0, 2)}
                     </AvatarFallback>
                   </Avatar>
                   <span className="text-muted-foreground">Responsável:</span>
@@ -168,7 +197,7 @@ export function OpportunityDetail({ opportunity }: OpportunityDetailProps) {
         </TabsContent>
 
         <TabsContent value="spin" className="space-y-4 mt-4">
-          {opportunity.spin ? (
+          {hasSpin ? (
             <>
               <Card>
                 <CardHeader className="pb-3">
@@ -177,11 +206,11 @@ export function OpportunityDetail({ opportunity }: OpportunityDetailProps) {
                 <CardContent className="space-y-3 text-sm">
                   <div>
                     <p className="text-muted-foreground mb-1">Como a empresa contrata hoje?</p>
-                    <p className="text-foreground">{opportunity.spin.situacao.comoContrata}</p>
+                    <p className="text-foreground">{opportunity.spin_situacao_como_contrata || 'Não informado'}</p>
                   </div>
                   <div>
                     <p className="text-muted-foreground mb-1">Tem time interno ou terceiriza?</p>
-                    <p className="text-foreground">{opportunity.spin.situacao.timeInterno}</p>
+                    <p className="text-foreground">{opportunity.spin_situacao_time_interno || 'Não informado'}</p>
                   </div>
                 </CardContent>
               </Card>
@@ -193,11 +222,11 @@ export function OpportunityDetail({ opportunity }: OpportunityDetailProps) {
                 <CardContent className="space-y-3 text-sm">
                   <div>
                     <p className="text-muted-foreground mb-1">Quais dificuldades no recrutamento?</p>
-                    <p className="text-foreground">{opportunity.spin.problema.dificuldades}</p>
+                    <p className="text-foreground">{opportunity.spin_problema_dificuldades || 'Não informado'}</p>
                   </div>
                   <div>
                     <p className="text-muted-foreground mb-1">Tempo médio para fechar uma vaga?</p>
-                    <p className="text-foreground">{opportunity.spin.problema.tempoMedio}</p>
+                    <p className="text-foreground">{opportunity.spin_problema_tempo_medio || 'Não informado'}</p>
                   </div>
                 </CardContent>
               </Card>
@@ -209,11 +238,11 @@ export function OpportunityDetail({ opportunity }: OpportunityDetailProps) {
                 <CardContent className="space-y-3 text-sm">
                   <div>
                     <p className="text-muted-foreground mb-1">Qual o impacto das vagas em aberto?</p>
-                    <p className="text-foreground">{opportunity.spin.implicacao.impactoNegocios}</p>
+                    <p className="text-foreground">{opportunity.spin_implicacao_impacto || 'Não informado'}</p>
                   </div>
                   <div>
                     <p className="text-muted-foreground mb-1">Existe perda de receita?</p>
-                    <p className="text-foreground">{opportunity.spin.implicacao.perdaReceita}</p>
+                    <p className="text-foreground">{opportunity.spin_implicacao_perda || 'Não informado'}</p>
                   </div>
                 </CardContent>
               </Card>
@@ -225,11 +254,11 @@ export function OpportunityDetail({ opportunity }: OpportunityDetailProps) {
                 <CardContent className="space-y-3 text-sm">
                   <div>
                     <p className="text-muted-foreground mb-1">Cenário ideal de recrutamento?</p>
-                    <p className="text-foreground">{opportunity.spin.necessidade.cenarioIdeal}</p>
+                    <p className="text-foreground">{opportunity.spin_necessidade_cenario || 'Não informado'}</p>
                   </div>
                   <div>
                     <p className="text-muted-foreground mb-1">Qual a urgência?</p>
-                    <p className="text-foreground">{opportunity.spin.necessidade.urgencia}</p>
+                    <p className="text-foreground">{opportunity.spin_necessidade_urgencia || 'Não informado'}</p>
                   </div>
                 </CardContent>
               </Card>
@@ -244,25 +273,36 @@ export function OpportunityDetail({ opportunity }: OpportunityDetailProps) {
         </TabsContent>
 
         <TabsContent value="activities" className="mt-4">
+          <div className="flex justify-between items-center mb-4">
+            <h4 className="text-sm font-medium">Histórico de Atividades</h4>
+            <Button size="sm" onClick={() => setShowActivityDialog(true)}>
+              <Plus className="h-4 w-4 mr-1" />
+              Nova Atividade
+            </Button>
+          </div>
+
           {activities.length > 0 ? (
             <div className="space-y-3">
               {activities.map(activity => {
-                const user = getUserById(activity.userId);
+                const activityUser = profiles.find(p => p.id === activity.user_id);
                 return (
                   <Card key={activity.id}>
                     <CardContent className="py-3">
                       <div className="flex items-start justify-between">
-                        <div>
-                          <p className="font-medium text-sm">{activity.titulo}</p>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <MessageSquare className="h-4 w-4 text-muted-foreground" />
+                            <p className="font-medium text-sm">{activity.titulo}</p>
+                          </div>
                           {activity.descricao && (
-                            <p className="text-sm text-muted-foreground mt-1">{activity.descricao}</p>
+                            <p className="text-sm text-muted-foreground mt-1 ml-6">{activity.descricao}</p>
                           )}
-                          <p className="text-xs text-muted-foreground mt-2">
-                            {user?.name} • {formatDate(activity.data)}
+                          <p className="text-xs text-muted-foreground mt-2 ml-6">
+                            {activityUser?.name || 'Usuário'} • {format(new Date(activity.data), "dd/MM/yyyy", { locale: ptBR })}
                           </p>
                         </div>
                         <Badge variant="outline" className="text-xs capitalize">
-                          {activity.type}
+                          {activityTypeLabels[activity.type] || activity.type}
                         </Badge>
                       </div>
                     </CardContent>
@@ -273,12 +313,22 @@ export function OpportunityDetail({ opportunity }: OpportunityDetailProps) {
           ) : (
             <Card>
               <CardContent className="py-8 text-center">
+                <MessageSquare className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
                 <p className="text-muted-foreground">Nenhuma atividade registrada</p>
+                <p className="text-xs text-muted-foreground mt-1">Clique em "Nova Atividade" para adicionar</p>
               </CardContent>
             </Card>
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Activity Dialog */}
+      <ActivityDialog 
+        open={showActivityDialog} 
+        onOpenChange={setShowActivityDialog}
+        preSelectedCompanyId={opportunity.company_id}
+        preSelectedOpportunityId={opportunity.id}
+      />
     </div>
   );
 }
