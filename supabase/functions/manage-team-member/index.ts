@@ -94,24 +94,23 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Create profile for the new user
-      const { data: profile, error: profileCreateError } = await supabaseAdmin
+      // Update the profile created by the trigger with the correct data
+      const { data: profile, error: profileUpdateError } = await supabaseAdmin
         .from('profiles')
-        .insert({
-          user_id: newUser.user.id,
-          email: payload.email,
+        .update({
           name: payload.name,
           role: payload.role,
           avatar: payload.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2),
         })
+        .eq('user_id', newUser.user.id)
         .select()
         .single();
 
-      if (profileCreateError) {
+      if (profileUpdateError) {
         // Rollback: delete the created user
         await supabaseAdmin.auth.admin.deleteUser(newUser.user.id);
         return new Response(
-          JSON.stringify({ error: profileCreateError.message }),
+          JSON.stringify({ error: profileUpdateError.message }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
