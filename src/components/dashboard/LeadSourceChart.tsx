@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useOpportunities } from '@/hooks/useOpportunities';
+import { OpportunityRow } from '@/hooks/useOpportunities';
 
 const sourceLabels: Record<string, string> = {
   indicacao: 'Indicação',
@@ -14,9 +14,11 @@ const sourceLabels: Record<string, string> = {
 
 const COLORS = ['#3b82f6', '#0ea5e9', '#8b5cf6', '#f59e0b', '#10b981', '#6b7280'];
 
-export function LeadSourceChart() {
-  const { data: opportunities = [] } = useOpportunities();
+interface LeadSourceChartProps {
+  opportunities: OpportunityRow[];
+}
 
+export function LeadSourceChart({ opportunities }: LeadSourceChartProps) {
   const data = useMemo(() => {
     const sources = opportunities.reduce((acc, opp) => {
       acc[opp.origem_lead] = (acc[opp.origem_lead] || 0) + 1;

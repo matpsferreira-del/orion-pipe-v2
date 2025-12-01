@@ -1,3 +1,4 @@
+import { useState, useMemo } from 'react';
 import { PageHeader } from '@/components/ui/page-header';
 import { StatCard } from '@/components/ui/stat-card';
 import { PipelineChart } from '@/components/dashboard/PipelineChart';
@@ -8,31 +9,79 @@ import { TasksList } from '@/components/dashboard/TasksList';
 import { useOpportunities } from '@/hooks/useOpportunities';
 import { useInvoices } from '@/hooks/useInvoices';
 import { useCompanies } from '@/hooks/useCompanies';
-import { Target, TrendingUp, DollarSign, Building2, Clock, CheckCircle2, Loader2 } from 'lucide-react';
-import { useMemo } from 'react';
+import { useProfiles } from '@/hooks/useProfiles';
+import { useActivities } from '@/hooks/useActivities';
+import { usePendingTasks } from '@/hooks/useTasks';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Target, TrendingUp, DollarSign, Building2, Clock, CheckCircle2, Loader2, Users } from 'lucide-react';
 
 export default function Dashboard() {
+  const [selectedMemberId, setSelectedMemberId] = useState<string>('all');
+  
   const { data: opportunities = [], isLoading: loadingOpps } = useOpportunities();
   const { data: invoices = [], isLoading: loadingInvoices } = useInvoices();
   const { data: companies = [], isLoading: loadingCompanies } = useCompanies();
+  const { data: profiles = [], isLoading: loadingProfiles } = useProfiles();
+  const { data: activities = [], isLoading: loadingActivities } = useActivities();
+  const { data: tasks = [], isLoading: loadingTasks } = usePendingTasks();
 
-  const isLoading = loadingOpps || loadingInvoices || loadingCompanies;
+  const isLoading = loadingOpps || loadingInvoices || loadingCompanies || loadingProfiles || loadingActivities || loadingTasks;
+
+  // Filter data by selected team member
+  const filteredData = useMemo(() => {
+    if (selectedMemberId === 'all') {
+      return {
+        opportunities,
+        invoices,
+        companies,
+        activities,
+        tasks,
+      };
+    }
+
+    const filteredOpps = opportunities.filter(o => o.responsavel_id === selectedMemberId);
+    const filteredOppIds = new Set(filteredOpps.map(o => o.id));
+    
+    // Filter invoices by opportunities that belong to the selected member
+    const filteredInvoices = invoices.filter(inv => 
+      inv.opportunity_id && filteredOppIds.has(inv.opportunity_id)
+    );
+    
+    // Filter companies by responsavel_id
+    const filteredCompanies = companies.filter(c => c.responsavel_id === selectedMemberId);
+    
+    // Filter activities by user_id (the person who created the activity)
+    const filteredActivities = activities.filter(a => a.user_id === selectedMemberId);
+    
+    // Filter tasks by responsavel_id
+    const filteredTasks = tasks.filter(t => t.responsavel_id === selectedMemberId);
+
+    return {
+      opportunities: filteredOpps,
+      invoices: filteredInvoices,
+      companies: filteredCompanies,
+      activities: filteredActivities,
+      tasks: filteredTasks,
+    };
+  }, [selectedMemberId, opportunities, invoices, companies, activities, tasks]);
 
   const stats = useMemo(() => {
-    const activeOpps = opportunities.filter(o => 
+    const { opportunities: opps, invoices: invs, companies: comps } = filteredData;
+    
+    const activeOpps = opps.filter(o => 
       !['fechado_ganhou', 'fechado_perdeu'].includes(o.stage)
     );
-    const wonOpps = opportunities.filter(o => o.stage === 'fechado_ganhou');
+    const wonOpps = opps.filter(o => o.stage === 'fechado_ganhou');
     const totalPipeline = activeOpps.reduce((sum, o) => sum + Number(o.valor_potencial), 0);
     const wonValue = wonOpps.reduce((sum, o) => sum + Number(o.valor_potencial), 0);
     
-    const receivedInvoices = invoices.filter(i => i.status === 'recebido');
+    const receivedInvoices = invs.filter(i => i.status === 'recebido');
     const totalRevenue = receivedInvoices.reduce((sum, i) => sum + Number(i.valor), 0);
     
-    const pendingInvoices = invoices.filter(i => i.status === 'a_receber');
+    const pendingInvoices = invs.filter(i => i.status === 'a_receber');
     const pendingValue = pendingInvoices.reduce((sum, i) => sum + Number(i.valor), 0);
 
-    const activeClients = companies.filter(c => c.status === 'cliente_ativo').length;
+    const activeClients = comps.filter(c => c.status === 'cliente_ativo').length;
 
     return {
       activeOpportunities: activeOpps.length,
@@ -42,9 +91,10 @@ export default function Dashboard() {
       totalRevenue,
       pendingValue,
       activeClients,
-      conversionRate: opportunities.length > 0 ? Math.round((wonOpps.length / opportunities.length) * 100) : 0,
+      conversionRate: opps.length > 0 ? Math.round((wonOpps.length / opps.length) * 100) : 0,
+      totalCompanies: comps.length,
     };
-  }, [opportunities, invoices, companies]);
+  }, [filteredData]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -54,6 +104,12 @@ export default function Dashboard() {
       maximumFractionDigits: 1,
     }).format(value);
   };
+
+  const selectedMemberName = useMemo(() => {
+    if (selectedMemberId === 'all') return 'Toda Equipe';
+    const profile = profiles.find(p => p.id === selectedMemberId);
+    return profile?.name || 'Membro';
+  }, [selectedMemberId, profiles]);
 
   if (isLoading) {
     return (
@@ -65,10 +121,29 @@ export default function Dashboard() {
 
   return (
     <div className="p-6 space-y-6">
-      <PageHeader
-        title="Dashboard"
-        description="Visão geral do desempenho comercial"
-      />
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <PageHeader
+          title="Dashboard"
+          description={`Visão geral do desempenho comercial - ${selectedMemberName}`}
+        />
+        
+        <div className="flex items-center gap-2">
+          <Users className="h-4 w-4 text-muted-foreground" />
+          <Select value={selectedMemberId} onValueChange={setSelectedMemberId}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Filtrar por membro" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Toda Equipe</SelectItem>
+              {profiles.map((profile) => (
+                <SelectItem key={profile.id} value={profile.id}>
+                  {profile.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -96,7 +171,7 @@ export default function Dashboard() {
           value={stats.activeClients}
           icon={Building2}
           variant="warning"
-          subtitle={`${companies.length} empresas cadastradas`}
+          subtitle={`${stats.totalCompanies} empresas cadastradas`}
         />
       </div>
 
@@ -124,15 +199,15 @@ export default function Dashboard() {
 
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <PipelineChart />
-        <RevenueChart />
+        <PipelineChart opportunities={filteredData.opportunities} />
+        <RevenueChart invoices={filteredData.invoices} />
       </div>
 
       {/* Bottom Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <LeadSourceChart />
-        <RecentActivities />
-        <TasksList />
+        <LeadSourceChart opportunities={filteredData.opportunities} />
+        <RecentActivities activities={filteredData.activities} profiles={profiles} companies={companies} />
+        <TasksList tasks={filteredData.tasks} profiles={profiles} companies={companies} />
       </div>
     </div>
   );
