@@ -1,11 +1,13 @@
 import { useMemo } from 'react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useInvoices } from '@/hooks/useInvoices';
+import { InvoiceRow } from '@/hooks/useInvoices';
 
-export function RevenueChart() {
-  const { data: invoices = [] } = useInvoices();
+interface RevenueChartProps {
+  invoices: InvoiceRow[];
+}
 
+export function RevenueChart({ invoices }: RevenueChartProps) {
   const data = useMemo(() => {
     if (invoices.length === 0) {
       // Return empty months for current year if no data

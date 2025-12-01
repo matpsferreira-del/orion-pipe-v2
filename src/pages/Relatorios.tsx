@@ -133,7 +133,7 @@ export default function Relatorios() {
 
         <TabsContent value="pipeline" className="space-y-6 mt-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <PipelineChart />
+            <PipelineChart opportunities={opportunities} />
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg font-semibold">Taxa de Conversão por Etapa</CardTitle>
@@ -173,7 +173,7 @@ export default function Relatorios() {
               </CardContent>
             </Card>
           </div>
-          <LeadSourceChart />
+          <LeadSourceChart opportunities={opportunities} />
         </TabsContent>
 
         <TabsContent value="performance" className="space-y-6 mt-6">
@@ -240,7 +240,7 @@ export default function Relatorios() {
 
         <TabsContent value="financeiro" className="space-y-6 mt-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <RevenueChart />
+            <RevenueChart invoices={invoices} />
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg font-semibold">Top 5 Clientes por Faturamento</CardTitle>

@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useOpportunities } from '@/hooks/useOpportunities';
+import { OpportunityRow } from '@/hooks/useOpportunities';
 
 // All pipeline stages matching the commercial funnel
 const pipelineStages = [
@@ -13,9 +13,11 @@ const pipelineStages = [
   { key: 'fechado_ganhou', label: 'Fechado - Ganhou', color: '#22c55e' },
 ];
 
-export function PipelineChart() {
-  const { data: opportunities = [] } = useOpportunities();
+interface PipelineChartProps {
+  opportunities: OpportunityRow[];
+}
 
+export function PipelineChart({ opportunities }: PipelineChartProps) {
   const data = useMemo(() => {
     return pipelineStages.map(stage => {
       const stageOpps = opportunities.filter(o => o.stage === stage.key);
