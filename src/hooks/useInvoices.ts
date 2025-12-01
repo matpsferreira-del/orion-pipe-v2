@@ -91,6 +91,28 @@ export function useUpdateInvoiceStatus() {
   });
 }
 
+export function useUpdateInvoice() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ id, ...data }: { id: string } & Partial<InvoiceInsert>) => {
+      const { error } = await supabase
+        .from('invoices')
+        .update(data)
+        .eq('id', id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      toast.success('Fatura atualizada!');
+    },
+    onError: (error) => {
+      toast.error('Erro ao atualizar fatura: ' + error.message);
+    },
+  });
+}
+
 export function useDeleteInvoice() {
   const queryClient = useQueryClient();
   

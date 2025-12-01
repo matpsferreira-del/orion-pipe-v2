@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useCreateInvoice, InvoiceInsert } from '@/hooks/useInvoices';
+import { useCreateInvoice, useUpdateInvoice, InvoiceInsert, InvoiceRow } from '@/hooks/useInvoices';
 import { useCompanies } from '@/hooks/useCompanies';
 import { Loader2 } from 'lucide-react';
 
@@ -20,9 +20,10 @@ const paymentOptions = [
 interface InvoiceDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  invoice?: InvoiceRow | null;
 }
 
-export function InvoiceDialog({ open, onOpenChange }: InvoiceDialogProps) {
+export function InvoiceDialog({ open, onOpenChange, invoice }: InvoiceDialogProps) {
   const [companyId, setCompanyId] = useState('');
   const [numeroNota, setNumeroNota] = useState('');
   const [cnpjCliente, setCnpjCliente] = useState('');
@@ -34,6 +35,24 @@ export function InvoiceDialog({ open, onOpenChange }: InvoiceDialogProps) {
 
   const { data: companies = [] } = useCompanies();
   const createInvoice = useCreateInvoice();
+  const updateInvoice = useUpdateInvoice();
+
+  const isEditing = !!invoice;
+
+  useEffect(() => {
+    if (invoice) {
+      setCompanyId(invoice.company_id);
+      setNumeroNota(invoice.numero_nota);
+      setCnpjCliente(invoice.cnpj_cliente);
+      setDescricaoServico(invoice.descricao_servico);
+      setValor(String(invoice.valor));
+      setDataEmissao(invoice.data_emissao);
+      setDataVencimento(invoice.data_vencimento);
+      setFormaPagamento(invoice.forma_pagamento);
+    } else {
+      resetForm();
+    }
+  }, [invoice, open]);
 
   const handleCompanyChange = (id: string) => {
     setCompanyId(id);
@@ -46,7 +65,7 @@ export function InvoiceDialog({ open, onOpenChange }: InvoiceDialogProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    const invoice: InvoiceInsert = {
+    const data: InvoiceInsert = {
       company_id: companyId,
       numero_nota: numeroNota,
       cnpj_cliente: cnpjCliente,
@@ -57,12 +76,21 @@ export function InvoiceDialog({ open, onOpenChange }: InvoiceDialogProps) {
       forma_pagamento: formaPagamento,
     };
 
-    createInvoice.mutate(invoice, {
-      onSuccess: () => {
-        onOpenChange(false);
-        resetForm();
-      },
-    });
+    if (isEditing) {
+      updateInvoice.mutate({ id: invoice.id, ...data }, {
+        onSuccess: () => {
+          onOpenChange(false);
+          resetForm();
+        },
+      });
+    } else {
+      createInvoice.mutate(data, {
+        onSuccess: () => {
+          onOpenChange(false);
+          resetForm();
+        },
+      });
+    }
   };
 
   const resetForm = () => {
@@ -76,11 +104,13 @@ export function InvoiceDialog({ open, onOpenChange }: InvoiceDialogProps) {
     setFormaPagamento('boleto');
   };
 
+  const isPending = createInvoice.isPending || updateInvoice.isPending;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Nova Fatura</DialogTitle>
+          <DialogTitle>{isEditing ? 'Editar Fatura' : 'Nova Fatura'}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
@@ -194,9 +224,9 @@ export function InvoiceDialog({ open, onOpenChange }: InvoiceDialogProps) {
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={createInvoice.isPending}>
-              {createInvoice.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Criar Fatura
+            <Button type="submit" disabled={isPending}>
+              {isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              {isEditing ? 'Salvar Alterações' : 'Criar Fatura'}
             </Button>
           </div>
         </form>

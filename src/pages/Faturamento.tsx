@@ -6,11 +6,13 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { useInvoices, useUpdateInvoiceStatus } from '@/hooks/useInvoices';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { useInvoices, useUpdateInvoiceStatus, useDeleteInvoice, InvoiceRow } from '@/hooks/useInvoices';
 import { useCompanies } from '@/hooks/useCompanies';
+import { useAuth } from '@/contexts/AuthContext';
 import { InvoiceDialog } from '@/components/invoices/InvoiceDialog';
-import { Plus, Search, Filter, MoreHorizontal, Upload, Download, DollarSign, Clock, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
+import { Plus, Search, Filter, MoreHorizontal, Upload, Download, DollarSign, Clock, AlertCircle, CheckCircle2, Loader2, Pencil, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const statusConfig: Record<string, { label: string; className: string }> = {
@@ -31,11 +33,17 @@ const paymentLabels: Record<string, string> = {
 export default function Faturamento() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
-  const [showNewDialog, setShowNewDialog] = useState(false);
+  const [showDialog, setShowDialog] = useState(false);
+  const [editingInvoice, setEditingInvoice] = useState<InvoiceRow | null>(null);
+  const [deleteInvoice, setDeleteInvoice] = useState<InvoiceRow | null>(null);
+
+  const { profile } = useAuth();
+  const isAdmin = profile?.role === 'admin';
 
   const { data: invoices = [], isLoading } = useInvoices();
   const { data: companies = [] } = useCompanies();
   const updateStatus = useUpdateInvoiceStatus();
+  const deleteInvoiceMutation = useDeleteInvoice();
 
   const filteredInvoices = useMemo(() => {
     return invoices.filter(invoice => {
@@ -79,6 +87,26 @@ export default function Faturamento() {
     updateStatus.mutate({ id, status: 'recebido' });
   };
 
+  const handleEdit = (invoice: InvoiceRow) => {
+    setEditingInvoice(invoice);
+    setShowDialog(true);
+  };
+
+  const handleDelete = () => {
+    if (deleteInvoice) {
+      deleteInvoiceMutation.mutate(deleteInvoice.id, {
+        onSuccess: () => setDeleteInvoice(null),
+      });
+    }
+  };
+
+  const handleDialogClose = (open: boolean) => {
+    setShowDialog(open);
+    if (!open) {
+      setEditingInvoice(null);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="p-6 flex items-center justify-center min-h-[400px]">
@@ -102,7 +130,7 @@ export default function Faturamento() {
               <Download className="h-4 w-4 mr-2" />
               Exportar
             </Button>
-            <Button onClick={() => setShowNewDialog(true)}>
+            <Button onClick={() => setShowDialog(true)}>
               <Plus className="h-4 w-4 mr-2" />
               Nova Fatura
             </Button>
@@ -221,12 +249,28 @@ export default function Faturamento() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem>Ver detalhes</DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleMarkAsReceived(invoice.id)}>
-                            Marcar como recebido
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>Editar</DropdownMenuItem>
-                          <DropdownMenuItem className="text-destructive">Cancelar</DropdownMenuItem>
+                          {invoice.status !== 'recebido' && (
+                            <DropdownMenuItem onClick={() => handleMarkAsReceived(invoice.id)}>
+                              <CheckCircle2 className="h-4 w-4 mr-2" />
+                              Marcar como recebido
+                            </DropdownMenuItem>
+                          )}
+                          {isAdmin && (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem onClick={() => handleEdit(invoice)}>
+                                <Pencil className="h-4 w-4 mr-2" />
+                                Editar
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                className="text-destructive"
+                                onClick={() => setDeleteInvoice(invoice)}
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Excluir
+                              </DropdownMenuItem>
+                            </>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
@@ -238,8 +282,38 @@ export default function Faturamento() {
         </Table>
       </div>
 
-      {/* New Invoice Dialog */}
-      <InvoiceDialog open={showNewDialog} onOpenChange={setShowNewDialog} />
+      {/* Invoice Dialog */}
+      <InvoiceDialog 
+        open={showDialog} 
+        onOpenChange={handleDialogClose}
+        invoice={editingInvoice}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deleteInvoice} onOpenChange={(open) => !open && setDeleteInvoice(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir fatura</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir a fatura <strong>{deleteInvoice?.numero_nota}</strong>?
+              Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteInvoiceMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                'Excluir'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
