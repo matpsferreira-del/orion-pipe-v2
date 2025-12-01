@@ -117,10 +117,10 @@ export function InvoiceDialog({ open, onOpenChange }: InvoiceDialogProps) {
               <Label htmlFor="cnpj">CNPJ Cliente *</Label>
               <Input
                 id="cnpj"
-                placeholder="00.000.000/0001-00"
+                placeholder="Selecione um cliente"
                 value={cnpjCliente}
-                onChange={(e) => setCnpjCliente(e.target.value)}
-                required
+                readOnly
+                className="bg-muted"
               />
             </div>
             
