@@ -1,10 +1,10 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useCreateCompany, useCompanies, CompanyInsert } from '@/hooks/useCompanies';
+import { useCreateCompany, useUpdateCompany, useCompanies, CompanyInsert, CompanyRow } from '@/hooks/useCompanies';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
@@ -44,9 +44,10 @@ const estadoOptions = [
 interface CompanyDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  company?: CompanyRow | null;
 }
 
-export function CompanyDialog({ open, onOpenChange }: CompanyDialogProps) {
+export function CompanyDialog({ open, onOpenChange, company }: CompanyDialogProps) {
   const [razaoSocial, setRazaoSocial] = useState('');
   const [nomeFantasia, setNomeFantasia] = useState('');
   const [cnpj, setCnpj] = useState('');
@@ -58,18 +59,42 @@ export function CompanyDialog({ open, onOpenChange }: CompanyDialogProps) {
   const [status, setStatus] = useState('prospect');
   const [cnpjError, setCnpjError] = useState<string | null>(null);
 
+  const isEditing = !!company;
+
   const { data: companies = [] } = useCompanies();
   const createCompany = useCreateCompany();
+  const updateCompany = useUpdateCompany();
+
+  // Populate form when editing
+  useEffect(() => {
+    if (company) {
+      setRazaoSocial(company.razao_social);
+      setNomeFantasia(company.nome_fantasia);
+      setCnpj(company.cnpj);
+      setSite(company.site || '');
+      setSegmento(company.segmento);
+      setPorte(company.porte);
+      setCidade(company.cidade);
+      setEstado(company.estado);
+      setStatus(company.status);
+      setCnpjError(null);
+    } else {
+      resetForm();
+    }
+  }, [company]);
 
   // Normalize CNPJ for comparison (remove formatting)
   const normalizeCnpj = (value: string) => value.replace(/\D/g, '');
 
-  // Check if CNPJ already exists
+  // Check if CNPJ already exists (excluding current company when editing)
   const cnpjExists = useMemo(() => {
     if (!cnpj) return false;
     const normalizedInput = normalizeCnpj(cnpj);
-    return companies.some(c => normalizeCnpj(c.cnpj) === normalizedInput);
-  }, [cnpj, companies]);
+    return companies.some(c => 
+      normalizeCnpj(c.cnpj) === normalizedInput && 
+      (!isEditing || c.id !== company?.id)
+    );
+  }, [cnpj, companies, isEditing, company]);
 
   const handleCnpjChange = (value: string) => {
     setCnpj(value);
@@ -94,7 +119,7 @@ export function CompanyDialog({ open, onOpenChange }: CompanyDialogProps) {
       return;
     }
     
-    const company: CompanyInsert = {
+    const companyData: CompanyInsert = {
       razao_social: razaoSocial,
       nome_fantasia: nomeFantasia,
       cnpj,
@@ -106,12 +131,21 @@ export function CompanyDialog({ open, onOpenChange }: CompanyDialogProps) {
       status,
     };
 
-    createCompany.mutate(company, {
-      onSuccess: () => {
-        onOpenChange(false);
-        resetForm();
-      },
-    });
+    if (isEditing && company) {
+      updateCompany.mutate({ id: company.id, ...companyData }, {
+        onSuccess: () => {
+          onOpenChange(false);
+          resetForm();
+        },
+      });
+    } else {
+      createCompany.mutate(companyData, {
+        onSuccess: () => {
+          onOpenChange(false);
+          resetForm();
+        },
+      });
+    }
   };
 
   const resetForm = () => {
@@ -130,7 +164,7 @@ export function CompanyDialog({ open, onOpenChange }: CompanyDialogProps) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Nova Empresa</DialogTitle>
+          <DialogTitle>{isEditing ? 'Editar Empresa' : 'Nova Empresa'}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
@@ -272,9 +306,9 @@ export function CompanyDialog({ open, onOpenChange }: CompanyDialogProps) {
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={createCompany.isPending || !!cnpjError}>
-              {createCompany.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Criar Empresa
+            <Button type="submit" disabled={createCompany.isPending || updateCompany.isPending || !!cnpjError}>
+              {(createCompany.isPending || updateCompany.isPending) && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              {isEditing ? 'Salvar Alterações' : 'Criar Empresa'}
             </Button>
           </div>
         </form>

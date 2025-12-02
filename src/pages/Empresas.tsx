@@ -41,6 +41,7 @@ export default function Empresas() {
   const [filterSegmento, setFilterSegmento] = useState<string>('all');
   const [selectedCompany, setSelectedCompany] = useState<CompanyRow | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [companyToEdit, setCompanyToEdit] = useState<CompanyRow | null>(null);
   const [contactDialogOpen, setContactDialogOpen] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -267,7 +268,11 @@ export default function Empresas() {
                             <Eye className="h-4 w-4 mr-2" />
                             Ver detalhes
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={(e) => e.stopPropagation()}>
+                          <DropdownMenuItem onClick={(e) => { 
+                            e.stopPropagation(); 
+                            setCompanyToEdit(company);
+                            setDialogOpen(true);
+                          }}>
                             <Pencil className="h-4 w-4 mr-2" />
                             Editar
                           </DropdownMenuItem>
@@ -308,7 +313,14 @@ export default function Empresas() {
       </Sheet>
 
       {/* Company Dialog */}
-      <CompanyDialog open={dialogOpen} onOpenChange={setDialogOpen} />
+      <CompanyDialog 
+        open={dialogOpen} 
+        onOpenChange={(open) => {
+          setDialogOpen(open);
+          if (!open) setCompanyToEdit(null);
+        }} 
+        company={companyToEdit}
+      />
 
       {/* Contact Dialog */}
       <ContactDialog open={contactDialogOpen} onOpenChange={setContactDialogOpen} />
