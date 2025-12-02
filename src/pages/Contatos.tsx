@@ -17,6 +17,7 @@ export default function Contatos() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCompany, setFilterCompany] = useState<string>('all');
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [contactToEdit, setContactToEdit] = useState<ContactRow | null>(null);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [contactToDelete, setContactToDelete] = useState<ContactRow | null>(null);
@@ -218,7 +219,11 @@ export default function Contatos() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={(e) => e.stopPropagation()}>
+                        <DropdownMenuItem onClick={(e) => {
+                          e.stopPropagation();
+                          setContactToEdit(contact);
+                          setDialogOpen(true);
+                        }}>
                           <Pencil className="h-4 w-4 mr-2" />
                           Editar
                         </DropdownMenuItem>
@@ -240,7 +245,14 @@ export default function Contatos() {
       </div>
 
       {/* Contact Dialog */}
-      <ContactDialog open={dialogOpen} onOpenChange={setDialogOpen} />
+      <ContactDialog 
+        open={dialogOpen} 
+        onOpenChange={(open) => {
+          setDialogOpen(open);
+          if (!open) setContactToEdit(null);
+        }}
+        contact={contactToEdit}
+      />
 
       {/* Import Dialog */}
       <ImportContactsDialog open={importDialogOpen} onOpenChange={setImportDialogOpen} />
