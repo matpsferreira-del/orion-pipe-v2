@@ -15,6 +15,7 @@ import {
   Users,
   LogOut,
   CheckSquare,
+  Contact,
 } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -66,6 +67,7 @@ export function AppSidebar() {
     { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
     { to: '/pipeline', icon: Kanban, label: 'Funil Comercial' },
     { to: '/empresas', icon: Building2, label: 'Empresas' },
+    { to: '/contatos', icon: Contact, label: 'Contatos' },
     { to: '/oportunidades', icon: Target, label: 'Oportunidades' },
     { to: '/tarefas', icon: CheckSquare, label: 'Tarefas' },
     { to: '/faturamento', icon: Receipt, label: 'Faturamento' },
