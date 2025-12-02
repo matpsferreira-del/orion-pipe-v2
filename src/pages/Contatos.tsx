@@ -5,17 +5,25 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useContacts, useDeleteContact, ContactRow } from '@/hooks/useContacts';
 import { useCompanies } from '@/hooks/useCompanies';
-import { Plus, Search, Filter, MoreHorizontal, User, Pencil, Trash2, Download, Loader2, Mail, Phone, Building2, Upload, Linkedin } from 'lucide-react';
+import { Plus, Search, Filter, MoreHorizontal, User, Pencil, Trash2, Download, Loader2, Mail, Phone, Building2, Upload, Linkedin, ArrowUpDown, ArrowUp, ArrowDown, X } from 'lucide-react';
 import { ContactDialog } from '@/components/contacts/ContactDialog';
 import { ImportContactsDialog } from '@/components/contacts/ImportContactsDialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 
+type SortField = 'nome' | 'company' | 'cargo' | 'email' | 'telefone';
+type SortDirection = 'asc' | 'desc';
+
 export default function Contatos() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCompany, setFilterCompany] = useState<string>('all');
+  const [filterCargo, setFilterCargo] = useState<string>('all');
+  const [filterPrimary, setFilterPrimary] = useState<string>('all');
+  const [sortField, setSortField] = useState<SortField | null>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [contactToEdit, setContactToEdit] = useState<ContactRow | null>(null);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
@@ -26,16 +34,79 @@ export default function Contatos() {
   const { data: companies = [] } = useCompanies();
   const deleteContact = useDeleteContact();
 
-  const filteredContacts = useMemo(() => {
-    return contacts.filter(contact => {
+  const cargos = useMemo(() => {
+    return [...new Set(contacts.map(c => c.cargo).filter(Boolean))];
+  }, [contacts]);
+
+  const activeFiltersCount = useMemo(() => {
+    let count = 0;
+    if (filterCompany !== 'all') count++;
+    if (filterCargo !== 'all') count++;
+    if (filterPrimary !== 'all') count++;
+    return count;
+  }, [filterCompany, filterCargo, filterPrimary]);
+
+  const clearAllFilters = () => {
+    setFilterCompany('all');
+    setFilterCargo('all');
+    setFilterPrimary('all');
+  };
+
+  const filteredAndSortedContacts = useMemo(() => {
+    let result = contacts.filter(contact => {
       const matchesSearch = searchTerm === '' ||
         contact.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
         contact.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (contact.cargo && contact.cargo.toLowerCase().includes(searchTerm.toLowerCase()));
       const matchesCompany = filterCompany === 'all' || contact.company_id === filterCompany;
-      return matchesSearch && matchesCompany;
+      const matchesCargo = filterCargo === 'all' || contact.cargo === filterCargo;
+      const matchesPrimary = filterPrimary === 'all' || 
+        (filterPrimary === 'primary' && contact.is_primary) ||
+        (filterPrimary === 'secondary' && !contact.is_primary);
+      return matchesSearch && matchesCompany && matchesCargo && matchesPrimary;
     });
-  }, [contacts, searchTerm, filterCompany]);
+
+    if (sortField) {
+      result = [...result].sort((a, b) => {
+        let aValue: string;
+        let bValue: string;
+
+        if (sortField === 'company') {
+          aValue = getCompanyName(a.company_id);
+          bValue = getCompanyName(b.company_id);
+        } else {
+          aValue = a[sortField] || '';
+          bValue = b[sortField] || '';
+        }
+
+        const comparison = String(aValue).localeCompare(String(bValue), 'pt-BR', { sensitivity: 'base' });
+        return sortDirection === 'asc' ? comparison : -comparison;
+      });
+    }
+
+    return result;
+  }, [contacts, companies, searchTerm, filterCompany, filterCargo, filterPrimary, sortField, sortDirection]);
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      if (sortDirection === 'asc') {
+        setSortDirection('desc');
+      } else {
+        setSortField(null);
+        setSortDirection('asc');
+      }
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  const SortIcon = ({ field }: { field: SortField }) => {
+    if (sortField !== field) return <ArrowUpDown className="h-4 w-4 ml-1 opacity-50" />;
+    return sortDirection === 'asc' ? 
+      <ArrowUp className="h-4 w-4 ml-1" /> : 
+      <ArrowDown className="h-4 w-4 ml-1" />;
+  };
 
   const getCompanyName = (companyId: string) => {
     const company = companies.find(c => c.id === companyId);
@@ -101,18 +172,100 @@ export default function Contatos() {
             className="pl-9"
           />
         </div>
-        <Select value={filterCompany} onValueChange={setFilterCompany}>
-          <SelectTrigger className="w-[220px]">
-            <Filter className="h-4 w-4 mr-2" />
-            <SelectValue placeholder="Empresa" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todas as empresas</SelectItem>
-            {companies.map(company => (
-              <SelectItem key={company.id} value={company.id}>{company.nome_fantasia}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" className="gap-2">
+              <Filter className="h-4 w-4" />
+              Filtros
+              {activeFiltersCount > 0 && (
+                <Badge variant="secondary" className="ml-1 h-5 w-5 p-0 flex items-center justify-center text-xs">
+                  {activeFiltersCount}
+                </Badge>
+              )}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-80 bg-popover" align="start">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h4 className="font-medium">Filtros</h4>
+                {activeFiltersCount > 0 && (
+                  <Button variant="ghost" size="sm" onClick={clearAllFilters} className="h-auto py-1 px-2 text-xs">
+                    <X className="h-3 w-3 mr-1" />
+                    Limpar todos
+                  </Button>
+                )}
+              </div>
+              
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Empresa</label>
+                <Select value={filterCompany} onValueChange={setFilterCompany}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Todas as empresas" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas as empresas</SelectItem>
+                    {companies.map(company => (
+                      <SelectItem key={company.id} value={company.id}>{company.nome_fantasia}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Cargo</label>
+                <Select value={filterCargo} onValueChange={setFilterCargo}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Todos os cargos" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os cargos</SelectItem>
+                    {cargos.map(cargo => (
+                      <SelectItem key={cargo} value={cargo}>{cargo}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Tipo</label>
+                <Select value={filterPrimary} onValueChange={setFilterPrimary}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Todos" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="primary">Contato Principal</SelectItem>
+                    <SelectItem value="secondary">Contato Secundário</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </PopoverContent>
+        </Popover>
+
+        {activeFiltersCount > 0 && (
+          <div className="flex items-center gap-2">
+            {filterCompany !== 'all' && (
+              <Badge variant="secondary" className="gap-1">
+                {companies.find(c => c.id === filterCompany)?.nome_fantasia || filterCompany}
+                <X className="h-3 w-3 cursor-pointer" onClick={() => setFilterCompany('all')} />
+              </Badge>
+            )}
+            {filterCargo !== 'all' && (
+              <Badge variant="secondary" className="gap-1">
+                {filterCargo}
+                <X className="h-3 w-3 cursor-pointer" onClick={() => setFilterCargo('all')} />
+              </Badge>
+            )}
+            {filterPrimary !== 'all' && (
+              <Badge variant="secondary" className="gap-1">
+                {filterPrimary === 'primary' ? 'Principal' : 'Secundário'}
+                <X className="h-3 w-3 cursor-pointer" onClick={() => setFilterPrimary('all')} />
+              </Badge>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Table */}
@@ -120,25 +273,65 @@ export default function Contatos() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Contato</TableHead>
-              <TableHead>Empresa</TableHead>
-              <TableHead>Cargo</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Telefone</TableHead>
+              <TableHead 
+                className="cursor-pointer hover:bg-muted/50 select-none"
+                onClick={() => handleSort('nome')}
+              >
+                <div className="flex items-center">
+                  Contato
+                  <SortIcon field="nome" />
+                </div>
+              </TableHead>
+              <TableHead 
+                className="cursor-pointer hover:bg-muted/50 select-none"
+                onClick={() => handleSort('company')}
+              >
+                <div className="flex items-center">
+                  Empresa
+                  <SortIcon field="company" />
+                </div>
+              </TableHead>
+              <TableHead 
+                className="cursor-pointer hover:bg-muted/50 select-none"
+                onClick={() => handleSort('cargo')}
+              >
+                <div className="flex items-center">
+                  Cargo
+                  <SortIcon field="cargo" />
+                </div>
+              </TableHead>
+              <TableHead 
+                className="cursor-pointer hover:bg-muted/50 select-none"
+                onClick={() => handleSort('email')}
+              >
+                <div className="flex items-center">
+                  Email
+                  <SortIcon field="email" />
+                </div>
+              </TableHead>
+              <TableHead 
+                className="cursor-pointer hover:bg-muted/50 select-none"
+                onClick={() => handleSort('telefone')}
+              >
+                <div className="flex items-center">
+                  Telefone
+                  <SortIcon field="telefone" />
+                </div>
+              </TableHead>
               <TableHead>WhatsApp</TableHead>
               <TableHead>LinkedIn</TableHead>
               <TableHead className="w-[50px]"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredContacts.length === 0 ? (
+            {filteredAndSortedContacts.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                   Nenhum contato encontrado
                 </TableCell>
               </TableRow>
             ) : (
-              filteredContacts.map((contact) => (
+              filteredAndSortedContacts.map((contact) => (
                 <TableRow key={contact.id} className="hover:bg-muted/50">
                   <TableCell>
                     <div className="flex items-center gap-3">
