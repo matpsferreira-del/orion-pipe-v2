@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Upload, FileSpreadsheet, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Upload, FileSpreadsheet, Loader2, AlertCircle, CheckCircle2, Info } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -21,39 +21,127 @@ interface ImportRow {
   telefone: string;
 }
 
+// Função para encontrar coluna por palavras-chave (case insensitive)
+const findColumn = (headers: string[], keywords: string[]): string | undefined => {
+  const normalizedHeaders = headers.map(h => h.toLowerCase().trim());
+  
+  for (const keyword of keywords) {
+    const exactMatch = normalizedHeaders.findIndex(h => h === keyword.toLowerCase());
+    if (exactMatch !== -1) return headers[exactMatch];
+  }
+  
+  for (const keyword of keywords) {
+    const partialMatch = normalizedHeaders.findIndex(h => h.includes(keyword.toLowerCase()));
+    if (partialMatch !== -1) return headers[partialMatch];
+  }
+  
+  return undefined;
+};
+
 export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
   const [data, setData] = useState<ImportRow[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [importResult, setImportResult] = useState<{ success: number; errors: number } | null>(null);
+  const [detectedColumns, setDetectedColumns] = useState<string[]>([]);
+  const [mappedColumns, setMappedColumns] = useState<Record<string, string>>({});
+  const [parseWarning, setParseWarning] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file) {
+      console.log('Nenhum arquivo selecionado');
+      return;
+    }
 
+    console.log('Arquivo selecionado:', file.name, 'Tamanho:', file.size);
     setIsLoading(true);
     setImportResult(null);
+    setParseWarning(null);
+    setDetectedColumns([]);
+    setMappedColumns({});
     
     try {
       const buffer = await file.arrayBuffer();
+      console.log('Buffer lido, tamanho:', buffer.byteLength);
+      
       const workbook = XLSX.read(buffer, { type: 'array' });
+      console.log('Workbook lido, planilhas:', workbook.SheetNames);
+      
       const sheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[sheetName];
+      
+      // Obter headers da planilha
+      const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
+      const headers: string[] = [];
+      for (let col = range.s.c; col <= range.e.c; col++) {
+        const cellAddress = XLSX.utils.encode_cell({ r: range.s.r, c: col });
+        const cell = worksheet[cellAddress];
+        headers.push(cell ? String(cell.v).trim() : `Coluna ${col + 1}`);
+      }
+      
+      console.log('Colunas detectadas:', headers);
+      setDetectedColumns(headers);
+      
       const jsonData = XLSX.utils.sheet_to_json<Record<string, string>>(worksheet);
+      console.log('Total de linhas:', jsonData.length);
+      
+      if (jsonData.length === 0) {
+        setParseWarning('O arquivo está vazio ou não foi possível ler os dados.');
+        setData([]);
+        setIsLoading(false);
+        return;
+      }
+
+      // Mapeamento flexível de colunas
+      const empresaCol = findColumn(headers, ['empresa', 'razao_social', 'razão social', 'nome fantasia', 'company', 'nome da empresa']);
+      const contatoCol = findColumn(headers, ['nome do responsável', 'nome do responsavel', 'responsável', 'responsavel', 'contato', 'nome', 'contact', 'nome do contato']);
+      const emailCol = findColumn(headers, ['email', 'e-mail', 'mail']);
+      const telefoneCol = findColumn(headers, ['telefone', 'phone', 'tel', 'celular', 'fone', 'whatsapp']);
+
+      const mapped = {
+        empresa: empresaCol || 'Não encontrado',
+        contato: contatoCol || 'Não encontrado',
+        email: emailCol || 'Não encontrado',
+        telefone: telefoneCol || 'Não encontrado',
+      };
+      setMappedColumns(mapped);
+      console.log('Mapeamento de colunas:', mapped);
+
+      if (!empresaCol) {
+        setParseWarning(`Coluna "Empresa" não encontrada. Colunas disponíveis: ${headers.join(', ')}`);
+        setData([]);
+        setIsLoading(false);
+        return;
+      }
 
       const parsedData: ImportRow[] = jsonData.map((row) => ({
-        empresa: row['Empresa'] || row['empresa'] || '',
-        contato: row['Nome do responsável'] || row['Nome do Responsável'] || row['contato'] || row['Contato'] || '',
-        email: (row['Email'] || row['email'] || '').replace(/[<>]/g, '').trim(),
-        telefone: row['Telefone'] || row['telefone'] || '',
-      })).filter(row => row.empresa && row.contato);
+        empresa: String(row[empresaCol] || '').trim(),
+        contato: contatoCol ? String(row[contatoCol] || '').replace(/[,<>]/g, '').trim() : '',
+        email: emailCol ? String(row[emailCol] || '').replace(/[<>]/g, '').trim() : '',
+        telefone: telefoneCol ? String(row[telefoneCol] || '').trim() : '',
+      })).filter(row => row.empresa.length > 0);
+
+      console.log('Dados parseados:', parsedData.length, 'registros válidos');
+
+      if (parsedData.length === 0) {
+        setParseWarning('Nenhum registro válido encontrado. Verifique se a coluna "Empresa" contém dados.');
+      } else if (!contatoCol) {
+        setParseWarning(`Aviso: Coluna de contato não identificada. Os contatos serão criados sem nome.`);
+      }
 
       setData(parsedData);
+      
+      if (parsedData.length > 0) {
+        toast.success(`${parsedData.length} registros encontrados no arquivo!`);
+      }
     } catch (error) {
-      console.error('Error parsing file:', error);
-      toast.error('Erro ao ler o arquivo. Verifique se é um arquivo Excel válido.');
+      console.error('Erro ao ler arquivo:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      toast.error(`Erro ao ler o arquivo: ${errorMessage}`);
+      setParseWarning(`Erro ao processar arquivo: ${errorMessage}`);
     } finally {
       setIsLoading(false);
     }
@@ -94,14 +182,15 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
 
         if (companyError) throw companyError;
 
-        // Create contact
+        // Create contact (mesmo sem nome, para manter o email/telefone)
+        const contactName = row.contato || 'Contato Principal';
         const { error: contactError } = await supabase
           .from('contacts')
           .insert({
             company_id: company.id,
-            nome: row.contato.replace(/,/g, '').trim(),
+            nome: contactName,
             cargo: 'Responsável',
-            email: cleanEmail(row.email),
+            email: cleanEmail(row.email) || `contato_${Date.now()}@importado.tmp`,
             telefone: cleanPhone(row.telefone),
             whatsapp: cleanPhone(row.telefone),
             is_primary: true,
@@ -134,6 +223,9 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
   const handleClose = () => {
     setData([]);
     setImportResult(null);
+    setDetectedColumns([]);
+    setMappedColumns({});
+    setParseWarning(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -183,6 +275,32 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
             )}
           </div>
 
+          {/* Detected Columns Info */}
+          {detectedColumns.length > 0 && (
+            <Alert>
+              <Info className="h-4 w-4" />
+              <AlertDescription className="text-sm">
+                <div className="font-medium mb-1">Colunas detectadas:</div>
+                <div className="text-muted-foreground text-xs mb-2">{detectedColumns.join(' | ')}</div>
+                <div className="font-medium mb-1">Mapeamento:</div>
+                <div className="text-xs grid grid-cols-2 gap-1">
+                  <span>Empresa → {mappedColumns.empresa}</span>
+                  <span>Contato → {mappedColumns.contato}</span>
+                  <span>Email → {mappedColumns.email}</span>
+                  <span>Telefone → {mappedColumns.telefone}</span>
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* Warning */}
+          {parseWarning && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{parseWarning}</AlertDescription>
+            </Alert>
+          )}
+
           {/* Import Result */}
           {importResult && (
             <Alert variant={importResult.errors > 0 ? 'destructive' : 'default'}>
@@ -213,9 +331,9 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
                   {data.slice(0, 50).map((row, index) => (
                     <TableRow key={index}>
                       <TableCell className="font-medium">{row.empresa}</TableCell>
-                      <TableCell>{row.contato}</TableCell>
-                      <TableCell className="text-muted-foreground">{row.email}</TableCell>
-                      <TableCell className="text-muted-foreground">{row.telefone}</TableCell>
+                      <TableCell>{row.contato || <span className="text-muted-foreground italic">Não informado</span>}</TableCell>
+                      <TableCell className="text-muted-foreground">{row.email || '-'}</TableCell>
+                      <TableCell className="text-muted-foreground">{row.telefone || '-'}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
