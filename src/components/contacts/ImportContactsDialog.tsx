@@ -202,6 +202,15 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
     return email.toLowerCase().trim();
   };
 
+  const normalizePorte = (porte: string): string => {
+    if (!porte) return '';
+    const normalized = porte.toLowerCase().trim();
+    if (normalized.includes('pequen')) return 'pequena';
+    if (normalized.includes('médi') || normalized.includes('medi')) return 'media';
+    if (normalized.includes('grand') || normalized.includes('enterprise')) return 'grande';
+    return '';
+  };
+
   const handleImport = async () => {
     const validContacts = parsedData.filter(row => !row.isDuplicate && !row.companyNotFound);
     
@@ -235,7 +244,7 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
               cidade: row.cidade || '',
               estado: row.estado || '',
               segmento: row.segmento || '',
-              porte: row.porte || '',
+              porte: normalizePorte(row.porte) || 'media',
               status: 'prospect',
             };
 
