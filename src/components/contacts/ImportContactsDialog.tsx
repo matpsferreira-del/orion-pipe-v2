@@ -131,13 +131,30 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
         const headers = Object.keys(jsonData[0]);
         setDetectedColumns(headers);
 
-        const contatoCol = findColumn(headers, ['contato', 'nome', 'responsável', 'responsavel', 'name']);
+        // Find first "contato" column for name
+        const contatoCol = findColumn(headers, ['nome', 'responsável', 'responsavel', 'name']);
+        // If no nome column found, use first column that has 'contato'
+        const firstContatoCol = !contatoCol ? headers.find(h => h.toLowerCase().includes('contato') && !h.toLowerCase().includes('_1') && !h.toLowerCase().includes('_2')) : contatoCol;
+        
         const empresaCol = findColumn(headers, ['empresa', 'company', 'companhia', 'razao', 'fantasia']);
         const cargoCol = findColumn(headers, ['cargo', 'position', 'função', 'funcao', 'role']);
         const emailCol = findColumn(headers, ['email', 'e-mail', 'mail']);
-        const telefoneCol = findColumn(headers, ['telefone', 'phone', 'tel', 'fone']);
+        
+        // Check for telefone column, or use second "contato" column if exists (XLSX may rename duplicates to "Contato_1")
+        let telefoneCol = findColumn(headers, ['telefone', 'phone', 'tel', 'fone', 'celular']);
+        if (!telefoneCol) {
+          // Look for duplicate contato columns (XLSX renames duplicates to columnName_1, columnName_2, etc)
+          const duplicateContatoCol = headers.find(h => 
+            (h.toLowerCase().includes('contato_') || h.toLowerCase().includes('contato ')) ||
+            (h.toLowerCase().includes('contato') && h !== firstContatoCol)
+          );
+          if (duplicateContatoCol) {
+            telefoneCol = duplicateContatoCol;
+          }
+        }
+        
         const whatsappCol = findColumn(headers, ['whatsapp', 'whats', 'wpp', 'zap']);
-        const linkedinCol = findColumn(headers, ['linkedin', 'linked', 'in']);
+        const linkedinCol = findColumn(headers, ['linkedin', 'linked']);
         const cnpjCol = findColumn(headers, ['cnpj']);
         const cidadeCol = findColumn(headers, ['cidade', 'city']);
         const estadoCol = findColumn(headers, ['estado', 'uf', 'state']);
@@ -145,7 +162,7 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
         const porteCol = findColumn(headers, ['porte', 'size', 'tamanho']);
 
         const rows: ImportRow[] = jsonData.map((row) => ({
-          contato: contatoCol ? String(row[contatoCol] || '').trim() : '',
+          contato: firstContatoCol ? String(row[firstContatoCol] || '').trim() : '',
           empresa: empresaCol ? String(row[empresaCol] || '').trim() : '',
           cargo: cargoCol ? String(row[cargoCol] || '').trim() : '',
           email: emailCol ? String(row[emailCol] || '').trim() : '',
@@ -302,7 +319,7 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
   const downloadTemplate = () => {
     const template = [
       { Contato: 'João Silva', Cargo: 'Diretor', Empresa: 'Tech Solutions', Email: 'joao@tech.com', Telefone: '11999998888', WhatsApp: '11999998888', LinkedIn: 'https://linkedin.com/in/joaosilva', CNPJ: '12.345.678/0001-90', Cidade: 'São Paulo', Estado: 'SP', Segmento: 'Tecnologia', Porte: 'media' },
-      { Contato: 'Maria Santos', Cargo: 'RH', Empresa: 'Nova Empresa', Email: 'maria@nova.com', Telefone: '11988887777', WhatsApp: '', LinkedIn: '', CNPJ: '98.765.432/0001-10', Cidade: 'Rio de Janeiro', Estado: 'RJ', Segmento: 'Varejo', Porte: 'grande' },
+      { Contato: 'Maria Santos', Cargo: 'RH', Empresa: 'Nova Empresa', Email: 'maria@nova.com', Telefone: '11988887777', WhatsApp: '', LinkedIn: '', CNPJ: '', Cidade: 'Rio de Janeiro', Estado: 'RJ', Segmento: 'Varejo', Porte: 'grande' },
     ];
     const ws = XLSX.utils.json_to_sheet(template);
     const wb = XLSX.utils.book_new();
