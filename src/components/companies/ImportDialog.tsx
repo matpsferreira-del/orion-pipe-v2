@@ -19,6 +19,9 @@ interface ImportRow {
   contato: string;
   email: string;
   telefone: string;
+  porte: string;
+  cidade: string;
+  estado: string;
 }
 
 // Função para encontrar coluna por palavras-chave (case insensitive)
@@ -100,12 +103,18 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
       const contatoCol = findColumn(headers, ['nome do responsável', 'nome do responsavel', 'responsável', 'responsavel', 'contato', 'nome', 'contact', 'nome do contato']);
       const emailCol = findColumn(headers, ['email', 'e-mail', 'mail']);
       const telefoneCol = findColumn(headers, ['telefone', 'phone', 'tel', 'celular', 'fone', 'whatsapp']);
+      const porteCol = findColumn(headers, ['porte', 'tamanho', 'size', 'porte da empresa']);
+      const cidadeCol = findColumn(headers, ['cidade', 'city', 'municipio', 'município']);
+      const estadoCol = findColumn(headers, ['estado', 'uf', 'state']);
 
       const mapped = {
         empresa: empresaCol || 'Não encontrado',
         contato: contatoCol || 'Não encontrado',
         email: emailCol || 'Não encontrado',
         telefone: telefoneCol || 'Não encontrado',
+        porte: porteCol || 'Não encontrado',
+        cidade: cidadeCol || 'Não encontrado',
+        estado: estadoCol || 'Não encontrado',
       };
       setMappedColumns(mapped);
       console.log('Mapeamento de colunas:', mapped);
@@ -122,6 +131,9 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
         contato: contatoCol ? String(row[contatoCol] || '').replace(/[,<>]/g, '').trim() : '',
         email: emailCol ? String(row[emailCol] || '').replace(/[<>]/g, '').trim() : '',
         telefone: telefoneCol ? String(row[telefoneCol] || '').trim() : '',
+        porte: porteCol ? String(row[porteCol] || '').trim() : '',
+        cidade: cidadeCol ? String(row[cidadeCol] || '').trim() : '',
+        estado: estadoCol ? String(row[estadoCol] || '').trim() : '',
       })).filter(row => row.empresa.length > 0);
 
       console.log('Dados parseados:', parsedData.length, 'registros válidos');
@@ -172,9 +184,9 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
             nome_fantasia: row.empresa.trim(),
             cnpj: `IMPORTADO-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             segmento: 'Outros',
-            porte: 'media',
-            cidade: 'Não informado',
-            estado: 'RJ',
+            porte: row.porte || '',
+            cidade: row.cidade || '',
+            estado: row.estado || '',
             status: 'prospect',
           })
           .select()
