@@ -7,8 +7,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useContacts, useDeleteContact, ContactRow } from '@/hooks/useContacts';
 import { useCompanies } from '@/hooks/useCompanies';
-import { Plus, Search, Filter, MoreHorizontal, User, Pencil, Trash2, Download, Loader2, Mail, Phone, Building2 } from 'lucide-react';
+import { Plus, Search, Filter, MoreHorizontal, User, Pencil, Trash2, Download, Loader2, Mail, Phone, Building2, Upload } from 'lucide-react';
 import { ContactDialog } from '@/components/contacts/ContactDialog';
+import { ImportContactsDialog } from '@/components/contacts/ImportContactsDialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 
@@ -16,6 +17,7 @@ export default function Contatos() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCompany, setFilterCompany] = useState<string>('all');
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [contactToDelete, setContactToDelete] = useState<ContactRow | null>(null);
 
@@ -74,6 +76,10 @@ export default function Contatos() {
             <Button variant="outline">
               <Download className="h-4 w-4 mr-2" />
               Exportar
+            </Button>
+            <Button variant="outline" onClick={() => setImportDialogOpen(true)}>
+              <Upload className="h-4 w-4 mr-2" />
+              Importar
             </Button>
             <Button onClick={() => setDialogOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
@@ -220,6 +226,9 @@ export default function Contatos() {
 
       {/* Contact Dialog */}
       <ContactDialog open={dialogOpen} onOpenChange={setDialogOpen} />
+
+      {/* Import Dialog */}
+      <ImportContactsDialog open={importDialogOpen} onOpenChange={setImportDialogOpen} />
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
