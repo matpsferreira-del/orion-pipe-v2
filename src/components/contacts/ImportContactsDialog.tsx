@@ -24,6 +24,7 @@ interface ImportRow {
   email: string;
   telefone: string;
   whatsapp: string;
+  linkedin: string;
   isDuplicate?: boolean;
   duplicateReason?: string;
   companyId?: string;
@@ -125,6 +126,7 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
         const emailCol = findColumn(headers, ['email', 'e-mail', 'mail']);
         const telefoneCol = findColumn(headers, ['telefone', 'phone', 'tel', 'fone']);
         const whatsappCol = findColumn(headers, ['whatsapp', 'whats', 'wpp', 'zap']);
+        const linkedinCol = findColumn(headers, ['linkedin', 'linked', 'in']);
 
         const rows: ImportRow[] = jsonData.map((row) => ({
           contato: contatoCol ? String(row[contatoCol] || '').trim() : '',
@@ -133,6 +135,7 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
           email: emailCol ? String(row[emailCol] || '').trim() : '',
           telefone: telefoneCol ? String(row[telefoneCol] || '').trim() : '',
           whatsapp: whatsappCol ? String(row[whatsappCol] || '').trim() : '',
+          linkedin: linkedinCol ? String(row[linkedinCol] || '').trim() : '',
         }));
 
         const validRows = rows.filter(r => r.contato || r.email);
@@ -182,6 +185,7 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
           email: row.email || `contato_${Date.now()}_${Math.random().toString(36).substr(2, 5)}@importado.tmp`,
           telefone: cleanPhone(row.telefone) || '',
           whatsapp: cleanPhone(row.whatsapp) || '',
+          linkedin: row.linkedin || '',
           is_primary: false,
         };
 
@@ -226,8 +230,8 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
 
   const downloadTemplate = () => {
     const template = [
-      { Contato: 'João Silva', Empresa: 'Tech Solutions', Cargo: 'Diretor', Email: 'joao@tech.com', Telefone: '11999998888', WhatsApp: '11999998888' },
-      { Contato: 'Maria Santos', Empresa: 'Tech Solutions', Cargo: 'RH', Email: 'maria@tech.com', Telefone: '11988887777', WhatsApp: '' },
+      { Contato: 'João Silva', Empresa: 'Tech Solutions', Cargo: 'Diretor', Email: 'joao@tech.com', Telefone: '11999998888', WhatsApp: '11999998888', LinkedIn: 'https://linkedin.com/in/joaosilva' },
+      { Contato: 'Maria Santos', Empresa: 'Tech Solutions', Cargo: 'RH', Email: 'maria@tech.com', Telefone: '11988887777', WhatsApp: '', LinkedIn: '' },
     ];
     const ws = XLSX.utils.json_to_sheet(template);
     const wb = XLSX.utils.book_new();

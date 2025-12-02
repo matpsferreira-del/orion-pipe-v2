@@ -10,6 +10,7 @@ export interface ContactRow {
   email: string;
   telefone: string | null;
   whatsapp: string | null;
+  linkedin: string | null;
   observacoes: string | null;
   is_primary: boolean;
   created_at: string;
@@ -22,6 +23,7 @@ export interface ContactInsert {
   email: string;
   telefone?: string;
   whatsapp?: string;
+  linkedin?: string;
   observacoes?: string;
   is_primary?: boolean;
 }

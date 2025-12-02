@@ -24,6 +24,7 @@ export function ContactDialog({ open, onOpenChange, preSelectedCompanyId }: Cont
   const [email, setEmail] = useState('');
   const [telefone, setTelefone] = useState('');
   const [whatsapp, setWhatsapp] = useState('');
+  const [linkedin, setLinkedin] = useState('');
   const [observacoes, setObservacoes] = useState('');
   const [isPrimary, setIsPrimary] = useState(false);
 
@@ -47,6 +48,7 @@ export function ContactDialog({ open, onOpenChange, preSelectedCompanyId }: Cont
       email,
       telefone: telefone || undefined,
       whatsapp: whatsapp || undefined,
+      linkedin: linkedin || undefined,
       observacoes: observacoes || undefined,
       is_primary: isPrimary,
     };
@@ -66,6 +68,7 @@ export function ContactDialog({ open, onOpenChange, preSelectedCompanyId }: Cont
     setEmail('');
     setTelefone('');
     setWhatsapp('');
+    setLinkedin('');
     setObservacoes('');
     setIsPrimary(false);
   };
@@ -163,6 +166,16 @@ export function ContactDialog({ open, onOpenChange, preSelectedCompanyId }: Cont
                 onChange={(e) => setWhatsapp(e.target.value)}
               />
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="linkedin">LinkedIn</Label>
+            <Input
+              id="linkedin"
+              placeholder="https://linkedin.com/in/usuario"
+              value={linkedin}
+              onChange={(e) => setLinkedin(e.target.value)}
+            />
           </div>
 
           <div className="space-y-2">

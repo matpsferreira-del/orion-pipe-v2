@@ -136,6 +136,7 @@ export type Database = {
           email: string
           id: string
           is_primary: boolean | null
+          linkedin: string | null
           nome: string
           observacoes: string | null
           telefone: string | null
@@ -148,6 +149,7 @@ export type Database = {
           email: string
           id?: string
           is_primary?: boolean | null
+          linkedin?: string | null
           nome: string
           observacoes?: string | null
           telefone?: string | null
@@ -160,6 +162,7 @@ export type Database = {
           email?: string
           id?: string
           is_primary?: boolean | null
+          linkedin?: string | null
           nome?: string
           observacoes?: string | null
           telefone?: string | null
