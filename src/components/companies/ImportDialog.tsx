@@ -22,6 +22,7 @@ interface ImportRow {
   porte: string;
   cidade: string;
   estado: string;
+  segmento: string;
 }
 
 // Função para encontrar coluna por palavras-chave (case insensitive)
@@ -106,6 +107,7 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
       const porteCol = findColumn(headers, ['porte', 'tamanho', 'size', 'porte da empresa']);
       const cidadeCol = findColumn(headers, ['cidade', 'city', 'municipio', 'município']);
       const estadoCol = findColumn(headers, ['estado', 'uf', 'state']);
+      const segmentoCol = findColumn(headers, ['segmento', 'segment', 'setor', 'ramo', 'área', 'area']);
 
       const mapped = {
         empresa: empresaCol || 'Não encontrado',
@@ -115,6 +117,7 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
         porte: porteCol || 'Não encontrado',
         cidade: cidadeCol || 'Não encontrado',
         estado: estadoCol || 'Não encontrado',
+        segmento: segmentoCol || 'Não encontrado',
       };
       setMappedColumns(mapped);
       console.log('Mapeamento de colunas:', mapped);
@@ -134,6 +137,7 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
         porte: porteCol ? String(row[porteCol] || '').trim() : '',
         cidade: cidadeCol ? String(row[cidadeCol] || '').trim() : '',
         estado: estadoCol ? String(row[estadoCol] || '').trim() : '',
+        segmento: segmentoCol ? String(row[segmentoCol] || '').trim() : '',
       })).filter(row => row.empresa.length > 0);
 
       console.log('Dados parseados:', parsedData.length, 'registros válidos');
@@ -183,8 +187,8 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
             razao_social: row.empresa.trim(),
             nome_fantasia: row.empresa.trim(),
             cnpj: `IMPORTADO-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-            segmento: 'Outros',
-            porte: row.porte || '',
+            segmento: row.segmento || 'Outros',
+            porte: row.porte || 'media',
             cidade: row.cidade || '',
             estado: row.estado || '',
             status: 'prospect',
@@ -300,6 +304,10 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
                   <span>Contato → {mappedColumns.contato}</span>
                   <span>Email → {mappedColumns.email}</span>
                   <span>Telefone → {mappedColumns.telefone}</span>
+                  <span>Porte → {mappedColumns.porte}</span>
+                  <span>Cidade → {mappedColumns.cidade}</span>
+                  <span>Estado → {mappedColumns.estado}</span>
+                  <span>Segmento → {mappedColumns.segmento}</span>
                 </div>
               </AlertDescription>
             </Alert>
@@ -337,15 +345,23 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
                     <TableHead>Contato</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Telefone</TableHead>
+                    <TableHead>Segmento</TableHead>
+                    <TableHead>Porte</TableHead>
+                    <TableHead>Cidade</TableHead>
+                    <TableHead>UF</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {data.slice(0, 50).map((row, index) => (
                     <TableRow key={index}>
                       <TableCell className="font-medium">{row.empresa}</TableCell>
-                      <TableCell>{row.contato || <span className="text-muted-foreground italic">Não informado</span>}</TableCell>
+                      <TableCell>{row.contato || <span className="text-muted-foreground italic">-</span>}</TableCell>
                       <TableCell className="text-muted-foreground">{row.email || '-'}</TableCell>
                       <TableCell className="text-muted-foreground">{row.telefone || '-'}</TableCell>
+                      <TableCell className="text-muted-foreground">{row.segmento || '-'}</TableCell>
+                      <TableCell className="text-muted-foreground">{row.porte || '-'}</TableCell>
+                      <TableCell className="text-muted-foreground">{row.cidade || '-'}</TableCell>
+                      <TableCell className="text-muted-foreground">{row.estado || '-'}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
