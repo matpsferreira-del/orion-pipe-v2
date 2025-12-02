@@ -8,6 +8,7 @@ import { AppLayout } from "./components/layout/AppLayout";
 import Dashboard from "./pages/Dashboard";
 import Pipeline from "./pages/Pipeline";
 import Empresas from "./pages/Empresas";
+import Contatos from "./pages/Contatos";
 import Oportunidades from "./pages/Oportunidades";
 import Faturamento from "./pages/Faturamento";
 import Relatorios from "./pages/Relatorios";
@@ -77,6 +78,7 @@ const App = () => (
               <Route path="/" element={<Dashboard />} />
               <Route path="/pipeline" element={<Pipeline />} />
               <Route path="/empresas" element={<Empresas />} />
+              <Route path="/contatos" element={<Contatos />} />
               <Route path="/oportunidades" element={<Oportunidades />} />
               <Route path="/tarefas" element={<Tarefas />} />
               <Route path="/faturamento" element={<Faturamento />} />
