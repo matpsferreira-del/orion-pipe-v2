@@ -244,7 +244,7 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
               cidade: row.cidade || '',
               estado: row.estado || '',
               segmento: row.segmento || '',
-              porte: normalizePorte(row.porte) || 'media',
+              porte: normalizePorte(row.porte),
               status: 'prospect',
             };
 
