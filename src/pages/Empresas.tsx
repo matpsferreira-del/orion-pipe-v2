@@ -10,12 +10,13 @@ import { useContacts } from '@/hooks/useContacts';
 import { useOpportunities } from '@/hooks/useOpportunities';
 import { useInvoices } from '@/hooks/useInvoices';
 import { useProfiles } from '@/hooks/useProfiles';
-import { Plus, Search, Filter, MoreHorizontal, Building2, Eye, Pencil, Trash2, Download, Loader2, UserPlus } from 'lucide-react';
+import { Plus, Search, Filter, MoreHorizontal, Building2, Eye, Pencil, Trash2, Download, Loader2, UserPlus, Upload } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { CompanyDetail } from '@/components/companies/CompanyDetail';
 import { CompanyDialog } from '@/components/companies/CompanyDialog';
 import { ContactDialog } from '@/components/contacts/ContactDialog';
+import { ImportDialog } from '@/components/companies/ImportDialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 
@@ -40,6 +41,7 @@ export default function Empresas() {
   const [selectedCompany, setSelectedCompany] = useState<CompanyRow | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [contactDialogOpen, setContactDialogOpen] = useState(false);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [companyToDelete, setCompanyToDelete] = useState<CompanyRow | null>(null);
 
@@ -106,6 +108,10 @@ export default function Empresas() {
         description="Gerencie empresas e prospects"
         actions={
           <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => setImportDialogOpen(true)}>
+              <Upload className="h-4 w-4 mr-2" />
+              Importar
+            </Button>
             <Button variant="outline">
               <Download className="h-4 w-4 mr-2" />
               Exportar
@@ -268,6 +274,9 @@ export default function Empresas() {
 
       {/* Contact Dialog */}
       <ContactDialog open={contactDialogOpen} onOpenChange={setContactDialogOpen} />
+
+      {/* Import Dialog */}
+      <ImportDialog open={importDialogOpen} onOpenChange={setImportDialogOpen} />
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
