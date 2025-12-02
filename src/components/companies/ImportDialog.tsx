@@ -1,13 +1,14 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Upload, FileSpreadsheet, Loader2, AlertCircle, CheckCircle2, Info } from 'lucide-react';
+import { Upload, FileSpreadsheet, Loader2, AlertCircle, CheckCircle2, Info, AlertTriangle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
+import { Badge } from '@/components/ui/badge';
 
 interface ImportDialogProps {
   open: boolean;
@@ -23,6 +24,17 @@ interface ImportRow {
   cidade: string;
   estado: string;
   segmento: string;
+}
+
+interface GroupedCompany {
+  empresa: string;
+  porte: string;
+  cidade: string;
+  estado: string;
+  segmento: string;
+  contacts: { nome: string; email: string; telefone: string }[];
+  isDuplicate: boolean;
+  duplicateReason?: string;
 }
 
 // Função para encontrar coluna por palavras-chave (case insensitive)
@@ -43,37 +55,134 @@ const findColumn = (headers: string[], keywords: string[]): string | undefined =
 };
 
 export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
-  const [data, setData] = useState<ImportRow[]>([]);
+  const [rawData, setRawData] = useState<ImportRow[]>([]);
+  const [groupedData, setGroupedData] = useState<GroupedCompany[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
-  const [importResult, setImportResult] = useState<{ success: number; errors: number } | null>(null);
+  const [isCheckingDuplicates, setIsCheckingDuplicates] = useState(false);
+  const [importResult, setImportResult] = useState<{ success: number; errors: number; skipped: number } | null>(null);
   const [detectedColumns, setDetectedColumns] = useState<string[]>([]);
   const [mappedColumns, setMappedColumns] = useState<Record<string, string>>({});
   const [parseWarning, setParseWarning] = useState<string | null>(null);
+  const [duplicateCount, setDuplicateCount] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
 
+  // Check for duplicates when rawData changes
+  useEffect(() => {
+    if (rawData.length > 0) {
+      checkDuplicatesAndGroup();
+    }
+  }, [rawData]);
+
+  const checkDuplicatesAndGroup = async () => {
+    setIsCheckingDuplicates(true);
+    
+    try {
+      // Fetch existing companies and contacts from database
+      const { data: existingCompanies } = await supabase
+        .from('companies')
+        .select('nome_fantasia, razao_social');
+      
+      const { data: existingContacts } = await supabase
+        .from('contacts')
+        .select('email');
+
+      const existingCompanyNames = new Set(
+        (existingCompanies || []).flatMap(c => [
+          c.nome_fantasia?.toLowerCase().trim(),
+          c.razao_social?.toLowerCase().trim()
+        ].filter(Boolean))
+      );
+
+      const existingEmails = new Set(
+        (existingContacts || [])
+          .map(c => c.email?.toLowerCase().trim())
+          .filter(Boolean)
+      );
+
+      // Group rows by company name
+      const companyMap = new Map<string, GroupedCompany>();
+
+      for (const row of rawData) {
+        const companyKey = row.empresa.toLowerCase().trim();
+        
+        if (!companyMap.has(companyKey)) {
+          const isDuplicateCompany = existingCompanyNames.has(companyKey);
+          
+          companyMap.set(companyKey, {
+            empresa: row.empresa,
+            porte: row.porte,
+            cidade: row.cidade,
+            estado: row.estado,
+            segmento: row.segmento,
+            contacts: [],
+            isDuplicate: isDuplicateCompany,
+            duplicateReason: isDuplicateCompany ? 'Empresa já existe no sistema' : undefined,
+          });
+        }
+
+        const company = companyMap.get(companyKey)!;
+        
+        // Add contact if has name or email
+        if (row.contato || row.email) {
+          const emailLower = row.email?.toLowerCase().trim();
+          const isEmailDuplicate = emailLower && existingEmails.has(emailLower);
+          
+          // Check if this contact is already in the group
+          const contactExists = company.contacts.some(
+            c => c.email?.toLowerCase().trim() === emailLower
+          );
+          
+          if (!contactExists) {
+            company.contacts.push({
+              nome: row.contato || 'Contato Principal',
+              email: row.email || '',
+              telefone: row.telefone || '',
+            });
+            
+            // Mark company as duplicate if any contact email already exists
+            if (isEmailDuplicate && !company.isDuplicate) {
+              company.isDuplicate = true;
+              company.duplicateReason = `Email ${row.email} já existe no sistema`;
+            }
+          }
+        }
+
+        // Update company data if not set (take first non-empty values)
+        if (!company.porte && row.porte) company.porte = row.porte;
+        if (!company.cidade && row.cidade) company.cidade = row.cidade;
+        if (!company.estado && row.estado) company.estado = row.estado;
+        if (!company.segmento && row.segmento) company.segmento = row.segmento;
+      }
+
+      const grouped = Array.from(companyMap.values());
+      const duplicates = grouped.filter(c => c.isDuplicate).length;
+      
+      setGroupedData(grouped);
+      setDuplicateCount(duplicates);
+    } catch (error) {
+      console.error('Error checking duplicates:', error);
+    } finally {
+      setIsCheckingDuplicates(false);
+    }
+  };
+
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) {
-      console.log('Nenhum arquivo selecionado');
-      return;
-    }
+    if (!file) return;
 
-    console.log('Arquivo selecionado:', file.name, 'Tamanho:', file.size);
     setIsLoading(true);
     setImportResult(null);
     setParseWarning(null);
     setDetectedColumns([]);
     setMappedColumns({});
+    setGroupedData([]);
+    setDuplicateCount(0);
     
     try {
       const buffer = await file.arrayBuffer();
-      console.log('Buffer lido, tamanho:', buffer.byteLength);
-      
       const workbook = XLSX.read(buffer, { type: 'array' });
-      console.log('Workbook lido, planilhas:', workbook.SheetNames);
-      
       const sheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[sheetName];
       
@@ -86,15 +195,13 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
         headers.push(cell ? String(cell.v).trim() : `Coluna ${col + 1}`);
       }
       
-      console.log('Colunas detectadas:', headers);
       setDetectedColumns(headers);
       
       const jsonData = XLSX.utils.sheet_to_json<Record<string, string>>(worksheet);
-      console.log('Total de linhas:', jsonData.length);
       
       if (jsonData.length === 0) {
         setParseWarning('O arquivo está vazio ou não foi possível ler os dados.');
-        setData([]);
+        setRawData([]);
         setIsLoading(false);
         return;
       }
@@ -120,11 +227,10 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
         segmento: segmentoCol || 'Não encontrado',
       };
       setMappedColumns(mapped);
-      console.log('Mapeamento de colunas:', mapped);
 
       if (!empresaCol) {
         setParseWarning(`Coluna "Empresa" não encontrada. Colunas disponíveis: ${headers.join(', ')}`);
-        setData([]);
+        setRawData([]);
         setIsLoading(false);
         return;
       }
@@ -140,15 +246,11 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
         segmento: segmentoCol ? String(row[segmentoCol] || '').trim() : '',
       })).filter(row => row.empresa.length > 0);
 
-      console.log('Dados parseados:', parsedData.length, 'registros válidos');
-
       if (parsedData.length === 0) {
         setParseWarning('Nenhum registro válido encontrado. Verifique se a coluna "Empresa" contém dados.');
-      } else if (!contatoCol) {
-        setParseWarning(`Aviso: Coluna de contato não identificada. Os contatos serão criados sem nome.`);
       }
 
-      setData(parsedData);
+      setRawData(parsedData);
       
       if (parsedData.length > 0) {
         toast.success(`${parsedData.length} registros encontrados no arquivo!`);
@@ -187,25 +289,30 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
   };
 
   const handleImport = async () => {
-    if (data.length === 0) return;
+    const toImport = groupedData.filter(c => !c.isDuplicate);
+    if (toImport.length === 0) {
+      toast.error('Nenhuma empresa válida para importar.');
+      return;
+    }
 
     setIsImporting(true);
     let successCount = 0;
     let errorCount = 0;
+    const skippedCount = groupedData.filter(c => c.isDuplicate).length;
 
-    for (const row of data) {
+    for (const company of toImport) {
       try {
         // Create company
-        const { data: company, error: companyError } = await supabase
+        const { data: newCompany, error: companyError } = await supabase
           .from('companies')
           .insert({
-            razao_social: row.empresa.trim(),
-            nome_fantasia: row.empresa.trim(),
+            razao_social: company.empresa.trim(),
+            nome_fantasia: company.empresa.trim(),
             cnpj: `IMPORTADO-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-            segmento: row.segmento || '',
-            porte: normalizePorte(row.porte),
-            cidade: row.cidade || '',
-            estado: row.estado || '',
+            segmento: company.segmento || '',
+            porte: normalizePorte(company.porte),
+            cidade: company.cidade || '',
+            estado: company.estado || '',
             status: 'prospect',
           })
           .select()
@@ -213,33 +320,36 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
 
         if (companyError) throw companyError;
 
-        // Create contact (mesmo sem nome, para manter o email/telefone)
-        const contactName = row.contato || 'Contato Principal';
-        const { error: contactError } = await supabase
-          .from('contacts')
-          .insert({
-            company_id: company.id,
-            nome: contactName,
-            cargo: 'Responsável',
-            email: cleanEmail(row.email) || `contato_${Date.now()}@importado.tmp`,
-            telefone: cleanPhone(row.telefone),
-            whatsapp: cleanPhone(row.telefone),
-            is_primary: true,
-          });
+        // Create all contacts for this company
+        for (let i = 0; i < company.contacts.length; i++) {
+          const contact = company.contacts[i];
+          const { error: contactError } = await supabase
+            .from('contacts')
+            .insert({
+              company_id: newCompany.id,
+              nome: contact.nome || 'Contato Principal',
+              cargo: 'Responsável',
+              email: cleanEmail(contact.email) || `contato_${Date.now()}_${i}@importado.tmp`,
+              telefone: cleanPhone(contact.telefone),
+              whatsapp: cleanPhone(contact.telefone),
+              is_primary: i === 0, // First contact is primary
+            });
 
-        if (contactError) throw contactError;
+          if (contactError) {
+            console.error('Error creating contact:', contactError);
+          }
+        }
 
         successCount++;
       } catch (error) {
-        console.error('Error importing row:', row, error);
+        console.error('Error importing company:', company, error);
         errorCount++;
       }
     }
 
-    setImportResult({ success: successCount, errors: errorCount });
+    setImportResult({ success: successCount, errors: errorCount, skipped: skippedCount });
     setIsImporting(false);
     
-    // Invalidate queries to refresh data
     queryClient.invalidateQueries({ queryKey: ['companies'] });
     queryClient.invalidateQueries({ queryKey: ['contacts'] });
 
@@ -249,30 +359,38 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
     if (errorCount > 0) {
       toast.error(`${errorCount} erros durante a importação.`);
     }
+    if (skippedCount > 0) {
+      toast.warning(`${skippedCount} empresas ignoradas (duplicadas).`);
+    }
   };
 
   const handleClose = () => {
-    setData([]);
+    setRawData([]);
+    setGroupedData([]);
     setImportResult(null);
     setDetectedColumns([]);
     setMappedColumns({});
     setParseWarning(null);
+    setDuplicateCount(0);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
     onOpenChange(false);
   };
 
+  const validCompanies = groupedData.filter(c => !c.isDuplicate);
+  const duplicateCompanies = groupedData.filter(c => c.isDuplicate);
+
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-5xl max-h-[85vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileSpreadsheet className="h-5 w-5" />
             Importar Empresas e Contatos
           </DialogTitle>
           <DialogDescription>
-            Selecione um arquivo Excel (.xlsx) com as colunas: Empresa, Nome do responsável, Email, Telefone
+            Selecione um arquivo Excel (.xlsx). Contatos da mesma empresa serão agrupados automaticamente.
           </DialogDescription>
         </DialogHeader>
 
@@ -290,19 +408,24 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
             <Button
               variant="outline"
               onClick={() => fileInputRef.current?.click()}
-              disabled={isLoading || isImporting}
+              disabled={isLoading || isImporting || isCheckingDuplicates}
             >
-              {isLoading ? (
+              {isLoading || isCheckingDuplicates ? (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               ) : (
                 <Upload className="h-4 w-4 mr-2" />
               )}
-              Selecionar Arquivo
+              {isCheckingDuplicates ? 'Verificando duplicados...' : 'Selecionar Arquivo'}
             </Button>
-            {data.length > 0 && (
-              <span className="text-sm text-muted-foreground">
-                {data.length} registros encontrados
-              </span>
+            {groupedData.length > 0 && (
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-muted-foreground">
+                  {groupedData.length} empresas ({rawData.length} linhas)
+                </span>
+                {duplicateCount > 0 && (
+                  <Badge variant="destructive">{duplicateCount} duplicadas</Badge>
+                )}
+              </div>
             )}
           </div>
 
@@ -311,10 +434,8 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
             <Alert>
               <Info className="h-4 w-4" />
               <AlertDescription className="text-sm">
-                <div className="font-medium mb-1">Colunas detectadas:</div>
-                <div className="text-muted-foreground text-xs mb-2">{detectedColumns.join(' | ')}</div>
-                <div className="font-medium mb-1">Mapeamento:</div>
-                <div className="text-xs grid grid-cols-2 gap-1">
+                <div className="font-medium mb-1">Mapeamento de colunas:</div>
+                <div className="text-xs grid grid-cols-4 gap-1">
                   <span>Empresa → {mappedColumns.empresa}</span>
                   <span>Contato → {mappedColumns.contato}</span>
                   <span>Email → {mappedColumns.email}</span>
@@ -336,6 +457,24 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
             </Alert>
           )}
 
+          {/* Duplicates Warning */}
+          {duplicateCount > 0 && !importResult && (
+            <Alert className="border-yellow-500 bg-yellow-50 dark:bg-yellow-950/20">
+              <AlertTriangle className="h-4 w-4 text-yellow-600" />
+              <AlertDescription className="text-yellow-800 dark:text-yellow-200">
+                <strong>{duplicateCount} empresa(s) já existem no sistema e serão ignoradas na importação.</strong>
+                <div className="mt-1 text-xs">
+                  {duplicateCompanies.slice(0, 3).map((c, i) => (
+                    <span key={i} className="block">• {c.empresa}: {c.duplicateReason}</span>
+                  ))}
+                  {duplicateCompanies.length > 3 && (
+                    <span className="block">• ...e mais {duplicateCompanies.length - 3}</span>
+                  )}
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
+
           {/* Import Result */}
           {importResult && (
             <Alert variant={importResult.errors > 0 ? 'destructive' : 'default'}>
@@ -346,20 +485,20 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
               )}
               <AlertDescription>
                 Importação concluída: {importResult.success} sucesso, {importResult.errors} erros
+                {importResult.skipped > 0 && `, ${importResult.skipped} ignoradas (duplicadas)`}
               </AlertDescription>
             </Alert>
           )}
 
           {/* Preview Table */}
-          {data.length > 0 && (
+          {groupedData.length > 0 && (
             <div className="flex-1 overflow-auto border rounded-lg">
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>Status</TableHead>
                     <TableHead>Empresa</TableHead>
-                    <TableHead>Contato</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Telefone</TableHead>
+                    <TableHead>Contatos</TableHead>
                     <TableHead>Segmento</TableHead>
                     <TableHead>Porte</TableHead>
                     <TableHead>Cidade</TableHead>
@@ -367,46 +506,80 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {data.slice(0, 50).map((row, index) => (
-                    <TableRow key={index}>
-                      <TableCell className="font-medium">{row.empresa}</TableCell>
-                      <TableCell>{row.contato || <span className="text-muted-foreground italic">-</span>}</TableCell>
-                      <TableCell className="text-muted-foreground">{row.email || '-'}</TableCell>
-                      <TableCell className="text-muted-foreground">{row.telefone || '-'}</TableCell>
-                      <TableCell className="text-muted-foreground">{row.segmento || '-'}</TableCell>
-                      <TableCell className="text-muted-foreground">{row.porte || '-'}</TableCell>
-                      <TableCell className="text-muted-foreground">{row.cidade || '-'}</TableCell>
-                      <TableCell className="text-muted-foreground">{row.estado || '-'}</TableCell>
+                  {groupedData.slice(0, 50).map((company, index) => (
+                    <TableRow 
+                      key={index}
+                      className={company.isDuplicate ? 'bg-destructive/10 opacity-60' : ''}
+                    >
+                      <TableCell>
+                        {company.isDuplicate ? (
+                          <Badge variant="destructive" className="text-xs">Duplicada</Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-300">Nova</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        {company.empresa}
+                        {company.isDuplicate && (
+                          <span className="block text-xs text-destructive">{company.duplicateReason}</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-xs space-y-1">
+                          {company.contacts.slice(0, 2).map((c, i) => (
+                            <div key={i} className="text-muted-foreground">
+                              {c.nome} {c.email && `(${c.email})`}
+                            </div>
+                          ))}
+                          {company.contacts.length > 2 && (
+                            <div className="text-muted-foreground">+{company.contacts.length - 2} mais</div>
+                          )}
+                          {company.contacts.length === 0 && (
+                            <span className="text-muted-foreground italic">Sem contatos</span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">{company.segmento || '-'}</TableCell>
+                      <TableCell className="text-muted-foreground">{company.porte || '-'}</TableCell>
+                      <TableCell className="text-muted-foreground">{company.cidade || '-'}</TableCell>
+                      <TableCell className="text-muted-foreground">{company.estado || '-'}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
-              {data.length > 50 && (
+              {groupedData.length > 50 && (
                 <p className="text-sm text-muted-foreground p-4 text-center">
-                  Mostrando 50 de {data.length} registros
+                  Mostrando 50 de {groupedData.length} empresas
                 </p>
               )}
             </div>
           )}
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={handleClose}>
-            Fechar
-          </Button>
-          <Button 
-            onClick={handleImport} 
-            disabled={data.length === 0 || isImporting || !!importResult}
-          >
-            {isImporting ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Importando...
-              </>
-            ) : (
-              <>Importar {data.length} Empresas</>
+        <DialogFooter className="flex items-center justify-between">
+          <div className="text-sm text-muted-foreground">
+            {validCompanies.length > 0 && (
+              <span>{validCompanies.length} empresa(s) serão importadas</span>
             )}
-          </Button>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handleClose}>
+              Fechar
+            </Button>
+            <Button 
+              onClick={handleImport} 
+              disabled={validCompanies.length === 0 || isImporting || !!importResult}
+            >
+              {isImporting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Importando...
+                </>
+              ) : (
+                <>Importar {validCompanies.length} Empresas</>
+              )}
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
