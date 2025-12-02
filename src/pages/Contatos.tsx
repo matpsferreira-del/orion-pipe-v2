@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useContacts, useDeleteContact, ContactRow } from '@/hooks/useContacts';
 import { useCompanies } from '@/hooks/useCompanies';
-import { Plus, Search, Filter, MoreHorizontal, User, Pencil, Trash2, Download, Loader2, Mail, Phone, Building2, Upload } from 'lucide-react';
+import { Plus, Search, Filter, MoreHorizontal, User, Pencil, Trash2, Download, Loader2, Mail, Phone, Building2, Upload, Linkedin } from 'lucide-react';
 import { ContactDialog } from '@/components/contacts/ContactDialog';
 import { ImportContactsDialog } from '@/components/contacts/ImportContactsDialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -125,13 +125,14 @@ export default function Contatos() {
               <TableHead>Email</TableHead>
               <TableHead>Telefone</TableHead>
               <TableHead>WhatsApp</TableHead>
+              <TableHead>LinkedIn</TableHead>
               <TableHead className="w-[50px]"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredContacts.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                   Nenhum contato encontrado
                 </TableCell>
               </TableRow>
@@ -192,6 +193,20 @@ export default function Contatos() {
                         onClick={(e) => e.stopPropagation()}
                       >
                         {contact.whatsapp}
+                      </a>
+                    ) : '-'}
+                  </TableCell>
+                  <TableCell>
+                    {contact.linkedin ? (
+                      <a 
+                        href={contact.linkedin.startsWith('http') ? contact.linkedin : `https://${contact.linkedin}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1 text-blue-600 hover:underline"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <Linkedin className="h-3 w-3" />
+                        Perfil
                       </a>
                     ) : '-'}
                   </TableCell>
