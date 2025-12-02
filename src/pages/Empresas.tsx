@@ -101,6 +101,7 @@ export default function Empresas() {
         'Nome do responsável': 'João Silva',
         'Email': 'joao@empresa.com',
         'Telefone': '(11) 99999-9999',
+        'Segmento': 'Tecnologia',
         'Porte': 'media',
         'Cidade': 'São Paulo',
         'Estado': 'SP',
@@ -117,6 +118,7 @@ export default function Empresas() {
       { wch: 25 }, // Nome do responsável
       { wch: 30 }, // Email
       { wch: 18 }, // Telefone
+      { wch: 20 }, // Segmento
       { wch: 12 }, // Porte
       { wch: 20 }, // Cidade
       { wch: 8 },  // Estado
