@@ -10,7 +10,8 @@ import { useContacts } from '@/hooks/useContacts';
 import { useOpportunities } from '@/hooks/useOpportunities';
 import { useInvoices } from '@/hooks/useInvoices';
 import { useProfiles } from '@/hooks/useProfiles';
-import { Plus, Search, Filter, MoreHorizontal, Building2, Eye, Pencil, Trash2, Download, Loader2, UserPlus, Upload } from 'lucide-react';
+import { Plus, Search, Filter, MoreHorizontal, Building2, Eye, Pencil, Trash2, Download, Loader2, UserPlus, Upload, FileSpreadsheet } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { cn } from '@/lib/utils';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { CompanyDetail } from '@/components/companies/CompanyDetail';
@@ -93,6 +94,38 @@ export default function Empresas() {
     }
   };
 
+  const handleDownloadTemplate = () => {
+    const templateData = [
+      {
+        'Empresa': 'Empresa Exemplo LTDA',
+        'Nome do responsável': 'João Silva',
+        'Email': 'joao@empresa.com',
+        'Telefone': '(11) 99999-9999',
+        'Porte': 'media',
+        'Cidade': 'São Paulo',
+        'Estado': 'SP',
+      },
+    ];
+    
+    const worksheet = XLSX.utils.json_to_sheet(templateData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Modelo');
+    
+    // Set column widths
+    worksheet['!cols'] = [
+      { wch: 30 }, // Empresa
+      { wch: 25 }, // Nome do responsável
+      { wch: 30 }, // Email
+      { wch: 18 }, // Telefone
+      { wch: 12 }, // Porte
+      { wch: 20 }, // Cidade
+      { wch: 8 },  // Estado
+    ];
+    
+    XLSX.writeFile(workbook, 'modelo_importacao_empresas.xlsx');
+    toast.success('Modelo baixado com sucesso!');
+  };
+
   if (isLoading) {
     return (
       <div className="p-6 flex items-center justify-center min-h-[400px]">
@@ -108,6 +141,9 @@ export default function Empresas() {
         description="Gerencie empresas e prospects"
         actions={
           <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" onClick={handleDownloadTemplate} title="Baixar modelo Excel">
+              <FileSpreadsheet className="h-4 w-4" />
+            </Button>
             <Button variant="outline" onClick={() => setImportDialogOpen(true)}>
               <Upload className="h-4 w-4 mr-2" />
               Importar
