@@ -25,10 +25,18 @@ interface ImportRow {
   telefone: string;
   whatsapp: string;
   linkedin: string;
+  // Company fields for auto-creation
+  cnpj: string;
+  cidade: string;
+  estado: string;
+  segmento: string;
+  porte: string;
+  // Status fields
   isDuplicate?: boolean;
   duplicateReason?: string;
   companyId?: string;
   companyNotFound?: boolean;
+  willCreateCompany?: boolean;
 }
 
 export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialogProps) {
@@ -76,6 +84,7 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
 
     return rows.map(row => {
       const companyResult = findCompanyByName(row.empresa);
+      const willCreateCompany = !companyResult?.found && row.empresa.trim() !== '';
       
       if (row.email && existingEmails.has(row.email.toLowerCase().trim())) {
         return { 
@@ -83,7 +92,8 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
           isDuplicate: true, 
           duplicateReason: 'Email já existe',
           companyId: companyResult?.id || '',
-          companyNotFound: companyResult ? !companyResult.found : true
+          companyNotFound: false,
+          willCreateCompany
         };
       }
       
@@ -91,7 +101,8 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
         ...row, 
         isDuplicate: false,
         companyId: companyResult?.id || '',
-        companyNotFound: companyResult ? !companyResult.found : true
+        companyNotFound: !row.empresa.trim(),
+        willCreateCompany
       };
     });
   };
@@ -127,6 +138,11 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
         const telefoneCol = findColumn(headers, ['telefone', 'phone', 'tel', 'fone']);
         const whatsappCol = findColumn(headers, ['whatsapp', 'whats', 'wpp', 'zap']);
         const linkedinCol = findColumn(headers, ['linkedin', 'linked', 'in']);
+        const cnpjCol = findColumn(headers, ['cnpj']);
+        const cidadeCol = findColumn(headers, ['cidade', 'city']);
+        const estadoCol = findColumn(headers, ['estado', 'uf', 'state']);
+        const segmentoCol = findColumn(headers, ['segmento', 'segment', 'setor']);
+        const porteCol = findColumn(headers, ['porte', 'size', 'tamanho']);
 
         const rows: ImportRow[] = jsonData.map((row) => ({
           contato: contatoCol ? String(row[contatoCol] || '').trim() : '',
@@ -136,6 +152,11 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
           telefone: telefoneCol ? String(row[telefoneCol] || '').trim() : '',
           whatsapp: whatsappCol ? String(row[whatsappCol] || '').trim() : '',
           linkedin: linkedinCol ? String(row[linkedinCol] || '').trim() : '',
+          cnpj: cnpjCol ? String(row[cnpjCol] || '').trim() : '',
+          cidade: cidadeCol ? String(row[cidadeCol] || '').trim() : '',
+          estado: estadoCol ? String(row[estadoCol] || '').trim() : '',
+          segmento: segmentoCol ? String(row[segmentoCol] || '').trim() : '',
+          porte: porteCol ? String(row[porteCol] || '').trim() : '',
         }));
 
         const validRows = rows.filter(r => r.contato || r.email);
@@ -175,11 +196,57 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
     setIsImporting(true);
     let successCount = 0;
     let errorCount = 0;
+    let companiesCreated = 0;
+    const createdCompanies = new Map<string, string>(); // empresa name -> id
 
     try {
       for (const row of validContacts) {
+        let companyId = row.companyId;
+
+        // Create company if needed
+        if (row.willCreateCompany && row.empresa) {
+          const empresaKey = row.empresa.toLowerCase().trim();
+          
+          // Check if we already created this company in this import batch
+          if (createdCompanies.has(empresaKey)) {
+            companyId = createdCompanies.get(empresaKey)!;
+          } else {
+            const companyData = {
+              nome_fantasia: row.empresa,
+              razao_social: row.empresa,
+              cnpj: row.cnpj || `IMPORTADO-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+              cidade: row.cidade || '',
+              estado: row.estado || '',
+              segmento: row.segmento || '',
+              porte: row.porte || '',
+              status: 'prospect',
+            };
+
+            const { data: newCompany, error: companyError } = await supabase
+              .from('companies')
+              .insert(companyData)
+              .select('id')
+              .single();
+
+            if (companyError) {
+              console.error('Erro ao criar empresa:', companyError);
+              errorCount++;
+              continue;
+            }
+
+            companyId = newCompany.id;
+            createdCompanies.set(empresaKey, companyId);
+            companiesCreated++;
+          }
+        }
+
+        if (!companyId) {
+          errorCount++;
+          continue;
+        }
+
         const contactData = {
-          company_id: row.companyId!,
+          company_id: companyId,
           nome: row.contato || `Contato ${Date.now()}`,
           cargo: row.cargo || '',
           email: row.email || `contato_${Date.now()}_${Math.random().toString(36).substr(2, 5)}@importado.tmp`,
@@ -200,7 +267,11 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
       }
 
       queryClient.invalidateQueries({ queryKey: ['contacts'] });
+      queryClient.invalidateQueries({ queryKey: ['companies'] });
       
+      if (companiesCreated > 0) {
+        toast.success(`${companiesCreated} empresa(s) criada(s) automaticamente!`);
+      }
       if (successCount > 0) {
         toast.success(`${successCount} contato(s) importado(s) com sucesso!`);
       }
@@ -230,8 +301,8 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
 
   const downloadTemplate = () => {
     const template = [
-      { Contato: 'João Silva', Empresa: 'Tech Solutions', Cargo: 'Diretor', Email: 'joao@tech.com', Telefone: '11999998888', WhatsApp: '11999998888', LinkedIn: 'https://linkedin.com/in/joaosilva' },
-      { Contato: 'Maria Santos', Empresa: 'Tech Solutions', Cargo: 'RH', Email: 'maria@tech.com', Telefone: '11988887777', WhatsApp: '', LinkedIn: '' },
+      { Contato: 'João Silva', Cargo: 'Diretor', Empresa: 'Tech Solutions', Email: 'joao@tech.com', Telefone: '11999998888', WhatsApp: '11999998888', LinkedIn: 'https://linkedin.com/in/joaosilva', CNPJ: '12.345.678/0001-90', Cidade: 'São Paulo', Estado: 'SP', Segmento: 'Tecnologia', Porte: 'media' },
+      { Contato: 'Maria Santos', Cargo: 'RH', Empresa: 'Nova Empresa', Email: 'maria@nova.com', Telefone: '11988887777', WhatsApp: '', LinkedIn: '', CNPJ: '98.765.432/0001-10', Cidade: 'Rio de Janeiro', Estado: 'RJ', Segmento: 'Varejo', Porte: 'grande' },
     ];
     const ws = XLSX.utils.json_to_sheet(template);
     const wb = XLSX.utils.book_new();
@@ -241,6 +312,7 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
 
   const duplicateCount = parsedData.filter(r => r.isDuplicate).length;
   const companyNotFoundCount = parsedData.filter(r => r.companyNotFound && !r.isDuplicate).length;
+  const willCreateCompanyCount = parsedData.filter(r => r.willCreateCompany && !r.isDuplicate).length;
   const validCount = parsedData.filter(r => !r.isDuplicate && !r.companyNotFound).length;
 
   return (
@@ -317,17 +389,31 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
                 )}
                 {companyNotFoundCount > 0 && (
                   <Badge variant="outline" className="border-amber-500 text-amber-600">
-                    {companyNotFoundCount} empresa não encontrada
+                    {companyNotFoundCount} sem empresa
+                  </Badge>
+                )}
+                {willCreateCompanyCount > 0 && (
+                  <Badge variant="outline" className="border-blue-500 text-blue-600">
+                    {willCreateCompanyCount} nova(s) empresa(s)
                   </Badge>
                 )}
               </div>
+
+              {willCreateCompanyCount > 0 && (
+                <Alert className="border-blue-500 bg-blue-50">
+                  <Check className="h-4 w-4 text-blue-600" />
+                  <AlertDescription className="text-blue-700">
+                    {willCreateCompanyCount} empresa(s) serão criadas automaticamente durante a importação.
+                  </AlertDescription>
+                </Alert>
+              )}
 
               {(duplicateCount > 0 || companyNotFoundCount > 0) && (
                 <Alert>
                   <AlertTriangle className="h-4 w-4" />
                   <AlertDescription>
                     {duplicateCount > 0 && `${duplicateCount} contato(s) já existem e serão ignorados. `}
-                    {companyNotFoundCount > 0 && `${companyNotFoundCount} contato(s) têm empresa não cadastrada e serão ignorados.`}
+                    {companyNotFoundCount > 0 && `${companyNotFoundCount} contato(s) não tem empresa informada e serão ignorados.`}
                   </AlertDescription>
                 </Alert>
               )}
@@ -347,13 +433,15 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
                     {parsedData.map((row, idx) => (
                       <TableRow 
                         key={idx}
-                        className={row.isDuplicate ? 'bg-destructive/10' : row.companyNotFound ? 'bg-amber-500/10' : ''}
+                        className={row.isDuplicate ? 'bg-destructive/10' : row.companyNotFound ? 'bg-amber-500/10' : row.willCreateCompany ? 'bg-blue-50' : ''}
                       >
                         <TableCell>
                           {row.isDuplicate ? (
                             <Badge variant="destructive" className="text-xs">Duplicado</Badge>
                           ) : row.companyNotFound ? (
                             <Badge variant="outline" className="text-xs border-amber-500 text-amber-600">Sem empresa</Badge>
+                          ) : row.willCreateCompany ? (
+                            <Badge variant="outline" className="text-xs border-blue-500 text-blue-600">Nova empresa</Badge>
                           ) : (
                             <Badge variant="secondary" className="text-xs bg-green-100 text-green-700">OK</Badge>
                           )}
