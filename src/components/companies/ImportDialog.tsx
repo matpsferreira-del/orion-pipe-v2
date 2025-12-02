@@ -171,6 +171,21 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
     return email.replace(/[,<>]/g, '').trim().toLowerCase();
   };
 
+  const normalizePorte = (porte: string): string => {
+    const porteMap: Record<string, string> = {
+      'micro': 'micro',
+      'pequeno': 'pequena',
+      'pequena': 'pequena',
+      'médio': 'media',
+      'medio': 'media',
+      'média': 'media',
+      'media': 'media',
+      'grande': 'grande',
+    };
+    const normalized = porte.toLowerCase().trim();
+    return porteMap[normalized] || '';
+  };
+
   const handleImport = async () => {
     if (data.length === 0) return;
 
@@ -188,7 +203,7 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
             nome_fantasia: row.empresa.trim(),
             cnpj: `IMPORTADO-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             segmento: row.segmento || '',
-            porte: row.porte || '',
+            porte: normalizePorte(row.porte),
             cidade: row.cidade || '',
             estado: row.estado || '',
             status: 'prospect',
