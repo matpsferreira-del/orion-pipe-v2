@@ -5,13 +5,15 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useCompanies, useDeleteCompany, CompanyRow } from '@/hooks/useCompanies';
 import { useContacts } from '@/hooks/useContacts';
 import { useOpportunities } from '@/hooks/useOpportunities';
 import { useInvoices } from '@/hooks/useInvoices';
 import { useProfiles } from '@/hooks/useProfiles';
-import { Plus, Search, Filter, MoreHorizontal, Building2, Eye, Pencil, Trash2, Download, Loader2, UserPlus, Upload, FileSpreadsheet } from 'lucide-react';
+import { Plus, Search, Filter, MoreHorizontal, Building2, Eye, Pencil, Trash2, Download, Loader2, UserPlus, Upload, FileSpreadsheet, ArrowUpDown, ArrowUp, ArrowDown, X } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { CompanyDetail } from '@/components/companies/CompanyDetail';
@@ -35,10 +37,17 @@ const porteLabels: Record<string, string> = {
   enterprise: 'Enterprise',
 };
 
+type SortField = 'nome_fantasia' | 'cnpj' | 'segmento' | 'porte' | 'cidade' | 'status' | 'contatos' | 'oportunidades';
+type SortDirection = 'asc' | 'desc';
+
 export default function Empresas() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterSegmento, setFilterSegmento] = useState<string>('all');
+  const [filterPorte, setFilterPorte] = useState<string>('all');
+  const [filterCidade, setFilterCidade] = useState<string>('all');
+  const [sortField, setSortField] = useState<SortField | null>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [selectedCompany, setSelectedCompany] = useState<CompanyRow | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [companyToEdit, setCompanyToEdit] = useState<CompanyRow | null>(null);
@@ -55,20 +64,90 @@ export default function Empresas() {
   const deleteCompany = useDeleteCompany();
 
   const segmentos = useMemo(() => {
-    return [...new Set(companies.map(c => c.segmento))];
+    return [...new Set(companies.map(c => c.segmento).filter(Boolean))];
   }, [companies]);
 
-  const filteredCompanies = useMemo(() => {
-    return companies.filter(company => {
+  const cidades = useMemo(() => {
+    return [...new Set(companies.map(c => c.cidade).filter(Boolean))];
+  }, [companies]);
+
+  const activeFiltersCount = useMemo(() => {
+    let count = 0;
+    if (filterStatus !== 'all') count++;
+    if (filterSegmento !== 'all') count++;
+    if (filterPorte !== 'all') count++;
+    if (filterCidade !== 'all') count++;
+    return count;
+  }, [filterStatus, filterSegmento, filterPorte, filterCidade]);
+
+  const clearAllFilters = () => {
+    setFilterStatus('all');
+    setFilterSegmento('all');
+    setFilterPorte('all');
+    setFilterCidade('all');
+  };
+
+  const filteredAndSortedCompanies = useMemo(() => {
+    let result = companies.filter(company => {
       const matchesSearch = searchTerm === '' ||
         company.nome_fantasia.toLowerCase().includes(searchTerm.toLowerCase()) ||
         company.razao_social.toLowerCase().includes(searchTerm.toLowerCase()) ||
         company.cnpj.includes(searchTerm);
       const matchesStatus = filterStatus === 'all' || company.status === filterStatus;
       const matchesSegmento = filterSegmento === 'all' || company.segmento === filterSegmento;
-      return matchesSearch && matchesStatus && matchesSegmento;
+      const matchesPorte = filterPorte === 'all' || company.porte === filterPorte;
+      const matchesCidade = filterCidade === 'all' || company.cidade === filterCidade;
+      return matchesSearch && matchesStatus && matchesSegmento && matchesPorte && matchesCidade;
     });
-  }, [companies, searchTerm, filterStatus, filterSegmento]);
+
+    if (sortField) {
+      result = [...result].sort((a, b) => {
+        let aValue: string | number;
+        let bValue: string | number;
+
+        if (sortField === 'contatos') {
+          aValue = contacts.filter(c => c.company_id === a.id).length;
+          bValue = contacts.filter(c => c.company_id === b.id).length;
+        } else if (sortField === 'oportunidades') {
+          aValue = opportunities.filter(o => o.company_id === a.id).length;
+          bValue = opportunities.filter(o => o.company_id === b.id).length;
+        } else {
+          aValue = a[sortField] || '';
+          bValue = b[sortField] || '';
+        }
+
+        if (typeof aValue === 'number' && typeof bValue === 'number') {
+          return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
+        }
+
+        const comparison = String(aValue).localeCompare(String(bValue), 'pt-BR', { sensitivity: 'base' });
+        return sortDirection === 'asc' ? comparison : -comparison;
+      });
+    }
+
+    return result;
+  }, [companies, contacts, opportunities, searchTerm, filterStatus, filterSegmento, filterPorte, filterCidade, sortField, sortDirection]);
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      if (sortDirection === 'asc') {
+        setSortDirection('desc');
+      } else {
+        setSortField(null);
+        setSortDirection('asc');
+      }
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  const SortIcon = ({ field }: { field: SortField }) => {
+    if (sortField !== field) return <ArrowUpDown className="h-4 w-4 ml-1 opacity-50" />;
+    return sortDirection === 'asc' ? 
+      <ArrowUp className="h-4 w-4 ml-1" /> : 
+      <ArrowDown className="h-4 w-4 ml-1" />;
+  };
 
   const getContactsCount = (companyId: string) => {
     return contacts.filter(c => c.company_id === companyId).length;
@@ -178,29 +257,124 @@ export default function Empresas() {
             className="pl-9"
           />
         </div>
-        <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger className="w-[180px]">
-            <Filter className="h-4 w-4 mr-2" />
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos os status</SelectItem>
-            <SelectItem value="prospect">Prospect</SelectItem>
-            <SelectItem value="cliente_ativo">Cliente Ativo</SelectItem>
-            <SelectItem value="cliente_inativo">Cliente Inativo</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={filterSegmento} onValueChange={setFilterSegmento}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Segmento" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos os segmentos</SelectItem>
-            {segmentos.map(seg => (
-              <SelectItem key={seg} value={seg}>{seg}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" className="gap-2">
+              <Filter className="h-4 w-4" />
+              Filtros
+              {activeFiltersCount > 0 && (
+                <Badge variant="secondary" className="ml-1 h-5 w-5 p-0 flex items-center justify-center text-xs">
+                  {activeFiltersCount}
+                </Badge>
+              )}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-80 bg-popover" align="start">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h4 className="font-medium">Filtros</h4>
+                {activeFiltersCount > 0 && (
+                  <Button variant="ghost" size="sm" onClick={clearAllFilters} className="h-auto py-1 px-2 text-xs">
+                    <X className="h-3 w-3 mr-1" />
+                    Limpar todos
+                  </Button>
+                )}
+              </div>
+              
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Status</label>
+                <Select value={filterStatus} onValueChange={setFilterStatus}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Todos os status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os status</SelectItem>
+                    <SelectItem value="prospect">Prospect</SelectItem>
+                    <SelectItem value="cliente_ativo">Cliente Ativo</SelectItem>
+                    <SelectItem value="cliente_inativo">Cliente Inativo</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Segmento</label>
+                <Select value={filterSegmento} onValueChange={setFilterSegmento}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Todos os segmentos" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os segmentos</SelectItem>
+                    {segmentos.map(seg => (
+                      <SelectItem key={seg} value={seg}>{seg}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Porte</label>
+                <Select value={filterPorte} onValueChange={setFilterPorte}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Todos os portes" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os portes</SelectItem>
+                    <SelectItem value="micro">Micro</SelectItem>
+                    <SelectItem value="pequena">Pequena</SelectItem>
+                    <SelectItem value="media">Média</SelectItem>
+                    <SelectItem value="grande">Grande</SelectItem>
+                    <SelectItem value="enterprise">Enterprise</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Cidade</label>
+                <Select value={filterCidade} onValueChange={setFilterCidade}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Todas as cidades" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas as cidades</SelectItem>
+                    {cidades.map(cidade => (
+                      <SelectItem key={cidade} value={cidade}>{cidade}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </PopoverContent>
+        </Popover>
+
+        {activeFiltersCount > 0 && (
+          <div className="flex items-center gap-2">
+            {filterStatus !== 'all' && (
+              <Badge variant="secondary" className="gap-1">
+                {statusConfig[filterStatus]?.label || filterStatus}
+                <X className="h-3 w-3 cursor-pointer" onClick={() => setFilterStatus('all')} />
+              </Badge>
+            )}
+            {filterSegmento !== 'all' && (
+              <Badge variant="secondary" className="gap-1">
+                {filterSegmento}
+                <X className="h-3 w-3 cursor-pointer" onClick={() => setFilterSegmento('all')} />
+              </Badge>
+            )}
+            {filterPorte !== 'all' && (
+              <Badge variant="secondary" className="gap-1">
+                {porteLabels[filterPorte] || filterPorte}
+                <X className="h-3 w-3 cursor-pointer" onClick={() => setFilterPorte('all')} />
+              </Badge>
+            )}
+            {filterCidade !== 'all' && (
+              <Badge variant="secondary" className="gap-1">
+                {filterCidade}
+                <X className="h-3 w-3 cursor-pointer" onClick={() => setFilterCidade('all')} />
+              </Badge>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Table */}
@@ -208,26 +382,90 @@ export default function Empresas() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Empresa</TableHead>
-              <TableHead>CNPJ</TableHead>
-              <TableHead>Segmento</TableHead>
-              <TableHead>Porte</TableHead>
-              <TableHead>Localização</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-center">Contatos</TableHead>
-              <TableHead className="text-center">Oportunidades</TableHead>
+              <TableHead 
+                className="cursor-pointer hover:bg-muted/50 select-none"
+                onClick={() => handleSort('nome_fantasia')}
+              >
+                <div className="flex items-center">
+                  Empresa
+                  <SortIcon field="nome_fantasia" />
+                </div>
+              </TableHead>
+              <TableHead 
+                className="cursor-pointer hover:bg-muted/50 select-none"
+                onClick={() => handleSort('cnpj')}
+              >
+                <div className="flex items-center">
+                  CNPJ
+                  <SortIcon field="cnpj" />
+                </div>
+              </TableHead>
+              <TableHead 
+                className="cursor-pointer hover:bg-muted/50 select-none"
+                onClick={() => handleSort('segmento')}
+              >
+                <div className="flex items-center">
+                  Segmento
+                  <SortIcon field="segmento" />
+                </div>
+              </TableHead>
+              <TableHead 
+                className="cursor-pointer hover:bg-muted/50 select-none"
+                onClick={() => handleSort('porte')}
+              >
+                <div className="flex items-center">
+                  Porte
+                  <SortIcon field="porte" />
+                </div>
+              </TableHead>
+              <TableHead 
+                className="cursor-pointer hover:bg-muted/50 select-none"
+                onClick={() => handleSort('cidade')}
+              >
+                <div className="flex items-center">
+                  Localização
+                  <SortIcon field="cidade" />
+                </div>
+              </TableHead>
+              <TableHead 
+                className="cursor-pointer hover:bg-muted/50 select-none"
+                onClick={() => handleSort('status')}
+              >
+                <div className="flex items-center">
+                  Status
+                  <SortIcon field="status" />
+                </div>
+              </TableHead>
+              <TableHead 
+                className="text-center cursor-pointer hover:bg-muted/50 select-none"
+                onClick={() => handleSort('contatos')}
+              >
+                <div className="flex items-center justify-center">
+                  Contatos
+                  <SortIcon field="contatos" />
+                </div>
+              </TableHead>
+              <TableHead 
+                className="text-center cursor-pointer hover:bg-muted/50 select-none"
+                onClick={() => handleSort('oportunidades')}
+              >
+                <div className="flex items-center justify-center">
+                  Oportunidades
+                  <SortIcon field="oportunidades" />
+                </div>
+              </TableHead>
               <TableHead className="w-[50px]"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredCompanies.length === 0 ? (
+            {filteredAndSortedCompanies.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                   Nenhuma empresa encontrada
                 </TableCell>
               </TableRow>
             ) : (
-              filteredCompanies.map((company) => {
+              filteredAndSortedCompanies.map((company) => {
                 const status = statusConfig[company.status] || statusConfig.prospect;
                 
                 return (
