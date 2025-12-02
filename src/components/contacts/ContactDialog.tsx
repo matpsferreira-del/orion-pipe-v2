@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { useCompanies } from '@/hooks/useCompanies';
-import { useCreateContact, ContactInsert } from '@/hooks/useContacts';
+import { useCreateContact, useUpdateContact, ContactInsert, ContactRow } from '@/hooks/useContacts';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
@@ -15,9 +15,10 @@ interface ContactDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   preSelectedCompanyId?: string;
+  contact?: ContactRow | null;
 }
 
-export function ContactDialog({ open, onOpenChange, preSelectedCompanyId }: ContactDialogProps) {
+export function ContactDialog({ open, onOpenChange, preSelectedCompanyId, contact }: ContactDialogProps) {
   const [companyId, setCompanyId] = useState(preSelectedCompanyId || '');
   const [nome, setNome] = useState('');
   const [cargo, setCargo] = useState('');
@@ -28,20 +29,35 @@ export function ContactDialog({ open, onOpenChange, preSelectedCompanyId }: Cont
   const [observacoes, setObservacoes] = useState('');
   const [isPrimary, setIsPrimary] = useState(false);
 
+  const isEditing = !!contact;
+
   const { data: companies = [], isLoading: companiesLoading } = useCompanies();
   const createContact = useCreateContact();
+  const updateContact = useUpdateContact();
 
-  // Reset companyId when preSelectedCompanyId changes
+  // Populate form when editing or reset when preSelectedCompanyId changes
   useEffect(() => {
-    if (preSelectedCompanyId) {
+    if (contact) {
+      setCompanyId(contact.company_id);
+      setNome(contact.nome);
+      setCargo(contact.cargo || '');
+      setEmail(contact.email);
+      setTelefone(contact.telefone || '');
+      setWhatsapp(contact.whatsapp || '');
+      setLinkedin(contact.linkedin || '');
+      setObservacoes(contact.observacoes || '');
+      setIsPrimary(contact.is_primary || false);
+    } else if (preSelectedCompanyId) {
       setCompanyId(preSelectedCompanyId);
+    } else {
+      resetForm();
     }
-  }, [preSelectedCompanyId]);
+  }, [contact, preSelectedCompanyId]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    const contact: ContactInsert = {
+    const contactData: ContactInsert = {
       company_id: companyId,
       nome,
       cargo,
@@ -53,12 +69,21 @@ export function ContactDialog({ open, onOpenChange, preSelectedCompanyId }: Cont
       is_primary: isPrimary,
     };
 
-    createContact.mutate(contact, {
-      onSuccess: () => {
-        onOpenChange(false);
-        resetForm();
-      },
-    });
+    if (isEditing && contact) {
+      updateContact.mutate({ id: contact.id, ...contactData }, {
+        onSuccess: () => {
+          onOpenChange(false);
+          resetForm();
+        },
+      });
+    } else {
+      createContact.mutate(contactData, {
+        onSuccess: () => {
+          onOpenChange(false);
+          resetForm();
+        },
+      });
+    }
   };
 
   const resetForm = () => {
@@ -77,7 +102,7 @@ export function ContactDialog({ open, onOpenChange, preSelectedCompanyId }: Cont
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Novo Contato</DialogTitle>
+          <DialogTitle>{isEditing ? 'Editar Contato' : 'Novo Contato'}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
@@ -204,10 +229,10 @@ export function ContactDialog({ open, onOpenChange, preSelectedCompanyId }: Cont
             </Button>
             <Button 
               type="submit" 
-              disabled={createContact.isPending || !companyId || companies.length === 0}
+              disabled={createContact.isPending || updateContact.isPending || !companyId || companies.length === 0}
             >
-              {createContact.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Criar Contato
+              {(createContact.isPending || updateContact.isPending) && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              {isEditing ? 'Salvar Alterações' : 'Criar Contato'}
             </Button>
           </div>
         </form>

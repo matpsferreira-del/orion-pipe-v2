@@ -85,6 +85,28 @@ export function useCreateContact() {
   });
 }
 
+export function useUpdateContact() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ id, ...updates }: Partial<ContactRow> & { id: string }) => {
+      const { error } = await supabase
+        .from('contacts')
+        .update(updates)
+        .eq('id', id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['contacts'] });
+      toast.success('Contato atualizado!');
+    },
+    onError: (error) => {
+      toast.error('Erro ao atualizar contato: ' + error.message);
+    },
+  });
+}
+
 export function useDeleteContact() {
   const queryClient = useQueryClient();
   
