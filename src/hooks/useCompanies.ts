@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
 
 export interface CompanyRow {
   id: string;
@@ -48,6 +49,7 @@ export function useCompanies() {
 
 export function useCreateCompany() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   
   return useMutation({
     mutationFn: async (company: CompanyInsert) => {
@@ -58,10 +60,27 @@ export function useCreateCompany() {
         .single();
       
       if (error) throw error;
+      
+      // Automatically grant creator access to the new company
+      if (user?.id && data?.id) {
+        const { error: accessError } = await supabase
+          .from('user_company_access')
+          .insert({
+            user_id: user.id,
+            company_id: data.id,
+            access_level: 'owner',
+          });
+        
+        if (accessError) {
+          console.error('Error granting company access:', accessError);
+        }
+      }
+      
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['companies'] });
+      queryClient.invalidateQueries({ queryKey: ['company-access'] });
       toast.success('Empresa criada com sucesso!');
     },
     onError: (error) => {
