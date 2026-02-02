@@ -63,14 +63,15 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Check if requesting user is admin
-    const { data: requestingProfile, error: profileError } = await supabaseAdmin
-      .from('profiles')
+    // Check if requesting user is admin using user_roles table
+    const { data: userRole, error: roleError } = await supabaseAdmin
+      .from('user_roles')
       .select('role')
       .eq('user_id', requestingUser.id)
-      .single();
+      .eq('role', 'admin')
+      .maybeSingle();
 
-    if (profileError || !requestingProfile || requestingProfile.role !== 'admin') {
+    if (roleError || !userRole) {
       return new Response(
         JSON.stringify({ error: 'Apenas administradores podem gerenciar membros da equipe' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -115,6 +116,23 @@ Deno.serve(async (req) => {
         );
       }
 
+      // Update the user_roles entry created by the trigger with the correct role
+      const roleMapping: Record<string, string> = {
+        'admin': 'admin',
+        'gestor': 'gestor',
+        'consultor': 'consultor'
+      };
+      const mappedRole = roleMapping[payload.role] || 'consultor';
+      
+      const { error: roleUpdateError } = await supabaseAdmin
+        .from('user_roles')
+        .update({ role: mappedRole })
+        .eq('user_id', newUser.user.id);
+
+      if (roleUpdateError) {
+        console.error('Error updating user role:', roleUpdateError.message);
+      }
+
       return new Response(
         JSON.stringify({ success: true, profile }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -122,6 +140,20 @@ Deno.serve(async (req) => {
     }
 
     if (payload.action === 'update') {
+      // Get the user_id from the profile first
+      const { data: existingProfile, error: profileFetchError } = await supabaseAdmin
+        .from('profiles')
+        .select('user_id')
+        .eq('id', payload.profileId)
+        .single();
+
+      if (profileFetchError || !existingProfile) {
+        return new Response(
+          JSON.stringify({ error: 'Profile not found' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
       const { data: profile, error: updateError } = await supabaseAdmin
         .from('profiles')
         .update({
@@ -139,6 +171,23 @@ Deno.serve(async (req) => {
           JSON.stringify({ error: updateError.message }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
+      }
+
+      // Update the user_roles entry with the new role
+      const roleMapping: Record<string, string> = {
+        'admin': 'admin',
+        'gestor': 'gestor',
+        'consultor': 'consultor'
+      };
+      const mappedRole = roleMapping[payload.role] || 'consultor';
+      
+      const { error: roleUpdateError } = await supabaseAdmin
+        .from('user_roles')
+        .update({ role: mappedRole })
+        .eq('user_id', existingProfile.user_id);
+
+      if (roleUpdateError) {
+        console.error('Error updating user role:', roleUpdateError.message);
       }
 
       return new Response(
