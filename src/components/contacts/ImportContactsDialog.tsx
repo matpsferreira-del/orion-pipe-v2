@@ -11,6 +11,13 @@ import { useCompanies } from '@/hooks/useCompanies';
 import { useContacts } from '@/hooks/useContacts';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { 
+  validateContactImportRows,
+  normalizePorte as normalizePorteUtil,
+  cleanPhone as cleanPhoneUtil,
+  cleanEmail as cleanEmailUtil,
+  sanitizeText
+} from '@/utils/importValidation';
 
 interface ImportContactsDialogProps {
   open: boolean;
@@ -161,29 +168,63 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
         const segmentoCol = findColumn(headers, ['segmento', 'segment', 'setor']);
         const porteCol = findColumn(headers, ['porte', 'size', 'tamanho']);
 
-        const rows: ImportRow[] = jsonData.map((row) => ({
-          contato: firstContatoCol ? String(row[firstContatoCol] || '').trim() : '',
-          empresa: empresaCol ? String(row[empresaCol] || '').trim() : '',
-          cargo: cargoCol ? String(row[cargoCol] || '').trim() : '',
-          email: emailCol ? String(row[emailCol] || '').trim() : '',
-          telefone: telefoneCol ? String(row[telefoneCol] || '').trim() : '',
-          whatsapp: whatsappCol ? String(row[whatsappCol] || '').trim() : '',
-          linkedin: linkedinCol ? String(row[linkedinCol] || '').trim() : '',
-          cnpj: cnpjCol ? String(row[cnpjCol] || '').trim() : '',
-          cidade: cidadeCol ? String(row[cidadeCol] || '').trim() : '',
-          estado: estadoCol ? String(row[estadoCol] || '').trim() : '',
-          segmento: segmentoCol ? String(row[segmentoCol] || '').trim() : '',
-          porte: porteCol ? String(row[porteCol] || '').trim() : '',
+        // Build raw rows for validation
+        const rawRows = jsonData.map((row) => ({
+          contato: firstContatoCol ? sanitizeText(String(row[firstContatoCol] || '')) : '',
+          empresa: empresaCol ? sanitizeText(String(row[empresaCol] || '')) : '',
+          cargo: cargoCol ? sanitizeText(String(row[cargoCol] || '')) : '',
+          email: emailCol ? sanitizeText(String(row[emailCol] || '')) : '',
+          telefone: telefoneCol ? sanitizeText(String(row[telefoneCol] || '')) : '',
+          whatsapp: whatsappCol ? sanitizeText(String(row[whatsappCol] || '')) : '',
+          linkedin: linkedinCol ? sanitizeText(String(row[linkedinCol] || '')) : '',
+          cnpj: cnpjCol ? sanitizeText(String(row[cnpjCol] || '')) : '',
+          cidade: cidadeCol ? sanitizeText(String(row[cidadeCol] || '')) : '',
+          estado: estadoCol ? sanitizeText(String(row[estadoCol] || '')) : '',
+          segmento: segmentoCol ? sanitizeText(String(row[segmentoCol] || '')) : '',
+          porte: porteCol ? sanitizeText(String(row[porteCol] || '')) : '',
         }));
 
-        const validRows = rows.filter(r => r.contato || r.email);
+        // Validate all rows using zod schema
+        const { validRows: validated, errors: validationErrors } = validateContactImportRows(rawRows);
+
+        if (validationErrors.length > 0) {
+          const errorMessages = validationErrors.slice(0, 5).map(e => 
+            `Linha ${e.rowIndex}: ${e.errors.join(', ')}`
+          );
+          if (validationErrors.length > 5) {
+            errorMessages.push(`... e mais ${validationErrors.length - 5} erro(s)`);
+          }
+          console.warn('Validation errors:', validationErrors);
+          toast.warning(`${validationErrors.length} linha(s) com erros de validação ignoradas`);
+        }
+
+        // Convert validated rows to ImportRow format with additional status fields
+        const importRows: ImportRow[] = validated.map(row => ({
+          contato: row.contato || '',
+          empresa: row.empresa || '',
+          cargo: row.cargo || '',
+          email: row.email || '',
+          telefone: row.telefone || '',
+          whatsapp: row.whatsapp || '',
+          linkedin: row.linkedin || '',
+          cnpj: row.cnpj || '',
+          cidade: row.cidade || '',
+          estado: row.estado || '',
+          segmento: row.segmento || '',
+          porte: row.porte || '',
+          isDuplicate: false,
+          duplicateReason: undefined,
+          companyId: undefined,
+          companyNotFound: false,
+          willCreateCompany: false,
+        }));
         
-        if (validRows.length === 0) {
+        if (importRows.length === 0) {
           setParseError('Nenhum contato válido encontrado (nome ou email obrigatório)');
           return;
         }
 
-        const checkedRows = checkDuplicates(validRows);
+        const checkedRows = checkDuplicates(importRows);
         setParsedData(checkedRows);
       } catch {
         setParseError('Erro ao processar o arquivo. Verifique se é um arquivo Excel válido.');
@@ -192,24 +233,10 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
     reader.readAsArrayBuffer(selectedFile);
   };
 
-  const cleanPhone = (phone: string): string => {
-    if (!phone) return '';
-    return phone.replace(/\D/g, '').slice(0, 15);
-  };
-
-  const cleanEmail = (email: string): string => {
-    if (!email) return '';
-    return email.toLowerCase().trim();
-  };
-
-  const normalizePorte = (porte: string): string => {
-    if (!porte) return '';
-    const normalized = porte.toLowerCase().trim();
-    if (normalized.includes('pequen')) return 'pequena';
-    if (normalized.includes('médi') || normalized.includes('medi')) return 'media';
-    if (normalized.includes('grand') || normalized.includes('enterprise')) return 'grande';
-    return '';
-  };
+  // Use imported utility functions for cleaning/normalizing
+  const cleanPhone = cleanPhoneUtil;
+  const cleanEmail = cleanEmailUtil;
+  const normalizePorte = normalizePorteUtil;
 
   const handleImport = async () => {
     const validContacts = parsedData.filter(row => !row.isDuplicate && !row.companyNotFound);
@@ -237,13 +264,14 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
           if (createdCompanies.has(empresaKey)) {
             companyId = createdCompanies.get(empresaKey)!;
           } else {
+            // Sanitize company data before insert
             const companyData = {
-              nome_fantasia: row.empresa,
-              razao_social: row.empresa,
-              cnpj: row.cnpj || `IMPORTADO-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
-              cidade: row.cidade || '',
-              estado: row.estado || '',
-              segmento: row.segmento || '',
+              nome_fantasia: sanitizeText(row.empresa),
+              razao_social: sanitizeText(row.empresa),
+              cnpj: sanitizeText(row.cnpj) || `IMPORTADO-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+              cidade: sanitizeText(row.cidade || ''),
+              estado: sanitizeText(row.estado || ''),
+              segmento: sanitizeText(row.segmento || ''),
               porte: normalizePorte(row.porte),
               status: 'prospect',
             };
@@ -271,14 +299,15 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
           continue;
         }
 
+        // Sanitize contact data before insert
         const contactData = {
           company_id: companyId,
-          nome: row.contato || `Contato ${Date.now()}`,
-          cargo: row.cargo || '',
-          email: row.email || `contato_${Date.now()}_${Math.random().toString(36).substr(2, 5)}@importado.tmp`,
-          telefone: cleanPhone(row.telefone) || '',
-          whatsapp: cleanPhone(row.whatsapp) || '',
-          linkedin: row.linkedin || '',
+          nome: sanitizeText(row.contato) || `Contato ${Date.now()}`,
+          cargo: sanitizeText(row.cargo || ''),
+          email: cleanEmail(row.email) || `contato_${Date.now()}_${Math.random().toString(36).substr(2, 5)}@importado.tmp`,
+          telefone: cleanPhone(row.telefone || ''),
+          whatsapp: cleanPhone(row.whatsapp || ''),
+          linkedin: sanitizeText(row.linkedin || ''),
           is_primary: false,
         };
 
