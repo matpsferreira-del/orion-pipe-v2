@@ -9,22 +9,22 @@ import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
 import { Badge } from '@/components/ui/badge';
+import { 
+  CompanyImportRow, 
+  validateCompanyImportRows, 
+  normalizePorte as normalizePorteUtil,
+  cleanPhone,
+  cleanEmail,
+  sanitizeText
+} from '@/utils/importValidation';
 
 interface ImportDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-interface ImportRow {
-  empresa: string;
-  contato: string;
-  email: string;
-  telefone: string;
-  porte: string;
-  cidade: string;
-  estado: string;
-  segmento: string;
-}
+// Re-export the validated type for internal use
+type ImportRow = CompanyImportRow;
 
 interface GroupedCompany {
   empresa: string;
@@ -235,25 +235,40 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
         return;
       }
 
-      const parsedData: ImportRow[] = jsonData.map((row) => ({
-        empresa: String(row[empresaCol] || '').trim(),
-        contato: contatoCol ? String(row[contatoCol] || '').replace(/[,<>]/g, '').trim() : '',
-        email: emailCol ? String(row[emailCol] || '').replace(/[<>]/g, '').trim() : '',
-        telefone: telefoneCol ? String(row[telefoneCol] || '').trim() : '',
-        porte: porteCol ? String(row[porteCol] || '').trim() : '',
-        cidade: cidadeCol ? String(row[cidadeCol] || '').trim() : '',
-        estado: estadoCol ? String(row[estadoCol] || '').trim() : '',
-        segmento: segmentoCol ? String(row[segmentoCol] || '').trim() : '',
-      })).filter(row => row.empresa.length > 0);
+      // Build raw rows for validation
+      const rawRows = jsonData.map((row) => ({
+        empresa: sanitizeText(String(row[empresaCol] || '')),
+        contato: contatoCol ? sanitizeText(String(row[contatoCol] || '').replace(/[,<>]/g, '')) : '',
+        email: emailCol ? sanitizeText(String(row[emailCol] || '').replace(/[<>]/g, '')) : '',
+        telefone: telefoneCol ? sanitizeText(String(row[telefoneCol] || '')) : '',
+        porte: porteCol ? sanitizeText(String(row[porteCol] || '')) : '',
+        cidade: cidadeCol ? sanitizeText(String(row[cidadeCol] || '')) : '',
+        estado: estadoCol ? sanitizeText(String(row[estadoCol] || '')) : '',
+        segmento: segmentoCol ? sanitizeText(String(row[segmentoCol] || '')) : '',
+      }));
 
-      if (parsedData.length === 0) {
-        setParseWarning('Nenhum registro válido encontrado. Verifique se a coluna "Empresa" contém dados.');
+      // Validate all rows using zod schema
+      const { validRows, errors: validationErrors } = validateCompanyImportRows(rawRows);
+
+      if (validationErrors.length > 0) {
+        const errorMessages = validationErrors.slice(0, 5).map(e => 
+          `Linha ${e.rowIndex}: ${e.errors.join(', ')}`
+        );
+        if (validationErrors.length > 5) {
+          errorMessages.push(`... e mais ${validationErrors.length - 5} erro(s)`);
+        }
+        console.warn('Validation errors:', validationErrors);
+        toast.warning(`${validationErrors.length} linha(s) com erros de validação ignoradas`);
       }
 
-      setRawData(parsedData);
+      if (validRows.length === 0) {
+        setParseWarning('Nenhum registro válido encontrado. Verifique se a coluna "Empresa" contém dados válidos.');
+      }
+
+      setRawData(validRows);
       
-      if (parsedData.length > 0) {
-        toast.success(`${parsedData.length} registros encontrados no arquivo!`);
+      if (validRows.length > 0) {
+        toast.success(`${validRows.length} registros válidos encontrados no arquivo!`);
       }
     } catch (error) {
       console.error('Erro ao ler arquivo:', error);
@@ -265,28 +280,8 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
     }
   };
 
-  const cleanPhone = (phone: string): string => {
-    return phone.replace(/[^\d]/g, '');
-  };
-
-  const cleanEmail = (email: string): string => {
-    return email.replace(/[,<>]/g, '').trim().toLowerCase();
-  };
-
-  const normalizePorte = (porte: string): string => {
-    const porteMap: Record<string, string> = {
-      'micro': 'micro',
-      'pequeno': 'pequena',
-      'pequena': 'pequena',
-      'médio': 'media',
-      'medio': 'media',
-      'média': 'media',
-      'media': 'media',
-      'grande': 'grande',
-    };
-    const normalized = porte.toLowerCase().trim();
-    return porteMap[normalized] || '';
-  };
+  // Use imported utility functions for cleaning/normalizing
+  const normalizePorte = normalizePorteUtil;
 
   const handleImport = async () => {
     const toImport = groupedData.filter(c => !c.isDuplicate);
@@ -302,17 +297,24 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
 
     for (const company of toImport) {
       try {
+        // Sanitize and validate company data before insert
+        const companyName = sanitizeText(company.empresa);
+        const companySegmento = sanitizeText(company.segmento || '');
+        const companyCidade = sanitizeText(company.cidade || '');
+        const companyEstado = sanitizeText(company.estado || '');
+        const companyPorte = normalizePorte(company.porte);
+
         // Create company
         const { data: newCompany, error: companyError } = await supabase
           .from('companies')
           .insert({
-            razao_social: company.empresa.trim(),
-            nome_fantasia: company.empresa.trim(),
+            razao_social: companyName,
+            nome_fantasia: companyName,
             cnpj: `IMPORTADO-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-            segmento: company.segmento || '',
-            porte: normalizePorte(company.porte),
-            cidade: company.cidade || '',
-            estado: company.estado || '',
+            segmento: companySegmento,
+            porte: companyPorte,
+            cidade: companyCidade,
+            estado: companyEstado,
             status: 'prospect',
           })
           .select()
@@ -323,15 +325,19 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
         // Create all contacts for this company
         for (let i = 0; i < company.contacts.length; i++) {
           const contact = company.contacts[i];
+          const contactNome = sanitizeText(contact.nome) || 'Contato Principal';
+          const contactEmail = cleanEmail(contact.email) || `contato_${Date.now()}_${i}@importado.tmp`;
+          const contactTelefone = cleanPhone(contact.telefone);
+
           const { error: contactError } = await supabase
             .from('contacts')
             .insert({
               company_id: newCompany.id,
-              nome: contact.nome || 'Contato Principal',
+              nome: contactNome,
               cargo: 'Responsável',
-              email: cleanEmail(contact.email) || `contato_${Date.now()}_${i}@importado.tmp`,
-              telefone: cleanPhone(contact.telefone),
-              whatsapp: cleanPhone(contact.telefone),
+              email: contactEmail,
+              telefone: contactTelefone,
+              whatsapp: contactTelefone,
               is_primary: i === 0, // First contact is primary
             });
 
