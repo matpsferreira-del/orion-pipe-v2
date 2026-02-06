@@ -22,6 +22,7 @@ import {
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { TabType } from './TopNav';
 
 interface NavItemProps {
   to: string;
@@ -61,51 +62,33 @@ const NavItem = ({ to, icon: Icon, label, collapsed }: NavItemProps) => {
   return content;
 };
 
-type TabType = 'comercial' | 'recrutamento' | 'configuracoes';
-
-const tabConfig = {
-  comercial: {
-    label: 'Comercial',
-    items: [
-      { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
-      { to: '/pipeline', icon: Kanban, label: 'Funil Comercial' },
-      { to: '/empresas', icon: Building2, label: 'Empresas' },
-      { to: '/contatos', icon: Contact, label: 'Contatos' },
-      { to: '/oportunidades', icon: Target, label: 'Oportunidades' },
-      { to: '/tarefas', icon: CheckSquare, label: 'Tarefas' },
-      { to: '/faturamento', icon: Receipt, label: 'Faturamento' },
-      { to: '/relatorios', icon: BarChart3, label: 'Relatórios' },
-    ],
-  },
-  recrutamento: {
-    label: 'Recrutamento',
-    items: [
-      { to: '/pessoas', icon: UserCircle, label: 'Banco de Talentos' },
-      { to: '/vagas', icon: Briefcase, label: 'Vagas' },
-    ],
-  },
-  configuracoes: {
-    label: 'Configurações',
-    items: [
-      { to: '/equipe', icon: Users, label: 'Equipe' },
-      { to: '/configuracoes', icon: Settings, label: 'Configurações' },
-    ],
-  },
+const tabNavItems = {
+  comercial: [
+    { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
+    { to: '/pipeline', icon: Kanban, label: 'Funil Comercial' },
+    { to: '/empresas', icon: Building2, label: 'Empresas' },
+    { to: '/contatos', icon: Contact, label: 'Contatos' },
+    { to: '/oportunidades', icon: Target, label: 'Oportunidades' },
+    { to: '/tarefas', icon: CheckSquare, label: 'Tarefas' },
+    { to: '/faturamento', icon: Receipt, label: 'Faturamento' },
+    { to: '/relatorios', icon: BarChart3, label: 'Relatórios' },
+  ],
+  recrutamento: [
+    { to: '/pessoas', icon: UserCircle, label: 'Banco de Talentos' },
+    { to: '/vagas', icon: Briefcase, label: 'Vagas' },
+  ],
+  configuracoes: [
+    { to: '/equipe', icon: Users, label: 'Equipe' },
+    { to: '/configuracoes', icon: Settings, label: 'Configurações' },
+  ],
 };
 
-const getActiveTab = (pathname: string): TabType => {
-  for (const [tab, config] of Object.entries(tabConfig)) {
-    if (config.items.some(item => item.to === pathname)) {
-      return tab as TabType;
-    }
-  }
-  return 'comercial';
-};
+interface AppSidebarProps {
+  activeTab: TabType;
+}
 
-export function AppSidebar() {
-  const location = useLocation();
+export function AppSidebar({ activeTab }: AppSidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
-  const [activeTab, setActiveTab] = useState<TabType>(() => getActiveTab(location.pathname));
   const { profile, signOut } = useAuth();
 
   const getInitials = (name: string) => {
@@ -122,72 +105,15 @@ export function AppSidebar() {
     await signOut();
   };
 
-  const currentItems = tabConfig[activeTab].items;
+  const currentItems = tabNavItems[activeTab];
 
   return (
     <aside
       className={cn(
         'flex flex-col bg-sidebar border-r border-sidebar-border transition-all duration-300',
-        collapsed ? 'w-16' : 'w-64'
+        collapsed ? 'w-16' : 'w-56'
       )}
     >
-      {/* Logo */}
-      <div className={cn(
-        'flex items-center h-16 px-4 border-b border-sidebar-border',
-        collapsed ? 'justify-center' : 'gap-3'
-      )}>
-        <div className="h-8 w-8 rounded-lg gradient-primary flex items-center justify-center">
-          <Target className="h-5 w-5 text-primary-foreground" />
-        </div>
-        {!collapsed && (
-          <div className="flex flex-col">
-            <span className="font-semibold text-sidebar-foreground">RecruitCRM</span>
-            <span className="text-xs text-sidebar-foreground/60">Consultoria R&S</span>
-          </div>
-        )}
-      </div>
-
-      {/* Tab Navigation */}
-      {!collapsed ? (
-        <div className="flex border-b border-sidebar-border">
-          {(Object.keys(tabConfig) as TabType[]).map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={cn(
-                'flex-1 py-2.5 text-xs font-medium transition-colors',
-                activeTab === tab
-                  ? 'text-primary border-b-2 border-primary bg-primary/5'
-                  : 'text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent'
-              )}
-            >
-              {tabConfig[tab].label}
-            </button>
-          ))}
-        </div>
-      ) : (
-        <div className="flex flex-col border-b border-sidebar-border py-1">
-          {(Object.keys(tabConfig) as TabType[]).map((tab) => (
-            <Tooltip key={tab} delayDuration={0}>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={() => setActiveTab(tab)}
-                  className={cn(
-                    'mx-2 my-0.5 p-2 rounded-md text-xs font-medium transition-colors',
-                    activeTab === tab
-                      ? 'text-primary bg-primary/10'
-                      : 'text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent'
-                  )}
-                >
-                  {tabConfig[tab].label.charAt(0)}
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="right">{tabConfig[tab].label}</TooltipContent>
-            </Tooltip>
-          ))}
-        </div>
-      )}
-
       {/* Navigation */}
       <nav className="flex-1 p-3 space-y-1 overflow-y-auto scrollbar-thin">
         {currentItems.map((item) => (
