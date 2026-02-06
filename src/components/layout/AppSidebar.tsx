@@ -61,24 +61,52 @@ const NavItem = ({ to, icon: Icon, label, collapsed }: NavItemProps) => {
   return content;
 };
 
-export function AppSidebar() {
-  const [collapsed, setCollapsed] = useState(false);
-  const { profile, signOut } = useAuth();
+type TabType = 'comercial' | 'recrutamento' | 'configuracoes';
 
-  const navItems = [
-    { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
-    { to: '/pipeline', icon: Kanban, label: 'Funil Comercial' },
-    { to: '/empresas', icon: Building2, label: 'Empresas' },
-    { to: '/contatos', icon: Contact, label: 'Contatos' },
-    { to: '/pessoas', icon: UserCircle, label: 'Banco de Talentos' },
-    { to: '/vagas', icon: Briefcase, label: 'Vagas' },
-    { to: '/oportunidades', icon: Target, label: 'Oportunidades' },
-    { to: '/tarefas', icon: CheckSquare, label: 'Tarefas' },
-    { to: '/faturamento', icon: Receipt, label: 'Faturamento' },
-    { to: '/relatorios', icon: BarChart3, label: 'Relatórios' },
-    { to: '/equipe', icon: Users, label: 'Equipe' },
-    { to: '/configuracoes', icon: Settings, label: 'Configurações' },
-  ];
+const tabConfig = {
+  comercial: {
+    label: 'Comercial',
+    items: [
+      { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
+      { to: '/pipeline', icon: Kanban, label: 'Funil Comercial' },
+      { to: '/empresas', icon: Building2, label: 'Empresas' },
+      { to: '/contatos', icon: Contact, label: 'Contatos' },
+      { to: '/oportunidades', icon: Target, label: 'Oportunidades' },
+      { to: '/tarefas', icon: CheckSquare, label: 'Tarefas' },
+      { to: '/faturamento', icon: Receipt, label: 'Faturamento' },
+      { to: '/relatorios', icon: BarChart3, label: 'Relatórios' },
+    ],
+  },
+  recrutamento: {
+    label: 'Recrutamento',
+    items: [
+      { to: '/pessoas', icon: UserCircle, label: 'Banco de Talentos' },
+      { to: '/vagas', icon: Briefcase, label: 'Vagas' },
+    ],
+  },
+  configuracoes: {
+    label: 'Configurações',
+    items: [
+      { to: '/equipe', icon: Users, label: 'Equipe' },
+      { to: '/configuracoes', icon: Settings, label: 'Configurações' },
+    ],
+  },
+};
+
+const getActiveTab = (pathname: string): TabType => {
+  for (const [tab, config] of Object.entries(tabConfig)) {
+    if (config.items.some(item => item.to === pathname)) {
+      return tab as TabType;
+    }
+  }
+  return 'comercial';
+};
+
+export function AppSidebar() {
+  const location = useLocation();
+  const [collapsed, setCollapsed] = useState(false);
+  const [activeTab, setActiveTab] = useState<TabType>(() => getActiveTab(location.pathname));
+  const { profile, signOut } = useAuth();
 
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
@@ -93,6 +121,8 @@ export function AppSidebar() {
   const handleLogout = async () => {
     await signOut();
   };
+
+  const currentItems = tabConfig[activeTab].items;
 
   return (
     <aside
@@ -117,9 +147,50 @@ export function AppSidebar() {
         )}
       </div>
 
+      {/* Tab Navigation */}
+      {!collapsed ? (
+        <div className="flex border-b border-sidebar-border">
+          {(Object.keys(tabConfig) as TabType[]).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={cn(
+                'flex-1 py-2.5 text-xs font-medium transition-colors',
+                activeTab === tab
+                  ? 'text-primary border-b-2 border-primary bg-primary/5'
+                  : 'text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent'
+              )}
+            >
+              {tabConfig[tab].label}
+            </button>
+          ))}
+        </div>
+      ) : (
+        <div className="flex flex-col border-b border-sidebar-border py-1">
+          {(Object.keys(tabConfig) as TabType[]).map((tab) => (
+            <Tooltip key={tab} delayDuration={0}>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => setActiveTab(tab)}
+                  className={cn(
+                    'mx-2 my-0.5 p-2 rounded-md text-xs font-medium transition-colors',
+                    activeTab === tab
+                      ? 'text-primary bg-primary/10'
+                      : 'text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent'
+                  )}
+                >
+                  {tabConfig[tab].label.charAt(0)}
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right">{tabConfig[tab].label}</TooltipContent>
+            </Tooltip>
+          ))}
+        </div>
+      )}
+
       {/* Navigation */}
       <nav className="flex-1 p-3 space-y-1 overflow-y-auto scrollbar-thin">
-        {navItems.map((item) => (
+        {currentItems.map((item) => (
           <NavItem
             key={item.to}
             to={item.to}
