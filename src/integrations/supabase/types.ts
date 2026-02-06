@@ -79,6 +79,139 @@ export type Database = {
           },
         ]
       }
+      application_history: {
+        Row: {
+          application_id: string
+          changed_by: string | null
+          created_at: string
+          from_stage_id: string | null
+          from_status: Database["public"]["Enums"]["application_status"] | null
+          id: string
+          note: string | null
+          to_stage_id: string | null
+          to_status: Database["public"]["Enums"]["application_status"] | null
+        }
+        Insert: {
+          application_id: string
+          changed_by?: string | null
+          created_at?: string
+          from_stage_id?: string | null
+          from_status?: Database["public"]["Enums"]["application_status"] | null
+          id?: string
+          note?: string | null
+          to_stage_id?: string | null
+          to_status?: Database["public"]["Enums"]["application_status"] | null
+        }
+        Update: {
+          application_id?: string
+          changed_by?: string | null
+          created_at?: string
+          from_stage_id?: string | null
+          from_status?: Database["public"]["Enums"]["application_status"] | null
+          id?: string
+          note?: string | null
+          to_stage_id?: string | null
+          to_status?: Database["public"]["Enums"]["application_status"] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "application_history_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "application_history_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "application_history_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "application_history_from_stage_id_fkey"
+            columns: ["from_stage_id"]
+            isOneToOne: false
+            referencedRelation: "job_pipeline_stages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "application_history_to_stage_id_fkey"
+            columns: ["to_stage_id"]
+            isOneToOne: false
+            referencedRelation: "job_pipeline_stages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      applications: {
+        Row: {
+          applied_at: string
+          id: string
+          job_id: string
+          notes: string | null
+          party_id: string
+          rating: number | null
+          source: string
+          stage_id: string | null
+          status: Database["public"]["Enums"]["application_status"]
+          updated_at: string
+        }
+        Insert: {
+          applied_at?: string
+          id?: string
+          job_id: string
+          notes?: string | null
+          party_id: string
+          rating?: number | null
+          source?: string
+          stage_id?: string | null
+          status?: Database["public"]["Enums"]["application_status"]
+          updated_at?: string
+        }
+        Update: {
+          applied_at?: string
+          id?: string
+          job_id?: string
+          notes?: string | null
+          party_id?: string
+          rating?: number | null
+          source?: string
+          stage_id?: string | null
+          status?: Database["public"]["Enums"]["application_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "applications_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "applications_party_id_fkey"
+            columns: ["party_id"]
+            isOneToOne: false
+            referencedRelation: "party"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "applications_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "job_pipeline_stages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       companies: {
         Row: {
           cidade: string
@@ -258,6 +391,144 @@ export type Database = {
             columns: ["opportunity_id"]
             isOneToOne: false
             referencedRelation: "opportunities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      job_pipeline_stages: {
+        Row: {
+          color: string
+          created_at: string
+          id: string
+          job_id: string
+          name: string
+          position: number
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          id?: string
+          job_id: string
+          name: string
+          position?: number
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          id?: string
+          job_id?: string
+          name?: string
+          position?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_pipeline_stages_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      jobs: {
+        Row: {
+          company_id: string
+          contact_id: string | null
+          created_at: string
+          created_by: string
+          deadline: string | null
+          description: string | null
+          filled_at: string | null
+          id: string
+          location: string | null
+          priority: string
+          requirements: string | null
+          responsavel_id: string | null
+          salary_max: number | null
+          salary_min: number | null
+          status: Database["public"]["Enums"]["job_status"]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          contact_id?: string | null
+          created_at?: string
+          created_by: string
+          deadline?: string | null
+          description?: string | null
+          filled_at?: string | null
+          id?: string
+          location?: string | null
+          priority?: string
+          requirements?: string | null
+          responsavel_id?: string | null
+          salary_max?: number | null
+          salary_min?: number | null
+          status?: Database["public"]["Enums"]["job_status"]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          contact_id?: string | null
+          created_at?: string
+          created_by?: string
+          deadline?: string | null
+          description?: string | null
+          filled_at?: string | null
+          id?: string
+          location?: string | null
+          priority?: string
+          requirements?: string | null
+          responsavel_id?: string | null
+          salary_max?: number | null
+          salary_min?: number | null
+          status?: Database["public"]["Enums"]["job_status"]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jobs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_responsavel_id_fkey"
+            columns: ["responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_responsavel_id_fkey"
+            columns: ["responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -866,8 +1137,17 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "gestor" | "consultor"
+      application_status:
+        | "new"
+        | "screening"
+        | "interviewing"
+        | "offer"
+        | "hired"
+        | "rejected"
+        | "withdrawn"
       duplicate_reason: "same_email" | "same_phone" | "similar_name" | "manual"
       duplicate_status: "open" | "dismissed" | "merged"
+      job_status: "draft" | "open" | "paused" | "filled" | "cancelled"
       party_created_from: "crm" | "ats" | "site" | "import" | "api"
       party_role_type:
         | "candidate"
@@ -1006,8 +1286,18 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "gestor", "consultor"],
+      application_status: [
+        "new",
+        "screening",
+        "interviewing",
+        "offer",
+        "hired",
+        "rejected",
+        "withdrawn",
+      ],
       duplicate_reason: ["same_email", "same_phone", "similar_name", "manual"],
       duplicate_status: ["open", "dismissed", "merged"],
+      job_status: ["draft", "open", "paused", "filled", "cancelled"],
       party_created_from: ["crm", "ats", "site", "import", "api"],
       party_role_type: [
         "candidate",
