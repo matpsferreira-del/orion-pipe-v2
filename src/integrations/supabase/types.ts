@@ -153,6 +153,7 @@ export type Database = {
           linkedin: string | null
           nome: string
           observacoes: string | null
+          party_id: string | null
           telefone: string | null
           whatsapp: string | null
         }
@@ -166,6 +167,7 @@ export type Database = {
           linkedin?: string | null
           nome: string
           observacoes?: string | null
+          party_id?: string | null
           telefone?: string | null
           whatsapp?: string | null
         }
@@ -179,6 +181,7 @@ export type Database = {
           linkedin?: string | null
           nome?: string
           observacoes?: string | null
+          party_id?: string | null
           telefone?: string | null
           whatsapp?: string | null
         }
@@ -188,6 +191,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contacts_party_id_fkey"
+            columns: ["party_id"]
+            isOneToOne: false
+            referencedRelation: "party"
             referencedColumns: ["id"]
           },
         ]
@@ -349,6 +359,270 @@ export type Database = {
             columns: ["responsavel_id"]
             isOneToOne: false
             referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      party: {
+        Row: {
+          city: string | null
+          country: string | null
+          created_at: string
+          created_from: Database["public"]["Enums"]["party_created_from"]
+          email_norm: string | null
+          email_raw: string | null
+          full_name: string
+          headline: string | null
+          id: string
+          linkedin_url: string | null
+          merged_into_party_id: string | null
+          notes: string | null
+          phone_e164: string | null
+          phone_raw: string | null
+          state: string | null
+          status: Database["public"]["Enums"]["party_status"]
+          tags: Json | null
+          updated_at: string
+        }
+        Insert: {
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          created_from: Database["public"]["Enums"]["party_created_from"]
+          email_norm?: string | null
+          email_raw?: string | null
+          full_name: string
+          headline?: string | null
+          id?: string
+          linkedin_url?: string | null
+          merged_into_party_id?: string | null
+          notes?: string | null
+          phone_e164?: string | null
+          phone_raw?: string | null
+          state?: string | null
+          status?: Database["public"]["Enums"]["party_status"]
+          tags?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          created_from?: Database["public"]["Enums"]["party_created_from"]
+          email_norm?: string | null
+          email_raw?: string | null
+          full_name?: string
+          headline?: string | null
+          id?: string
+          linkedin_url?: string | null
+          merged_into_party_id?: string | null
+          notes?: string | null
+          phone_e164?: string | null
+          phone_raw?: string | null
+          state?: string | null
+          status?: Database["public"]["Enums"]["party_status"]
+          tags?: Json | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "party_merged_into_party_id_fkey"
+            columns: ["merged_into_party_id"]
+            isOneToOne: false
+            referencedRelation: "party"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      party_duplicate_suggestion: {
+        Row: {
+          confidence: number | null
+          created_at: string
+          id: string
+          party_id_a: string
+          party_id_b: string
+          reason: Database["public"]["Enums"]["duplicate_reason"]
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: Database["public"]["Enums"]["duplicate_status"]
+        }
+        Insert: {
+          confidence?: number | null
+          created_at?: string
+          id?: string
+          party_id_a: string
+          party_id_b: string
+          reason: Database["public"]["Enums"]["duplicate_reason"]
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["duplicate_status"]
+        }
+        Update: {
+          confidence?: number | null
+          created_at?: string
+          id?: string
+          party_id_a?: string
+          party_id_b?: string
+          reason?: Database["public"]["Enums"]["duplicate_reason"]
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["duplicate_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "party_duplicate_suggestion_party_id_a_fkey"
+            columns: ["party_id_a"]
+            isOneToOne: false
+            referencedRelation: "party"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "party_duplicate_suggestion_party_id_b_fkey"
+            columns: ["party_id_b"]
+            isOneToOne: false
+            referencedRelation: "party"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "party_duplicate_suggestion_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "party_duplicate_suggestion_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      party_identity: {
+        Row: {
+          created_at: string
+          id: string
+          identity_type: string
+          is_primary: boolean | null
+          party_id: string
+          value_norm: string
+          value_raw: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          identity_type: string
+          is_primary?: boolean | null
+          party_id: string
+          value_norm: string
+          value_raw: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          identity_type?: string
+          is_primary?: boolean | null
+          party_id?: string
+          value_norm?: string
+          value_raw?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "party_identity_party_id_fkey"
+            columns: ["party_id"]
+            isOneToOne: false
+            referencedRelation: "party"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      party_merge_log: {
+        Row: {
+          created_at: string
+          field_resolution: Json
+          id: string
+          merged_by_user_id: string
+          merged_party_id: string
+          note: string | null
+          survivor_party_id: string
+        }
+        Insert: {
+          created_at?: string
+          field_resolution?: Json
+          id?: string
+          merged_by_user_id: string
+          merged_party_id: string
+          note?: string | null
+          survivor_party_id: string
+        }
+        Update: {
+          created_at?: string
+          field_resolution?: Json
+          id?: string
+          merged_by_user_id?: string
+          merged_party_id?: string
+          note?: string | null
+          survivor_party_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "party_merge_log_merged_by_user_id_fkey"
+            columns: ["merged_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "party_merge_log_merged_by_user_id_fkey"
+            columns: ["merged_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "party_merge_log_survivor_party_id_fkey"
+            columns: ["survivor_party_id"]
+            isOneToOne: false
+            referencedRelation: "party"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      party_role: {
+        Row: {
+          confidence: number | null
+          created_at: string
+          id: string
+          notes: string | null
+          party_id: string
+          role: Database["public"]["Enums"]["party_role_type"]
+          since_date: string | null
+        }
+        Insert: {
+          confidence?: number | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          party_id: string
+          role: Database["public"]["Enums"]["party_role_type"]
+          since_date?: string | null
+        }
+        Update: {
+          confidence?: number | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          party_id?: string
+          role?: Database["public"]["Enums"]["party_role_type"]
+          since_date?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "party_role_party_id_fkey"
+            columns: ["party_id"]
+            isOneToOne: false
+            referencedRelation: "party"
             referencedColumns: ["id"]
           },
         ]
@@ -552,6 +826,14 @@ export type Database = {
       }
     }
     Functions: {
+      ensure_party_role: {
+        Args: {
+          p_confidence?: number
+          p_party_id: string
+          p_role: Database["public"]["Enums"]["party_role_type"]
+        }
+        Returns: string
+      }
       get_user_company_ids: { Args: { _user_id: string }; Returns: string[] }
       get_user_profile_id: { Args: { _user_id: string }; Returns: string }
       has_company_access: {
@@ -565,9 +847,37 @@ export type Database = {
         }
         Returns: boolean
       }
+      normalize_email: { Args: { raw_email: string }; Returns: string }
+      normalize_phone_br: { Args: { raw_phone: string }; Returns: string }
+      resolve_party: {
+        Args: {
+          p_city?: string
+          p_created_from?: Database["public"]["Enums"]["party_created_from"]
+          p_email?: string
+          p_full_name: string
+          p_headline?: string
+          p_linkedin_url?: string
+          p_notes?: string
+          p_phone?: string
+          p_state?: string
+        }
+        Returns: string
+      }
     }
     Enums: {
       app_role: "admin" | "gestor" | "consultor"
+      duplicate_reason: "same_email" | "same_phone" | "similar_name" | "manual"
+      duplicate_status: "open" | "dismissed" | "merged"
+      party_created_from: "crm" | "ats" | "site" | "import" | "api"
+      party_role_type:
+        | "candidate"
+        | "client_contact"
+        | "prospect"
+        | "hiring_manager"
+        | "interviewer"
+        | "alumni"
+        | "vendor"
+      party_status: "active" | "inactive" | "merged" | "blocked"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -696,6 +1006,19 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "gestor", "consultor"],
+      duplicate_reason: ["same_email", "same_phone", "similar_name", "manual"],
+      duplicate_status: ["open", "dismissed", "merged"],
+      party_created_from: ["crm", "ats", "site", "import", "api"],
+      party_role_type: [
+        "candidate",
+        "client_contact",
+        "prospect",
+        "hiring_manager",
+        "interviewer",
+        "alumni",
+        "vendor",
+      ],
+      party_status: ["active", "inactive", "merged", "blocked"],
     },
   },
 } as const
