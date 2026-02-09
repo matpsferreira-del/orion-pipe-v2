@@ -27,7 +27,7 @@ export function useParties(filters?: {
       }
 
       if (filters?.search) {
-        query = query.or(`full_name.ilike.%${filters.search}%,email_norm.ilike.%${filters.search}%`);
+        query = query.or(`full_name.ilike.%${filters.search}%,email_norm.ilike.%${filters.search}%,phone_raw.ilike.%${filters.search}%,city.ilike.%${filters.search}%,state.ilike.%${filters.search}%,headline.ilike.%${filters.search}%,linkedin_url.ilike.%${filters.search}%`);
       }
 
       const { data, error } = await query;

@@ -52,8 +52,17 @@ export default function Oportunidades() {
   const filteredOpportunities = useMemo(() => {
     return opportunities.filter(opp => {
       const company = companies.find(c => c.id === opp.company_id);
+      const contact = contacts.find(c => c.id === opp.contact_id);
+      const responsavel = profiles.find(p => p.id === opp.responsavel_id);
+      const term = searchTerm.toLowerCase();
       const matchesSearch = searchTerm === '' ||
-        company?.nome_fantasia.toLowerCase().includes(searchTerm.toLowerCase());
+        (company?.nome_fantasia.toLowerCase().includes(term)) ||
+        (company?.razao_social.toLowerCase().includes(term)) ||
+        (contact?.nome.toLowerCase().includes(term)) ||
+        (contact?.email.toLowerCase().includes(term)) ||
+        (responsavel?.name.toLowerCase().includes(term)) ||
+        (serviceLabels[opp.tipo_servico] || opp.tipo_servico).toLowerCase().includes(term) ||
+        (sourceLabels[opp.origem_lead] || opp.origem_lead).toLowerCase().includes(term);
       const matchesStage = filterStage === 'all' || opp.stage === filterStage;
       const matchesResponsavel = filterResponsavel === 'all' || opp.responsavel_id === filterResponsavel;
       return matchesSearch && matchesStage && matchesResponsavel;
@@ -109,7 +118,7 @@ export default function Oportunidades() {
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar por empresa..."
+            placeholder="Buscar por empresa, contato, responsável..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-9"
