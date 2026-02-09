@@ -89,10 +89,20 @@ export default function Empresas() {
 
   const filteredAndSortedCompanies = useMemo(() => {
     let result = companies.filter(company => {
+      const term = searchTerm.toLowerCase();
+      const companyContacts = contacts.filter(c => c.company_id === company.id);
       const matchesSearch = searchTerm === '' ||
-        company.nome_fantasia.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        company.razao_social.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        company.cnpj.includes(searchTerm);
+        company.nome_fantasia.toLowerCase().includes(term) ||
+        company.razao_social.toLowerCase().includes(term) ||
+        company.cnpj.includes(searchTerm) ||
+        company.segmento.toLowerCase().includes(term) ||
+        company.cidade.toLowerCase().includes(term) ||
+        company.estado.toLowerCase().includes(term) ||
+        (company.site && company.site.toLowerCase().includes(term)) ||
+        companyContacts.some(c => 
+          c.nome.toLowerCase().includes(term) || 
+          c.email.toLowerCase().includes(term)
+        );
       const matchesStatus = filterStatus === 'all' || company.status === filterStatus;
       const matchesSegmento = filterSegmento === 'all' || company.segmento === filterSegmento;
       const matchesPorte = filterPorte === 'all' || company.porte === filterPorte;
@@ -251,7 +261,7 @@ export default function Empresas() {
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar por nome, razão social ou CNPJ..."
+            placeholder="Buscar por nome, CNPJ, contato, cidade..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-9"

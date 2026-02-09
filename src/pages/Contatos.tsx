@@ -54,10 +54,16 @@ export default function Contatos() {
 
   const filteredAndSortedContacts = useMemo(() => {
     let result = contacts.filter(contact => {
+      const term = searchTerm.toLowerCase();
+      const companyName = getCompanyName(contact.company_id).toLowerCase();
       const matchesSearch = searchTerm === '' ||
-        contact.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        contact.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (contact.cargo && contact.cargo.toLowerCase().includes(searchTerm.toLowerCase()));
+        contact.nome.toLowerCase().includes(term) ||
+        contact.email.toLowerCase().includes(term) ||
+        (contact.cargo && contact.cargo.toLowerCase().includes(term)) ||
+        companyName.includes(term) ||
+        (contact.telefone && contact.telefone.toLowerCase().includes(term)) ||
+        (contact.whatsapp && contact.whatsapp.toLowerCase().includes(term)) ||
+        (contact.linkedin && contact.linkedin.toLowerCase().includes(term));
       const matchesCompany = filterCompany === 'all' || contact.company_id === filterCompany;
       const matchesCargo = filterCargo === 'all' || contact.cargo === filterCargo;
       const matchesPrimary = filterPrimary === 'all' || 
@@ -166,7 +172,7 @@ export default function Contatos() {
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar por nome, email ou cargo..."
+            placeholder="Buscar por nome, email, empresa, telefone..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-9"
