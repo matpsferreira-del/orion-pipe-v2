@@ -52,6 +52,11 @@ export default function Contatos() {
     setFilterPrimary('all');
   };
 
+  const getCompanyName = (companyId: string) => {
+    const company = companies.find(c => c.id === companyId);
+    return company?.nome_fantasia || 'Empresa não encontrada';
+  };
+
   const filteredAndSortedContacts = useMemo(() => {
     let result = contacts.filter(contact => {
       const term = searchTerm.toLowerCase();
@@ -114,10 +119,6 @@ export default function Contatos() {
       <ArrowDown className="h-4 w-4 ml-1" />;
   };
 
-  const getCompanyName = (companyId: string) => {
-    const company = companies.find(c => c.id === companyId);
-    return company?.nome_fantasia || 'Empresa não encontrada';
-  };
 
   const handleDeleteClick = (contact: ContactRow, e: React.MouseEvent) => {
     e.stopPropagation();
