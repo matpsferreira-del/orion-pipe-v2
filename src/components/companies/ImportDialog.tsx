@@ -326,7 +326,7 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
         // Sanitize and validate company data before insert
         const companyRazaoSocial = sanitizeText(company.empresa);
         const companyNomeFantasia = sanitizeText(company.nome_fantasia || company.empresa);
-        const companyCnpj = company.cnpj || `IMPORTADO-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        const companyCnpj = company.cnpj || '';
         const companySegmento = sanitizeText(company.segmento || '');
         const companyCidade = sanitizeText(company.cidade || '');
         const companyEstado = sanitizeText(company.estado || '');
