@@ -15,7 +15,9 @@ import {
   normalizePorte as normalizePorteUtil,
   cleanPhone,
   cleanEmail,
-  sanitizeText
+  sanitizeText,
+  formatPhoneBR,
+  normalizeCnpj
 } from '@/utils/importValidation';
 
 interface ImportDialogProps {
@@ -28,6 +30,8 @@ type ImportRow = CompanyImportRow;
 
 interface GroupedCompany {
   empresa: string;
+  nome_fantasia: string;
+  cnpj: string;
   porte: string;
   cidade: string;
   estado: string;
@@ -82,7 +86,7 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
       // Fetch existing companies and contacts from database
       const { data: existingCompanies } = await supabase
         .from('companies')
-        .select('nome_fantasia, razao_social');
+        .select('nome_fantasia, razao_social, cnpj');
       
       const { data: existingContacts } = await supabase
         .from('contacts')
@@ -93,6 +97,12 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
           c.nome_fantasia?.toLowerCase().trim(),
           c.razao_social?.toLowerCase().trim()
         ].filter(Boolean))
+      );
+
+      const existingCnpjs = new Set(
+        (existingCompanies || [])
+          .map(c => c.cnpj?.replace(/[^\d]/g, ''))
+          .filter(v => v && !v.startsWith('0000') && v.length >= 11)
       );
 
       const existingEmails = new Set(
@@ -108,10 +118,15 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
         const companyKey = row.empresa.toLowerCase().trim();
         
         if (!companyMap.has(companyKey)) {
-          const isDuplicateCompany = existingCompanyNames.has(companyKey);
+          const cnpjDigits = row.cnpj?.replace(/[^\d]/g, '') || '';
+          const isDuplicateCompany = existingCompanyNames.has(companyKey) || 
+            (row.nome_fantasia && existingCompanyNames.has(row.nome_fantasia.toLowerCase().trim())) ||
+            (cnpjDigits.length >= 11 && existingCnpjs.has(cnpjDigits));
           
           companyMap.set(companyKey, {
             empresa: row.empresa,
+            nome_fantasia: row.nome_fantasia || row.empresa,
+            cnpj: row.cnpj || '',
             porte: row.porte,
             cidade: row.cidade,
             estado: row.estado,
@@ -150,6 +165,8 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
         }
 
         // Update company data if not set (take first non-empty values)
+        if (!company.cnpj && row.cnpj) company.cnpj = row.cnpj;
+        if (!company.nome_fantasia && row.nome_fantasia) company.nome_fantasia = row.nome_fantasia;
         if (!company.porte && row.porte) company.porte = row.porte;
         if (!company.cidade && row.cidade) company.cidade = row.cidade;
         if (!company.estado && row.estado) company.estado = row.estado;
@@ -207,7 +224,9 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
       }
 
       // Mapeamento flexível de colunas
-      const empresaCol = findColumn(headers, ['empresa', 'razao_social', 'razão social', 'nome fantasia', 'company', 'nome da empresa']);
+      const empresaCol = findColumn(headers, ['empresa', 'razao_social', 'razão social', 'company', 'nome da empresa']);
+      const nomeFantasiaCol = findColumn(headers, ['nome fantasia', 'nome_fantasia', 'fantasia', 'trade name']);
+      const cnpjCol = findColumn(headers, ['cnpj', 'cnpj/cpf']);
       const contatoCol = findColumn(headers, ['nome do responsável', 'nome do responsavel', 'responsável', 'responsavel', 'contato', 'nome', 'contact', 'nome do contato']);
       const emailCol = findColumn(headers, ['email', 'e-mail', 'mail']);
       const telefoneCol = findColumn(headers, ['telefone', 'phone', 'tel', 'celular', 'fone', 'whatsapp']);
@@ -216,8 +235,13 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
       const estadoCol = findColumn(headers, ['estado', 'uf', 'state']);
       const segmentoCol = findColumn(headers, ['segmento', 'segment', 'setor', 'ramo', 'área', 'area']);
 
+      // If no "Empresa" column but "Nome Fantasia" exists, use it as empresa
+      const effectiveEmpresaCol = empresaCol || nomeFantasiaCol;
+
       const mapped = {
-        empresa: empresaCol || 'Não encontrado',
+        empresa: effectiveEmpresaCol || 'Não encontrado',
+        nome_fantasia: nomeFantasiaCol || 'Não encontrado',
+        cnpj: cnpjCol || 'Não encontrado',
         contato: contatoCol || 'Não encontrado',
         email: emailCol || 'Não encontrado',
         telefone: telefoneCol || 'Não encontrado',
@@ -228,8 +252,8 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
       };
       setMappedColumns(mapped);
 
-      if (!empresaCol) {
-        setParseWarning(`Coluna "Empresa" não encontrada. Colunas disponíveis: ${headers.join(', ')}`);
+      if (!effectiveEmpresaCol) {
+        setParseWarning(`Coluna "Empresa" ou "Nome Fantasia" não encontrada. Colunas disponíveis: ${headers.join(', ')}`);
         setRawData([]);
         setIsLoading(false);
         return;
@@ -237,10 +261,12 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
 
       // Build raw rows for validation
       const rawRows = jsonData.map((row) => ({
-        empresa: sanitizeText(String(row[empresaCol] || '')),
+        empresa: effectiveEmpresaCol ? sanitizeText(String(row[effectiveEmpresaCol] || '')) : '',
+        nome_fantasia: nomeFantasiaCol ? sanitizeText(String(row[nomeFantasiaCol] || '')) : '',
+        cnpj: cnpjCol ? normalizeCnpj(String(row[cnpjCol] || '')) : '',
         contato: contatoCol ? sanitizeText(String(row[contatoCol] || '').replace(/[,<>]/g, '')) : '',
         email: emailCol ? sanitizeText(String(row[emailCol] || '').replace(/[<>]/g, '')) : '',
-        telefone: telefoneCol ? sanitizeText(String(row[telefoneCol] || '')) : '',
+        telefone: telefoneCol ? formatPhoneBR(String(row[telefoneCol] || '')) : '',
         porte: porteCol ? sanitizeText(String(row[porteCol] || '')) : '',
         cidade: cidadeCol ? sanitizeText(String(row[cidadeCol] || '')) : '',
         estado: estadoCol ? sanitizeText(String(row[estadoCol] || '')) : '',
@@ -298,7 +324,9 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
     for (const company of toImport) {
       try {
         // Sanitize and validate company data before insert
-        const companyName = sanitizeText(company.empresa);
+        const companyRazaoSocial = sanitizeText(company.empresa);
+        const companyNomeFantasia = sanitizeText(company.nome_fantasia || company.empresa);
+        const companyCnpj = company.cnpj || `IMPORTADO-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
         const companySegmento = sanitizeText(company.segmento || '');
         const companyCidade = sanitizeText(company.cidade || '');
         const companyEstado = sanitizeText(company.estado || '');
@@ -308,9 +336,9 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
         const { data: newCompany, error: companyError } = await supabase
           .from('companies')
           .insert({
-            razao_social: companyName,
-            nome_fantasia: companyName,
-            cnpj: `IMPORTADO-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            razao_social: companyRazaoSocial,
+            nome_fantasia: companyNomeFantasia,
+            cnpj: companyCnpj,
             segmento: companySegmento,
             porte: companyPorte,
             cidade: companyCidade,
@@ -441,8 +469,10 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
               <Info className="h-4 w-4" />
               <AlertDescription className="text-sm">
                 <div className="font-medium mb-1">Mapeamento de colunas:</div>
-                <div className="text-xs grid grid-cols-4 gap-1">
+                <div className="text-xs grid grid-cols-5 gap-1">
                   <span>Empresa → {mappedColumns.empresa}</span>
+                  <span>Nome Fantasia → {mappedColumns.nome_fantasia}</span>
+                  <span>CNPJ → {mappedColumns.cnpj}</span>
                   <span>Contato → {mappedColumns.contato}</span>
                   <span>Email → {mappedColumns.email}</span>
                   <span>Telefone → {mappedColumns.telefone}</span>

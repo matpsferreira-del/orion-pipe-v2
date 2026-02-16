@@ -18,6 +18,16 @@ export const companyImportRowSchema = z.object({
     .trim()
     .min(1, 'Nome da empresa é obrigatório')
     .max(MAX_STRING_LENGTH, `Nome da empresa deve ter no máximo ${MAX_STRING_LENGTH} caracteres`),
+  nome_fantasia: z.string()
+    .trim()
+    .max(MAX_STRING_LENGTH, `Nome fantasia deve ter no máximo ${MAX_STRING_LENGTH} caracteres`)
+    .optional()
+    .default(''),
+  cnpj: z.string()
+    .trim()
+    .max(MAX_STRING_LENGTH, `CNPJ deve ter no máximo ${MAX_STRING_LENGTH} caracteres`)
+    .optional()
+    .default(''),
   contato: z.string()
     .trim()
     .max(MAX_STRING_LENGTH, `Nome do contato deve ter no máximo ${MAX_STRING_LENGTH} caracteres`)
@@ -227,6 +237,64 @@ export function isValidEmail(email: string): boolean {
 export function cleanPhone(phone: string): string {
   if (!phone) return '';
   return phone.replace(/[^\d]/g, '').slice(0, 15);
+}
+
+/**
+ * Formats a phone number to Brazilian format (XX) XXXXX-XXXX or (XX) XXXX-XXXX
+ */
+export function formatPhoneBR(phone: string): string {
+  if (!phone) return '';
+  const digits = phone.replace(/[^\d]/g, '');
+  if (!digits || digits.length < 10) return digits;
+  
+  // Remove country code 55 if present
+  let local = digits;
+  if (local.startsWith('55') && local.length > 11) {
+    local = local.slice(2);
+  }
+  
+  if (local.length === 11) {
+    return `(${local.slice(0, 2)}) ${local.slice(2, 7)}-${local.slice(7)}`;
+  }
+  if (local.length === 10) {
+    return `(${local.slice(0, 2)}) ${local.slice(2, 6)}-${local.slice(6)}`;
+  }
+  return local;
+}
+
+/**
+ * Converts a value that may be in scientific notation to a string of digits,
+ * then formats as CNPJ (XX.XXX.XXX/XXXX-XX)
+ */
+export function normalizeCnpj(raw: string): string {
+  if (!raw) return '';
+  
+  // Handle scientific notation (e.g., "8.73761E+13")
+  let value = raw.trim();
+  if (/[eE]/.test(value)) {
+    try {
+      const num = parseFloat(value);
+      if (!isNaN(num)) {
+        value = num.toFixed(0);
+      }
+    } catch {
+      // keep original
+    }
+  }
+  
+  // Remove non-digits
+  const digits = value.replace(/[^\d]/g, '');
+  
+  if (!digits) return '';
+  
+  // Pad to 14 digits if close
+  const padded = digits.length <= 14 ? digits.padStart(14, '0') : digits;
+  
+  if (padded.length === 14) {
+    return `${padded.slice(0, 2)}.${padded.slice(2, 5)}.${padded.slice(5, 8)}/${padded.slice(8, 12)}-${padded.slice(12, 14)}`;
+  }
+  
+  return digits;
 }
 
 /**
