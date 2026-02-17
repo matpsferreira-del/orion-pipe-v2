@@ -193,6 +193,8 @@ export default function Empresas() {
     const templateData = [
       {
         'Empresa': 'Empresa Exemplo LTDA',
+        'Nome Fantasia': 'Exemplo',
+        'CNPJ': '12.345.678/0001-90',
         'Nome do responsável': 'João Silva',
         'Email': 'joao@empresa.com',
         'Telefone': '(11) 99999-9999',
@@ -208,7 +210,7 @@ export default function Empresas() {
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Modelo');
     
     worksheet['!cols'] = [
-      { wch: 30 }, { wch: 25 }, { wch: 30 }, { wch: 18 },
+      { wch: 30 }, { wch: 20 }, { wch: 22 }, { wch: 25 }, { wch: 30 }, { wch: 18 },
       { wch: 20 }, { wch: 12 }, { wch: 20 }, { wch: 8 },
     ];
     
