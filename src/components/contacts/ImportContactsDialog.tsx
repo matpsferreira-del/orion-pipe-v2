@@ -44,6 +44,7 @@ interface ImportRow {
   companyId?: string;
   companyNotFound?: boolean;
   willCreateCompany?: boolean;
+  mergedCount?: number;
 }
 
 export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialogProps) {
@@ -224,7 +225,8 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
           return;
         }
 
-        const checkedRows = checkDuplicates(importRows);
+        const consolidated = consolidateContacts(importRows);
+        const checkedRows = checkDuplicates(consolidated);
         setParsedData(checkedRows);
       } catch {
         setParseError('Erro ao processar o arquivo. Verifique se é um arquivo Excel válido.');
@@ -237,6 +239,63 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
   const cleanPhone = cleanPhoneUtil;
   const cleanEmail = cleanEmailUtil;
   const normalizePorte = normalizePorteUtil;
+
+  const consolidateContacts = (rows: ImportRow[]): ImportRow[] => {
+    const groups = new Map<string, ImportRow[]>();
+
+    for (const row of rows) {
+      const nameKey = (row.contato || '').toLowerCase().trim();
+      if (!nameKey) {
+        // No name, keep as-is
+        const soloKey = `__solo_${groups.size}`;
+        groups.set(soloKey, [row]);
+        continue;
+      }
+      const cnpjDigits = (row.cnpj || '').replace(/[^\d]/g, '');
+      const companyKey = cnpjDigits.length >= 11
+        ? cnpjDigits
+        : (row.empresa || '').toLowerCase().trim();
+      const key = `${nameKey}|${companyKey}`;
+
+      if (!groups.has(key)) {
+        groups.set(key, []);
+      }
+      groups.get(key)!.push(row);
+    }
+
+    const result: ImportRow[] = [];
+    for (const groupRows of groups.values()) {
+      if (groupRows.length === 1) {
+        result.push({ ...groupRows[0], mergedCount: 1 });
+        continue;
+      }
+      const base = { ...groupRows[0] };
+      const emails = new Set<string>();
+      const phones = new Set<string>();
+      const whatsapps = new Set<string>();
+
+      for (const r of groupRows) {
+        if (r.email?.trim()) emails.add(r.email.trim());
+        if (r.telefone?.trim()) phones.add(r.telefone.trim());
+        if (r.whatsapp?.trim()) whatsapps.add(r.whatsapp.trim());
+        if (!base.cargo && r.cargo) base.cargo = r.cargo;
+        if (!base.linkedin && r.linkedin) base.linkedin = r.linkedin;
+        if (!base.cnpj && r.cnpj) base.cnpj = r.cnpj;
+        if (!base.cidade && r.cidade) base.cidade = r.cidade;
+        if (!base.estado && r.estado) base.estado = r.estado;
+        if (!base.segmento && r.segmento) base.segmento = r.segmento;
+        if (!base.porte && r.porte) base.porte = r.porte;
+        if (!base.empresa && r.empresa) base.empresa = r.empresa;
+      }
+
+      base.email = Array.from(emails).join(' ; ');
+      base.telefone = Array.from(phones).join(' ; ');
+      base.whatsapp = Array.from(whatsapps).join(' ; ');
+      base.mergedCount = groupRows.length;
+      result.push(base);
+    }
+    return result;
+  };
 
   const handleImport = async () => {
     const validContacts = parsedData.filter(row => !row.isDuplicate && !row.companyNotFound);
@@ -433,6 +492,11 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
                 <Badge variant="secondary">
                   {parsedData.length} contatos encontrados
                 </Badge>
+                {parsedData.some(r => (r.mergedCount || 1) > 1) && (
+                  <Badge variant="outline" className="border-violet-500 text-violet-600">
+                    {parsedData.filter(r => (r.mergedCount || 1) > 1).length} consolidado(s)
+                  </Badge>
+                )}
                 <Badge variant="default" className="bg-green-600">
                   <Check className="h-3 w-3 mr-1" />
                   {validCount} válidos
@@ -491,15 +555,20 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
                         className={row.isDuplicate ? 'bg-destructive/10' : row.companyNotFound ? 'bg-amber-500/10' : row.willCreateCompany ? 'bg-blue-50' : ''}
                       >
                         <TableCell>
-                          {row.isDuplicate ? (
-                            <Badge variant="destructive" className="text-xs">Duplicado</Badge>
-                          ) : row.companyNotFound ? (
-                            <Badge variant="outline" className="text-xs border-amber-500 text-amber-600">Sem empresa</Badge>
-                          ) : row.willCreateCompany ? (
-                            <Badge variant="outline" className="text-xs border-blue-500 text-blue-600">Nova empresa</Badge>
-                          ) : (
-                            <Badge variant="secondary" className="text-xs bg-green-100 text-green-700">OK</Badge>
-                          )}
+                          <div className="flex flex-col gap-1">
+                            {row.isDuplicate ? (
+                              <Badge variant="destructive" className="text-xs">Duplicado</Badge>
+                            ) : row.companyNotFound ? (
+                              <Badge variant="outline" className="text-xs border-amber-500 text-amber-600">Sem empresa</Badge>
+                            ) : row.willCreateCompany ? (
+                              <Badge variant="outline" className="text-xs border-blue-500 text-blue-600">Nova empresa</Badge>
+                            ) : (
+                              <Badge variant="secondary" className="text-xs bg-green-100 text-green-700">OK</Badge>
+                            )}
+                            {(row.mergedCount || 1) > 1 && (
+                              <Badge variant="outline" className="text-xs border-violet-500 text-violet-600">{row.mergedCount} mesclados</Badge>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell className="font-medium">{row.contato || '-'}</TableCell>
                         <TableCell>{row.empresa || '-'}</TableCell>
