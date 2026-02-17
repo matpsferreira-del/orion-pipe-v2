@@ -1131,6 +1131,14 @@ export type Database = {
           similarity_score: number
         }[]
       }
+      get_company_counts: {
+        Args: never
+        Returns: {
+          company_id: string
+          contacts_count: number
+          opportunities_count: number
+        }[]
+      }
       get_user_company_ids: { Args: { _user_id: string }; Returns: string[] }
       get_user_profile_id: { Args: { _user_id: string }; Returns: string }
       has_company_access: {

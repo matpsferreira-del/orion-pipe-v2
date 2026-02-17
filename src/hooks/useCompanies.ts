@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
+import { fetchAllRows } from '@/lib/fetchAllRows';
 
 export interface CompanyRow {
   id: string;
@@ -38,13 +39,27 @@ export function useCompanies() {
   return useQuery({
     queryKey: ['companies'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('companies')
-        .select('*')
-        .order('nome_fantasia', { ascending: true });
-      
+      return fetchAllRows<CompanyRow>('companies', {
+        orderBy: 'nome_fantasia',
+        ascending: true,
+      });
+    },
+  });
+}
+
+export interface CompanyCounts {
+  company_id: string;
+  contacts_count: number;
+  opportunities_count: number;
+}
+
+export function useCompanyCounts() {
+  return useQuery({
+    queryKey: ['company-counts'],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('get_company_counts');
       if (error) throw error;
-      return data as CompanyRow[];
+      return (data || []) as CompanyCounts[];
     },
   });
 }

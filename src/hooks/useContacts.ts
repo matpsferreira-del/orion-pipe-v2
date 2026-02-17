@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { fetchAllRows } from '@/lib/fetchAllRows';
 
 export interface ContactRow {
   id: string;
@@ -32,13 +33,10 @@ export function useContacts() {
   return useQuery({
     queryKey: ['contacts'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('contacts')
-        .select('*')
-        .order('nome', { ascending: true });
-      
-      if (error) throw error;
-      return data as ContactRow[];
+      return fetchAllRows<ContactRow>('contacts', {
+        orderBy: 'nome',
+        ascending: true,
+      });
     },
   });
 }

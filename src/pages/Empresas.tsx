@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { useCompanies, useDeleteCompany, CompanyRow } from '@/hooks/useCompanies';
+import { useCompanies, useDeleteCompany, useCompanyCounts, CompanyRow } from '@/hooks/useCompanies';
 import { useContacts } from '@/hooks/useContacts';
 import { useOpportunities } from '@/hooks/useOpportunities';
 import { useInvoices } from '@/hooks/useInvoices';
@@ -66,7 +66,16 @@ export default function Empresas() {
   const { data: opportunities = [] } = useOpportunities();
   const { data: invoices = [] } = useInvoices();
   const { data: profiles = [] } = useProfiles();
+  const { data: companyCounts = [] } = useCompanyCounts();
   const deleteCompany = useDeleteCompany();
+
+  const countsMap = useMemo(() => {
+    const map = new Map<string, { contacts: number; opportunities: number }>();
+    companyCounts.forEach(c => {
+      map.set(c.company_id, { contacts: c.contacts_count, opportunities: c.opportunities_count });
+    });
+    return map;
+  }, [companyCounts]);
 
   const segmentos = useMemo(() => {
     return [...new Set(companies.map(c => c.segmento).filter(Boolean))];
@@ -95,7 +104,6 @@ export default function Empresas() {
   const filteredAndSortedCompanies = useMemo(() => {
     let result = companies.filter(company => {
       const term = searchTerm.toLowerCase();
-      const companyContacts = contacts.filter(c => c.company_id === company.id);
       const matchesSearch = searchTerm === '' ||
         company.nome_fantasia.toLowerCase().includes(term) ||
         company.razao_social.toLowerCase().includes(term) ||
@@ -103,11 +111,7 @@ export default function Empresas() {
         company.segmento.toLowerCase().includes(term) ||
         company.cidade.toLowerCase().includes(term) ||
         company.estado.toLowerCase().includes(term) ||
-        (company.site && company.site.toLowerCase().includes(term)) ||
-        companyContacts.some(c => 
-          c.nome.toLowerCase().includes(term) || 
-          c.email.toLowerCase().includes(term)
-        );
+        (company.site && company.site.toLowerCase().includes(term));
       const matchesStatus = filterStatus === 'all' || company.status === filterStatus;
       const matchesSegmento = filterSegmento === 'all' || company.segmento === filterSegmento;
       const matchesPorte = filterPorte === 'all' || company.porte === filterPorte;
@@ -121,11 +125,11 @@ export default function Empresas() {
         let bValue: string | number;
 
         if (sortField === 'contatos') {
-          aValue = contacts.filter(c => c.company_id === a.id).length;
-          bValue = contacts.filter(c => c.company_id === b.id).length;
+          aValue = countsMap.get(a.id)?.contacts ?? 0;
+          bValue = countsMap.get(b.id)?.contacts ?? 0;
         } else if (sortField === 'oportunidades') {
-          aValue = opportunities.filter(o => o.company_id === a.id).length;
-          bValue = opportunities.filter(o => o.company_id === b.id).length;
+          aValue = countsMap.get(a.id)?.opportunities ?? 0;
+          bValue = countsMap.get(b.id)?.opportunities ?? 0;
         } else {
           aValue = a[sortField] || '';
           bValue = b[sortField] || '';
@@ -141,7 +145,7 @@ export default function Empresas() {
     }
 
     return result;
-  }, [companies, contacts, opportunities, searchTerm, filterStatus, filterSegmento, filterPorte, filterCidade, sortField, sortDirection]);
+  }, [companies, countsMap, searchTerm, filterStatus, filterSegmento, filterPorte, filterCidade, sortField, sortDirection]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -165,11 +169,11 @@ export default function Empresas() {
   };
 
   const getContactsCount = (companyId: string) => {
-    return contacts.filter(c => c.company_id === companyId).length;
+    return countsMap.get(companyId)?.contacts ?? 0;
   };
 
   const getOpportunitiesCount = (companyId: string) => {
-    return opportunities.filter(o => o.company_id === companyId).length;
+    return countsMap.get(companyId)?.opportunities ?? 0;
   };
 
   const handleDeleteClick = (company: CompanyRow, e: React.MouseEvent) => {
