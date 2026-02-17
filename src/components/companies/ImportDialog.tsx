@@ -139,28 +139,37 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
 
         const company = companyMap.get(companyKey)!;
         
-        // Add contact if has name or email
-        if (row.contato || row.email) {
+      // Add contact if has name or email
+      if (row.contato || row.email) {
           const emailLower = row.email?.toLowerCase().trim();
           const isEmailDuplicate = emailLower && existingEmails.has(emailLower);
+          const contactNameKey = (row.contato || '').toLowerCase().trim();
           
-          // Check if this contact is already in the group
-          const contactExists = company.contacts.some(
-            c => c.email?.toLowerCase().trim() === emailLower
-          );
+          // Check if this contact already exists by name in the group
+          const existingContact = contactNameKey
+            ? company.contacts.find(c => c.nome.toLowerCase().trim() === contactNameKey)
+            : null;
           
-          if (!contactExists) {
+          if (existingContact) {
+            // Merge phone and email into existing contact
+            if (row.email?.trim() && !existingContact.email.includes(row.email.trim())) {
+              existingContact.email = [existingContact.email, row.email.trim()].filter(Boolean).join(' ; ');
+            }
+            if (row.telefone?.trim() && !existingContact.telefone.includes(row.telefone.trim())) {
+              existingContact.telefone = [existingContact.telefone, row.telefone.trim()].filter(Boolean).join(' ; ');
+            }
+          } else {
             company.contacts.push({
               nome: row.contato || 'Contato Principal',
               email: row.email || '',
               telefone: row.telefone || '',
             });
+          }
             
-            // Mark company as duplicate if any contact email already exists
-            if (isEmailDuplicate && !company.isDuplicate) {
-              company.isDuplicate = true;
-              company.duplicateReason = `Email ${row.email} já existe no sistema`;
-            }
+          // Mark company as duplicate if any contact email already exists
+          if (isEmailDuplicate && !company.isDuplicate) {
+            company.isDuplicate = true;
+            company.duplicateReason = `Email ${row.email} já existe no sistema`;
           }
         }
 
