@@ -220,6 +220,7 @@ export type Database = {
           estado: string
           id: string
           nome_fantasia: string
+          parent_company_id: string | null
           porte: string
           razao_social: string
           responsavel_id: string | null
@@ -235,6 +236,7 @@ export type Database = {
           estado: string
           id?: string
           nome_fantasia: string
+          parent_company_id?: string | null
           porte?: string
           razao_social: string
           responsavel_id?: string | null
@@ -250,6 +252,7 @@ export type Database = {
           estado?: string
           id?: string
           nome_fantasia?: string
+          parent_company_id?: string | null
           porte?: string
           razao_social?: string
           responsavel_id?: string | null
@@ -259,6 +262,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "companies_parent_company_id_fkey"
+            columns: ["parent_company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "companies_responsavel_id_fkey"
             columns: ["responsavel_id"]

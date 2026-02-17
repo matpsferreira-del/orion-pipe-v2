@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CompanyRow } from '@/hooks/useCompanies';
+import { CompanyRow, useCompanies } from '@/hooks/useCompanies';
 import { ContactRow } from '@/hooks/useContacts';
 import { OpportunityRow } from '@/hooks/useOpportunities';
 import { InvoiceRow } from '@/hooks/useInvoices';
@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Globe, Mail, Phone, User, Target, Receipt, Building2, Plus, Calendar, Clock, MessageSquare, PhoneCall, Send, FileText, MoreHorizontal, CheckCircle2 } from 'lucide-react';
+import { Globe, Mail, Phone, User, Target, Receipt, Building2, Plus, Calendar, Clock, MessageSquare, PhoneCall, Send, FileText, MoreHorizontal, CheckCircle2, Network } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { pipelineStages } from '@/data/mockData';
 import { format, isToday, isTomorrow, isPast } from 'date-fns';
@@ -62,8 +62,14 @@ const activityTypeLabels: Record<string, string> = {
 export function CompanyDetail({ company, contacts, opportunities, invoices, profiles }: CompanyDetailProps) {
   const [activityDialogOpen, setActivityDialogOpen] = useState(false);
   
+  const { data: allCompanies = [] } = useCompanies();
   const { data: activities = [] } = useActivitiesByCompany(company.id);
   const { data: tasks = [] } = useTasksByCompany(company.id);
+  
+  const subsidiaries = allCompanies.filter(c => c.parent_company_id === company.id);
+  const parentCompany = company.parent_company_id 
+    ? allCompanies.find(c => c.id === company.parent_company_id) 
+    : null;
   
   const companyContacts = contacts.filter(c => c.company_id === company.id);
   const companyOpportunities = opportunities.filter(o => o.company_id === company.id);
@@ -136,8 +142,9 @@ export function CompanyDetail({ company, contacts, opportunities, invoices, prof
       <Separator />
 
       <Tabs defaultValue="info" className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="info">Info</TabsTrigger>
+          <TabsTrigger value="grupo">Grupo ({subsidiaries.length})</TabsTrigger>
           <TabsTrigger value="activities">Atividades ({activities.length})</TabsTrigger>
           <TabsTrigger value="contacts">Contatos ({companyContacts.length})</TabsTrigger>
           <TabsTrigger value="opportunities">Oport. ({companyOpportunities.length})</TabsTrigger>
@@ -220,6 +227,70 @@ export function CompanyDetail({ company, contacts, opportunities, invoices, prof
               </CardContent>
             </Card>
           )}
+        </TabsContent>
+
+        <TabsContent value="grupo" className="mt-4 space-y-4">
+          {parentCompany && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Building2 className="h-4 w-4" />
+                  Pertence ao Grupo
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <Network className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="font-medium">{parentCompany.nome_fantasia}</p>
+                    <p className="text-xs text-muted-foreground">{parentCompany.razao_social}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {subsidiaries.length > 0 ? (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Network className="h-4 w-4" />
+                  Empresas do Grupo ({subsidiaries.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {subsidiaries.map(sub => {
+                  const subStatus = statusConfig[sub.status] || statusConfig.prospect;
+                  return (
+                    <div key={sub.id} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                          <Building2 className="h-4 w-4 text-primary" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-sm">{sub.nome_fantasia}</p>
+                          <p className="text-xs text-muted-foreground">{sub.cidade}/{sub.estado}</p>
+                        </div>
+                      </div>
+                      <span className={cn(subStatus.className, 'text-xs')}>{subStatus.label}</span>
+                    </div>
+                  );
+                })}
+              </CardContent>
+            </Card>
+          ) : !parentCompany ? (
+            <Card>
+              <CardContent className="py-8 text-center">
+                <Network className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                <p className="text-muted-foreground">Nenhuma empresa vinculada a este grupo</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Para vincular, edite outra empresa e selecione esta como holding
+                </p>
+              </CardContent>
+            </Card>
+          ) : null}
         </TabsContent>
 
         <TabsContent value="activities" className="mt-4 space-y-4">
