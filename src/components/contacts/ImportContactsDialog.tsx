@@ -85,11 +85,24 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
   };
 
   const checkDuplicates = (rows: ImportRow[]): ImportRow[] => {
+    // Build sets for duplicate detection
     const existingEmails = new Set(
       existingContacts
         .filter(c => c.email && !c.email.includes('@importado.tmp'))
         .map(c => c.email.toLowerCase().trim())
     );
+
+    // Build name+company key set for existing contacts
+    const existingNameCompanyKeys = new Set<string>();
+    for (const c of existingContacts) {
+      if (c.nome && c.company_id) {
+        const companyMatch = companies.find(co => co.id === c.company_id);
+        if (companyMatch) {
+          existingNameCompanyKeys.add(`${c.nome.toLowerCase().trim()}|${companyMatch.nome_fantasia.toLowerCase().trim()}`);
+          existingNameCompanyKeys.add(`${c.nome.toLowerCase().trim()}|${companyMatch.razao_social.toLowerCase().trim()}`);
+        }
+      }
+    }
 
     return rows.map(row => {
       // Try matching by empresa (razao social) or nomeFantasia
@@ -97,14 +110,27 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
         (row.nomeFantasia ? findCompanyByName(row.nomeFantasia) : null);
       const willCreateCompany = !companyResult?.found && row.empresa.trim() !== '';
       
-      if (row.email && existingEmails.has(row.email.toLowerCase().trim())) {
+      // Check email duplicates (split by '; ' for consolidated emails)
+      const emails = row.email ? row.email.split(/\s*;\s*/).filter(Boolean) : [];
+      const hasEmailDuplicate = emails.some(e => existingEmails.has(e.toLowerCase().trim()));
+
+      // Check name+company duplicate
+      const nameKey = (row.contato || '').toLowerCase().trim();
+      const empresaKey = (row.empresa || '').toLowerCase().trim();
+      const fantasiaKey = (row.nomeFantasia || '').toLowerCase().trim();
+      const hasNameCompanyDuplicate = nameKey && (
+        (empresaKey && existingNameCompanyKeys.has(`${nameKey}|${empresaKey}`)) ||
+        (fantasiaKey && existingNameCompanyKeys.has(`${nameKey}|${fantasiaKey}`))
+      );
+
+      if (hasEmailDuplicate || hasNameCompanyDuplicate) {
         return { 
           ...row, 
           isDuplicate: true, 
-          duplicateReason: 'Email já existe',
+          duplicateReason: hasEmailDuplicate ? 'Email já existe' : 'Contato já existe nesta empresa',
           companyId: companyResult?.id || '',
           companyNotFound: false,
-          willCreateCompany
+          willCreateCompany: false
         };
       }
       
@@ -112,7 +138,7 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
         ...row, 
         isDuplicate: false,
         companyId: companyResult?.id || '',
-        companyNotFound: !row.empresa.trim(),
+        companyNotFound: false, // Don't block import for missing company name
         willCreateCompany
       };
     });
@@ -305,7 +331,7 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
   };
 
   const handleImport = async () => {
-    const validContacts = parsedData.filter(row => !row.isDuplicate && !row.companyNotFound);
+    const validContacts = parsedData.filter(row => !row.isDuplicate);
     
     if (validContacts.length === 0) {
       toast.error('Nenhum contato válido para importar');
@@ -319,92 +345,132 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
     const createdCompanies = new Map<string, string>(); // empresa name -> id
 
     try {
-      for (const row of validContacts) {
-        let companyId = row.companyId;
+      // Get user once for granting access
+      const { data: { user } } = await supabase.auth.getUser();
 
-        // Create company if needed
-        if (row.willCreateCompany && row.empresa) {
-          const empresaKey = row.empresa.toLowerCase().trim();
-          
-          // Check if we already created this company in this import batch
-          if (createdCompanies.has(empresaKey)) {
-            companyId = createdCompanies.get(empresaKey)!;
-          } else {
-            // Sanitize company data before insert
-            const companyData = {
-              nome_fantasia: sanitizeText(row.nomeFantasia || row.empresa),
-              razao_social: sanitizeText(row.empresa),
-              cnpj: sanitizeText(row.cnpj) || `IMPORTADO-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
-              cidade: sanitizeText(row.cidade || ''),
-              estado: sanitizeText(row.estado || ''),
-              segmento: sanitizeText(row.segmento || ''),
-              porte: normalizePorte(row.porte),
-              status: 'prospect',
-            };
+      // Process in batches of 50
+      const BATCH_SIZE = 50;
+      
+      for (let i = 0; i < validContacts.length; i += BATCH_SIZE) {
+        const batch = validContacts.slice(i, i + BATCH_SIZE);
+        const contactsToInsert: Array<{
+          company_id: string;
+          nome: string;
+          cargo: string;
+          email: string;
+          telefone: string;
+          whatsapp: string;
+          linkedin: string;
+          is_primary: boolean;
+        }> = [];
 
-            const { data: newCompany, error: companyError } = await supabase
-              .from('companies')
-              .insert(companyData)
-              .select('id')
-              .single();
+        for (const row of batch) {
+          let companyId = row.companyId;
 
-            if (companyError) {
-              console.error('Erro ao criar empresa:', companyError);
+          // Create company if needed
+          if (row.willCreateCompany && row.empresa) {
+            const empresaKey = row.empresa.toLowerCase().trim();
+            
+            if (createdCompanies.has(empresaKey)) {
+              companyId = createdCompanies.get(empresaKey)!;
+            } else {
+              const companyData = {
+                nome_fantasia: sanitizeText(row.nomeFantasia || row.empresa),
+                razao_social: sanitizeText(row.empresa),
+                cnpj: sanitizeText(row.cnpj) || `IMPORTADO-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+                cidade: sanitizeText(row.cidade || ''),
+                estado: sanitizeText(row.estado || ''),
+                segmento: sanitizeText(row.segmento || ''),
+                porte: normalizePorte(row.porte),
+                status: 'prospect',
+              };
+
+              const { data: newCompany, error: companyError } = await supabase
+                .from('companies')
+                .insert(companyData)
+                .select('id')
+                .single();
+
+              if (companyError) {
+                console.error('Erro ao criar empresa:', companyError);
+                errorCount++;
+                continue;
+              }
+
+              companyId = newCompany.id;
+              createdCompanies.set(empresaKey, companyId);
+              // Also map by nomeFantasia key
+              if (row.nomeFantasia) {
+                createdCompanies.set(row.nomeFantasia.toLowerCase().trim(), companyId);
+              }
+              companiesCreated++;
+
+              // Grant user access
+              if (user) {
+                await supabase.from('user_company_access').insert({
+                  user_id: user.id,
+                  company_id: companyId,
+                  access_level: 'owner',
+                });
+              }
+            }
+          }
+
+          if (!companyId) {
+            // If no company and no empresa name, skip
+            if (!row.empresa.trim()) {
               errorCount++;
               continue;
             }
+            errorCount++;
+            continue;
+          }
 
-            companyId = newCompany.id;
-            createdCompanies.set(empresaKey, companyId);
-            companiesCreated++;
+          // Handle consolidated '; ' separated values - take first value for phone fields
+          const firstPhone = (row.telefone || '').split(/\s*;\s*/)[0] || '';
+          const firstWhatsapp = (row.whatsapp || '').split(/\s*;\s*/)[0] || '';
 
-            // Grant user access to the new company so RLS allows viewing
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
-              await supabase.from('user_company_access').insert({
-                user_id: user.id,
-                company_id: companyId,
-                access_level: 'owner',
-              });
-            }
+          contactsToInsert.push({
+            company_id: companyId,
+            nome: sanitizeText(row.contato) || `Contato ${Date.now()}`,
+            cargo: sanitizeText(row.cargo || ''),
+            email: cleanEmail(row.email.split(/\s*;\s*/)[0] || '') || `contato_${Date.now()}_${Math.random().toString(36).substr(2, 5)}@importado.tmp`,
+            telefone: cleanPhone(firstPhone),
+            whatsapp: cleanPhone(firstWhatsapp),
+            linkedin: sanitizeText(row.linkedin || ''),
+            is_primary: false,
+          });
+        }
+
+        // Batch insert contacts
+        if (contactsToInsert.length > 0) {
+          const { data: inserted, error } = await supabase
+            .from('contacts')
+            .insert(contactsToInsert)
+            .select('id');
+          
+          if (error) {
+            console.error('Erro ao inserir lote de contatos:', error);
+            errorCount += contactsToInsert.length;
+          } else {
+            successCount += inserted?.length || contactsToInsert.length;
           }
         }
 
-        if (!companyId) {
-          errorCount++;
-          continue;
-        }
-
-        // Sanitize contact data before insert
-        const contactData = {
-          company_id: companyId,
-          nome: sanitizeText(row.contato) || `Contato ${Date.now()}`,
-          cargo: sanitizeText(row.cargo || ''),
-          email: cleanEmail(row.email) || `contato_${Date.now()}_${Math.random().toString(36).substr(2, 5)}@importado.tmp`,
-          telefone: cleanPhone(row.telefone || ''),
-          whatsapp: cleanPhone(row.whatsapp || ''),
-          linkedin: sanitizeText(row.linkedin || ''),
-          is_primary: false,
-        };
-
-        const { error } = await supabase.from('contacts').insert(contactData);
-        
-        if (error) {
-          console.error('Erro ao inserir contato:', error);
-          errorCount++;
-        } else {
-          successCount++;
-        }
+        // Yield to UI thread between batches
+        await new Promise(resolve => setTimeout(resolve, 50));
       }
 
       queryClient.invalidateQueries({ queryKey: ['contacts'] });
       queryClient.invalidateQueries({ queryKey: ['companies'] });
+      queryClient.invalidateQueries({ queryKey: ['company-access'] });
       
-      if (companiesCreated > 0) {
-        toast.success(`${companiesCreated} empresa(s) criada(s) automaticamente!`);
-      }
-      if (successCount > 0) {
-        toast.success(`${successCount} contato(s) importado(s) com sucesso!`);
+      const messages: string[] = [];
+      if (companiesCreated > 0) messages.push(`${companiesCreated} empresa(s) criada(s)`);
+      if (successCount > 0) messages.push(`${successCount} contato(s) importado(s)`);
+      
+      if (messages.length > 0) {
+        toast.success(`Importação concluída! ${messages.join(', ')}.`);
       }
       if (errorCount > 0) {
         toast.error(`${errorCount} contato(s) com erro na importação`);
@@ -442,9 +508,9 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
   };
 
   const duplicateCount = parsedData.filter(r => r.isDuplicate).length;
-  const companyNotFoundCount = parsedData.filter(r => r.companyNotFound && !r.isDuplicate).length;
+  const companyNotFoundCount = 0; // No longer blocking imports for missing company
   const willCreateCompanyCount = parsedData.filter(r => r.willCreateCompany && !r.isDuplicate).length;
-  const validCount = parsedData.filter(r => !r.isDuplicate && !r.companyNotFound).length;
+  const validCount = parsedData.filter(r => !r.isDuplicate).length;
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
