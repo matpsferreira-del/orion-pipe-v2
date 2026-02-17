@@ -109,6 +109,11 @@ export const contactImportRowSchema = z.object({
     .max(MAX_STRING_LENGTH, `CNPJ deve ter no máximo ${MAX_STRING_LENGTH} caracteres`)
     .optional()
     .default(''),
+  nomeFantasia: z.string()
+    .trim()
+    .max(MAX_STRING_LENGTH, `Nome Fantasia deve ter no máximo ${MAX_STRING_LENGTH} caracteres`)
+    .optional()
+    .default(''),
   cidade: z.string()
     .trim()
     .max(MAX_STRING_LENGTH, `Cidade deve ter no máximo ${MAX_STRING_LENGTH} caracteres`)

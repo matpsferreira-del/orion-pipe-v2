@@ -32,6 +32,7 @@ interface ImportRow {
   telefone: string;
   whatsapp: string;
   linkedin: string;
+  nomeFantasia: string;
   // Company fields for auto-creation
   cnpj: string;
   cidade: string;
@@ -91,7 +92,9 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
     );
 
     return rows.map(row => {
-      const companyResult = findCompanyByName(row.empresa);
+      // Try matching by empresa (razao social) or nomeFantasia
+      const companyResult = findCompanyByName(row.empresa) || 
+        (row.nomeFantasia ? findCompanyByName(row.nomeFantasia) : null);
       const willCreateCompany = !companyResult?.found && row.empresa.trim() !== '';
       
       if (row.email && existingEmails.has(row.email.toLowerCase().trim())) {
@@ -144,7 +147,7 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
         // If no nome column found, use first column that has 'contato'
         const firstContatoCol = !contatoCol ? headers.find(h => h.toLowerCase().includes('contato') && !h.toLowerCase().includes('_1') && !h.toLowerCase().includes('_2')) : contatoCol;
         
-        const empresaCol = findColumn(headers, ['empresa', 'company', 'companhia', 'razao', 'fantasia']);
+        const empresaCol = findColumn(headers, ['empresa', 'company', 'companhia', 'razao', 'razão social']);
         const cargoCol = findColumn(headers, ['cargo', 'position', 'função', 'funcao', 'role']);
         const emailCol = findColumn(headers, ['email', 'e-mail', 'mail']);
         
@@ -163,6 +166,7 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
         
         const whatsappCol = findColumn(headers, ['whatsapp', 'whats', 'wpp', 'zap']);
         const linkedinCol = findColumn(headers, ['linkedin', 'linked']);
+        const nomeFantasiaCol = findColumn(headers, ['nome fantasia', 'fantasia', 'nome_fantasia']);
         const cnpjCol = findColumn(headers, ['cnpj']);
         const cidadeCol = findColumn(headers, ['cidade', 'city']);
         const estadoCol = findColumn(headers, ['estado', 'uf', 'state']);
@@ -178,6 +182,7 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
           telefone: telefoneCol ? sanitizeText(String(row[telefoneCol] || '')) : '',
           whatsapp: whatsappCol ? sanitizeText(String(row[whatsappCol] || '')) : '',
           linkedin: linkedinCol ? sanitizeText(String(row[linkedinCol] || '')) : '',
+          nomeFantasia: nomeFantasiaCol ? sanitizeText(String(row[nomeFantasiaCol] || '')) : '',
           cnpj: cnpjCol ? sanitizeText(String(row[cnpjCol] || '')) : '',
           cidade: cidadeCol ? sanitizeText(String(row[cidadeCol] || '')) : '',
           estado: estadoCol ? sanitizeText(String(row[estadoCol] || '')) : '',
@@ -208,6 +213,7 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
           telefone: row.telefone || '',
           whatsapp: row.whatsapp || '',
           linkedin: row.linkedin || '',
+          nomeFantasia: row.nomeFantasia || '',
           cnpj: row.cnpj || '',
           cidade: row.cidade || '',
           estado: row.estado || '',
@@ -280,6 +286,7 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
         if (r.whatsapp?.trim()) whatsapps.add(r.whatsapp.trim());
         if (!base.cargo && r.cargo) base.cargo = r.cargo;
         if (!base.linkedin && r.linkedin) base.linkedin = r.linkedin;
+        if (!base.nomeFantasia && r.nomeFantasia) base.nomeFantasia = r.nomeFantasia;
         if (!base.cnpj && r.cnpj) base.cnpj = r.cnpj;
         if (!base.cidade && r.cidade) base.cidade = r.cidade;
         if (!base.estado && r.estado) base.estado = r.estado;
@@ -325,7 +332,7 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
           } else {
             // Sanitize company data before insert
             const companyData = {
-              nome_fantasia: sanitizeText(row.empresa),
+              nome_fantasia: sanitizeText(row.nomeFantasia || row.empresa),
               razao_social: sanitizeText(row.empresa),
               cnpj: sanitizeText(row.cnpj) || `IMPORTADO-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
               cidade: sanitizeText(row.cidade || ''),
@@ -350,6 +357,16 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
             companyId = newCompany.id;
             createdCompanies.set(empresaKey, companyId);
             companiesCreated++;
+
+            // Grant user access to the new company so RLS allows viewing
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+              await supabase.from('user_company_access').insert({
+                user_id: user.id,
+                company_id: companyId,
+                access_level: 'owner',
+              });
+            }
           }
         }
 
