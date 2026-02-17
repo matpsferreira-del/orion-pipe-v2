@@ -11,7 +11,7 @@ import { useContacts } from '@/hooks/useContacts';
 import { useOpportunities } from '@/hooks/useOpportunities';
 import { useInvoices } from '@/hooks/useInvoices';
 import { useProfiles } from '@/hooks/useProfiles';
-import { Plus, Search, Filter, MoreHorizontal, Building2, Eye, Pencil, Trash2, Download, Loader2, UserPlus, Upload, FileSpreadsheet, ArrowUpDown, ArrowUp, ArrowDown, X, ChevronRight, ChevronDown as ChevronDownIcon, Network } from 'lucide-react';
+import { Plus, Search, Filter, MoreHorizontal, Building2, Eye, Pencil, Trash2, Download, Loader2, UserPlus, Upload, FileSpreadsheet, ArrowUpDown, ArrowUp, ArrowDown, X, ChevronRight, ChevronDown as ChevronDownIcon, Network, Merge } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -21,6 +21,7 @@ import { CompanyDialog } from '@/components/companies/CompanyDialog';
 import { ContactDialog } from '@/components/contacts/ContactDialog';
 import { ImportDialog } from '@/components/companies/ImportDialog';
 import { ImportCnpjDialog } from '@/components/companies/ImportCnpjDialog';
+import { CompanyDuplicatesDialog } from '@/components/companies/CompanyDuplicatesDialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 
@@ -58,6 +59,7 @@ export default function Empresas() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [companyToDelete, setCompanyToDelete] = useState<CompanyRow | null>(null);
   const [expandedHoldings, setExpandedHoldings] = useState<Set<string>>(new Set());
+  const [duplicatesDialogOpen, setDuplicatesDialogOpen] = useState(false);
 
   const { data: companies = [], isLoading } = useCompanies();
   const { data: contacts = [] } = useContacts();
@@ -270,6 +272,10 @@ export default function Empresas() {
         description="Gerencie empresas e prospects"
         actions={
           <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => setDuplicatesDialogOpen(true)}>
+              <Merge className="h-4 w-4 mr-2" />
+              Revisar Duplicatas
+            </Button>
             <Button variant="ghost" size="icon" onClick={handleDownloadTemplate} title="Baixar modelo Excel">
               <FileSpreadsheet className="h-4 w-4" />
             </Button>
@@ -681,6 +687,9 @@ export default function Empresas() {
 
       {/* Import CNPJ Dialog */}
       <ImportCnpjDialog open={importCnpjDialogOpen} onOpenChange={setImportCnpjDialogOpen} />
+
+      {/* Company Duplicates Dialog */}
+      <CompanyDuplicatesDialog open={duplicatesDialogOpen} onOpenChange={setDuplicatesDialogOpen} />
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

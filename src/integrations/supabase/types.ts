@@ -1115,6 +1115,22 @@ export type Database = {
         }
         Returns: string
       }
+      find_similar_companies: {
+        Args: { similarity_threshold?: number }
+        Returns: {
+          company_cidade_a: string
+          company_cidade_b: string
+          company_estado_a: string
+          company_estado_b: string
+          company_id_a: string
+          company_id_b: string
+          company_name_a: string
+          company_name_b: string
+          company_status_a: string
+          company_status_b: string
+          similarity_score: number
+        }[]
+      }
       get_user_company_ids: { Args: { _user_id: string }; Returns: string[] }
       get_user_profile_id: { Args: { _user_id: string }; Returns: string }
       has_company_access: {
@@ -1127,6 +1143,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      merge_companies: {
+        Args: { merged_id: string; survivor_id: string }
+        Returns: undefined
       }
       normalize_email: { Args: { raw_email: string }; Returns: string }
       normalize_phone_br: { Args: { raw_phone: string }; Returns: string }
@@ -1144,6 +1164,8 @@ export type Database = {
         }
         Returns: string
       }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
     }
     Enums: {
       app_role: "admin" | "gestor" | "consultor"
