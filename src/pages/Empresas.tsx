@@ -20,6 +20,7 @@ import { CompanyDetail } from '@/components/companies/CompanyDetail';
 import { CompanyDialog } from '@/components/companies/CompanyDialog';
 import { ContactDialog } from '@/components/contacts/ContactDialog';
 import { ImportDialog } from '@/components/companies/ImportDialog';
+import { ImportCnpjDialog } from '@/components/companies/ImportCnpjDialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 
@@ -53,6 +54,7 @@ export default function Empresas() {
   const [companyToEdit, setCompanyToEdit] = useState<CompanyRow | null>(null);
   const [contactDialogOpen, setContactDialogOpen] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [importCnpjDialogOpen, setImportCnpjDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [companyToDelete, setCompanyToDelete] = useState<CompanyRow | null>(null);
   const [expandedHoldings, setExpandedHoldings] = useState<Set<string>>(new Set());
@@ -274,6 +276,10 @@ export default function Empresas() {
             <Button variant="outline" onClick={() => setImportDialogOpen(true)}>
               <Upload className="h-4 w-4 mr-2" />
               Importar
+            </Button>
+            <Button variant="outline" onClick={() => setImportCnpjDialogOpen(true)}>
+              <FileSpreadsheet className="h-4 w-4 mr-2" />
+              Importar CNPJs
             </Button>
             <Button variant="outline" onClick={handleExport}>
               <Download className="h-4 w-4 mr-2" />
@@ -672,6 +678,9 @@ export default function Empresas() {
 
       {/* Import Dialog */}
       <ImportDialog open={importDialogOpen} onOpenChange={setImportDialogOpen} />
+
+      {/* Import CNPJ Dialog */}
+      <ImportCnpjDialog open={importCnpjDialogOpen} onOpenChange={setImportCnpjDialogOpen} />
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
