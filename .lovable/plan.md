@@ -1,39 +1,57 @@
 
 
-## Importar CNPJs para Empresas Existentes
+## Consolidacao de Contatos Duplicados na Importacao (com CNPJ)
 
-O objetivo e criar uma funcionalidade para atualizar o CNPJ de empresas que ja existem no sistema, usando um arquivo Excel com duas colunas: o nome da empresa (para identificar) e o CNPJ (para atualizar).
+### O que muda
 
-### Como vai funcionar
+Ao importar contatos, o sistema vai agrupar linhas duplicadas usando **nome do contato + CNPJ da empresa** (em vez de apenas nome da empresa). Isso garante que contatos com o mesmo nome sejam consolidados corretamente mesmo quando o nome da empresa varia, desde que o CNPJ seja o mesmo.
 
-1. O usuario clica em um botao "Importar CNPJs" na pagina de Empresas
-2. Seleciona um arquivo Excel com pelo menos duas colunas: nome da empresa e CNPJ
-3. O sistema faz o match pelo nome da empresa (comparacao flexivel, ignorando maiusculas/minusculas e espacos extras)
-4. Mostra uma pre-visualizacao com:
-   - Empresas encontradas no sistema (match feito) com o CNPJ que sera atualizado
-   - Empresas nao encontradas (sem match)
-   - Empresas que ja possuem CNPJ (para decidir se sobrescreve ou nao)
-5. O usuario confirma e o sistema atualiza apenas o campo CNPJ das empresas encontradas
+### Regra de agrupamento
+
+A chave de agrupamento sera: `nome_contato_normalizado + cnpj_digitos`
+
+- Se o CNPJ estiver preenchido, ele e o identificador principal da empresa
+- Se o CNPJ estiver vazio, usa o nome da empresa como fallback
+- Chave final: `normalizar(contato) | cnpj_digitos OU normalizar(empresa)`
+
+### Exemplo pratico
+
+```text
+Planilha:
+  Joao Silva | Empresa X  | 12.345.678/0001-90 | joao@x.com  | (11) 99999-1111
+  Joao Silva | Empresa X  | 12.345.678/0001-90 |             | (11) 98888-2222
+  Joao Silva | Empresa X  | 12.345.678/0001-90 | joao2@x.com |
+  Maria Lima | Empresa X  | 12.345.678/0001-90 | maria@x.com | (11) 97777-3333
+
+Resultado:
+  Joao Silva | 12345678000190 | joao@x.com ; joao2@x.com | (11) 99999-1111 ; (11) 98888-2222
+  Maria Lima | 12345678000190 | maria@x.com             | (11) 97777-3333
+```
 
 ### Detalhes Tecnicos
 
-**Novo componente: `ImportCnpjDialog.tsx`**
-- Dialog dedicado para importacao de CNPJs
-- Reutiliza as funcoes utilitarias existentes (`normalizeCnpj`, `sanitizeText`, `findColumn`)
-- Fluxo:
-  1. Le o arquivo Excel
-  2. Detecta colunas de "empresa" e "cnpj" com mapeamento flexivel (mesma logica do `findColumn` existente)
-  3. Busca todas as empresas do banco via `supabase.from('companies').select('id, nome_fantasia, razao_social, cnpj')`
-  4. Faz match por nome (comparando `nome_fantasia` e `razao_social` com o valor da planilha, case-insensitive e trimmed)
-  5. Exibe tabela de pre-visualizacao com status de cada linha: "Encontrada", "Nao encontrada", "Ja possui CNPJ"
-  6. Ao confirmar, executa `supabase.from('companies').update({ cnpj }).eq('id', matchedId)` para cada empresa
+**Alteracao em `ImportContactsDialog.tsx`**
 
-**Alteracao em `Empresas.tsx`**
-- Adicionar botao "Importar CNPJs" ao lado dos botoes existentes
-- Adicionar state para controlar abertura do dialog
-- Importar e renderizar o novo `ImportCnpjDialog`
+1. Adicionar campo `mergedCount?: number` na interface `ImportRow`
+2. Criar funcao `consolidateContacts(rows: ImportRow[]): ImportRow[]`:
+   - Extrai apenas digitos do CNPJ para comparacao
+   - Gera chave: `normalizar(contato) | digitos_cnpj` (ou `normalizar(contato) | normalizar(empresa)` se CNPJ vazio)
+   - Para cada grupo com a mesma chave:
+     - Coleta todos os emails unicos e nao-vazios, junta com ` ; `
+     - Coleta todos os telefones unicos e nao-vazios, junta com ` ; `
+     - Coleta todos os WhatsApps unicos e nao-vazios, junta com ` ; `
+     - Usa primeiro cargo, linkedin, e dados da empresa nao-vazios
+     - Define `mergedCount` com a quantidade de linhas mescladas
+3. Chamar `consolidateContacts` apos o parse/validacao e antes do `checkDuplicates`
+4. Atualizar a tabela de pre-visualizacao:
+   - Mostrar badge "X linhas mescladas" quando `mergedCount > 1`
+   - Mostrar badge com contagem de contatos consolidados no resumo
 
-**Tratamento do CNPJ**
-- Reutiliza a funcao `normalizeCnpj` do `importValidation.ts` para converter notacao cientifica e formatar como XX.XXX.XXX/XXXX-XX
-- Opcao de checkbox para sobrescrever CNPJs existentes (desmarcado por padrao)
+**Alteracao em `ImportDialog.tsx` (importacao de empresas)**
 
+1. Na funcao `checkDuplicatesAndGroup`, ao adicionar contatos ao grupo da empresa:
+   - Usar nome do contato normalizado como chave (alem do email atual)
+   - Quando encontrar contato com mesmo nome, mesclar telefones e emails em vez de ignorar
+   - Contatos com mesmo nome terao: emails concatenados com ` ; `, telefones concatenados com ` ; `
+
+Nenhuma alteracao de banco de dados necessaria -- os campos `email`, `telefone` e `whatsapp` sao do tipo `text` e suportam valores concatenados.
