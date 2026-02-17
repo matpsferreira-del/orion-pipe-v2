@@ -1,57 +1,78 @@
 
 
-## Consolidacao de Contatos Duplicados na Importacao (com CNPJ)
+## Tela de Revisao de Empresas Duplicadas (por nome similar)
 
-### O que muda
+### Contexto
 
-Ao importar contatos, o sistema vai agrupar linhas duplicadas usando **nome do contato + CNPJ da empresa** (em vez de apenas nome da empresa). Isso garante que contatos com o mesmo nome sejam consolidados corretamente mesmo quando o nome da empresa varia, desde que o CNPJ seja o mesmo.
+Foram encontrados diversos grupos de empresas com nomes muito parecidos no banco de dados. Exemplos:
 
-### Regra de agrupamento
+| Grupo | Empresas |
+|-------|----------|
+| AbbVie | "AbbVie", "AbbVie (unidade Cidade Monções)" |
+| Aurora | "Aurora", "Aurora Coop", "Aurora Fine Brands" |
+| CPFL | "CPFL", "CPFL Piratininga", "CPFL Renováveis" |
+| ENGIE | "ENGIE", "ENGIE Brasil" |
+| Gran | "Gran", "Gran Cursos", "Gran Services" |
+| Schulz | "Schulz", "Schulz S/A e Controlada" |
+| Tupy | "Tupy", "Tupy S/A e Controladas" |
+| Sonoco | "Sonoco", "Sonoco do Brasil" |
+| Thomson Reuters | "Thomson Reuters", "Thomson Reuters Brasil" |
+| ...e mais ~30 grupos |
 
-A chave de agrupamento sera: `nome_contato_normalizado + cnpj_digitos`
+Nenhuma dessas empresas tem oportunidades ou mais de 1-2 contatos, o que facilita a mesclagem.
 
-- Se o CNPJ estiver preenchido, ele e o identificador principal da empresa
-- Se o CNPJ estiver vazio, usa o nome da empresa como fallback
-- Chave final: `normalizar(contato) | cnpj_digitos OU normalizar(empresa)`
+### O que sera construido
 
-### Exemplo pratico
+Uma nova tela/dialog acessivel pela pagina de Empresas com um botao "Revisar Duplicatas" que:
 
-```text
-Planilha:
-  Joao Silva | Empresa X  | 12.345.678/0001-90 | joao@x.com  | (11) 99999-1111
-  Joao Silva | Empresa X  | 12.345.678/0001-90 |             | (11) 98888-2222
-  Joao Silva | Empresa X  | 12.345.678/0001-90 | joao2@x.com |
-  Maria Lima | Empresa X  | 12.345.678/0001-90 | maria@x.com | (11) 97777-3333
-
-Resultado:
-  Joao Silva | 12345678000190 | joao@x.com ; joao2@x.com | (11) 99999-1111 ; (11) 98888-2222
-  Maria Lima | 12345678000190 | maria@x.com             | (11) 97777-3333
-```
+1. **Lista todos os grupos de nomes similares** agrupados pela primeira palavra do nome
+2. Para cada grupo, mostra as empresas com seus contatos
+3. Permite selecionar qual empresa **manter** (sobrevivente)
+4. Ao mesclar: move contatos, oportunidades, atividades e tarefas para a empresa sobrevivente e exclui as demais
+5. Permite marcar como "Nao e duplicata" para ignorar o grupo
 
 ### Detalhes Tecnicos
 
-**Alteracao em `ImportContactsDialog.tsx`**
+**1. Habilitar extensao `pg_trgm` (migracao SQL)**
 
-1. Adicionar campo `mergedCount?: number` na interface `ImportRow`
-2. Criar funcao `consolidateContacts(rows: ImportRow[]): ImportRow[]`:
-   - Extrai apenas digitos do CNPJ para comparacao
-   - Gera chave: `normalizar(contato) | digitos_cnpj` (ou `normalizar(contato) | normalizar(empresa)` se CNPJ vazio)
-   - Para cada grupo com a mesma chave:
-     - Coleta todos os emails unicos e nao-vazios, junta com ` ; `
-     - Coleta todos os telefones unicos e nao-vazios, junta com ` ; `
-     - Coleta todos os WhatsApps unicos e nao-vazios, junta com ` ; `
-     - Usa primeiro cargo, linkedin, e dados da empresa nao-vazios
-     - Define `mergedCount` com a quantidade de linhas mescladas
-3. Chamar `consolidateContacts` apos o parse/validacao e antes do `checkDuplicates`
-4. Atualizar a tabela de pre-visualizacao:
-   - Mostrar badge "X linhas mescladas" quando `mergedCount > 1`
-   - Mostrar badge com contagem de contatos consolidados no resumo
+```sql
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+```
 
-**Alteracao em `ImportDialog.tsx` (importacao de empresas)**
+Isso permite usar a funcao `similarity()` do PostgreSQL para encontrar nomes parecidos automaticamente.
 
-1. Na funcao `checkDuplicatesAndGroup`, ao adicionar contatos ao grupo da empresa:
-   - Usar nome do contato normalizado como chave (alem do email atual)
-   - Quando encontrar contato com mesmo nome, mesclar telefones e emails em vez de ignorar
-   - Contatos com mesmo nome terao: emails concatenados com ` ; `, telefones concatenados com ` ; `
+**2. Criar funcao SQL `find_similar_companies`**
 
-Nenhuma alteracao de banco de dados necessaria -- os campos `email`, `telefone` e `whatsapp` sao do tipo `text` e suportam valores concatenados.
+Uma funcao no banco que retorna pares de empresas com nome similar (similaridade > 0.5), agrupados. Isso evita trazer 1284 empresas para o front-end e comparar no cliente.
+
+**3. Novo componente `CompanyDuplicatesDialog.tsx`**
+
+- Dialog com lista de grupos de empresas similares
+- Cada grupo mostra as empresas lado a lado com seus dados (nome, cidade, estado, contatos)
+- Radio button para selecionar a sobrevivente
+- Botao "Mesclar" e "Nao e duplicata"
+- Ao mesclar:
+  - `UPDATE contacts SET company_id = :survivor WHERE company_id = :merged`
+  - `UPDATE opportunities SET company_id = :survivor WHERE company_id = :merged`
+  - `UPDATE activities SET company_id = :survivor WHERE company_id = :merged`
+  - `UPDATE tasks SET company_id = :survivor WHERE company_id = :merged`
+  - `DELETE FROM companies WHERE id = :merged`
+
+**4. Novo hook `useCompanyDuplicates.ts`**
+
+- `useCompanyDuplicates()` -- chama a funcao SQL para buscar pares similares
+- `useMergeCompanies()` -- executa a mesclagem (move referencias + deleta duplicada)
+- `useDismissCompanyDuplicate()` -- marca par como ignorado (opcional: tabela de dismissals ou lista local)
+
+**5. Botao na pagina Empresas**
+
+Adicionar botao "Revisar Duplicatas" ao lado dos botoes existentes no header da pagina.
+
+### Fluxo do usuario
+
+1. Clica em "Revisar Duplicatas" na pagina de Empresas
+2. Dialog abre mostrando o primeiro grupo de empresas similares
+3. Seleciona qual empresa manter
+4. Clica "Mesclar" -- contatos e dados sao movidos, duplicata e excluida
+5. Proximo grupo aparece automaticamente
+6. Ao terminar todos os grupos, mostra mensagem de sucesso
