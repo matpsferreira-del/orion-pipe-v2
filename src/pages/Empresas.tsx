@@ -203,20 +203,54 @@ export default function Empresas() {
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Modelo');
     
-    // Set column widths
     worksheet['!cols'] = [
-      { wch: 30 }, // Empresa
-      { wch: 25 }, // Nome do responsável
-      { wch: 30 }, // Email
-      { wch: 18 }, // Telefone
-      { wch: 20 }, // Segmento
-      { wch: 12 }, // Porte
-      { wch: 20 }, // Cidade
-      { wch: 8 },  // Estado
+      { wch: 30 }, { wch: 25 }, { wch: 30 }, { wch: 18 },
+      { wch: 20 }, { wch: 12 }, { wch: 20 }, { wch: 8 },
     ];
     
     XLSX.writeFile(workbook, 'modelo_importacao_empresas.xlsx');
     toast.success('Modelo baixado com sucesso!');
+  };
+
+  const handleExport = () => {
+    const dataToExport = filteredAndSortedCompanies.map(company => {
+      const companyContacts = contacts.filter(c => c.company_id === company.id);
+      const primaryContact = companyContacts.find(c => c.is_primary) || companyContacts[0];
+      const parentCompany = company.parent_company_id 
+        ? companies.find(c => c.id === company.parent_company_id) 
+        : null;
+
+      return {
+        'Nome Fantasia': company.nome_fantasia,
+        'Razão Social': company.razao_social,
+        'CNPJ': company.cnpj,
+        'Segmento': company.segmento,
+        'Porte': porteLabels[company.porte] || company.porte,
+        'Cidade': company.cidade,
+        'Estado': company.estado,
+        'Status': statusConfig[company.status]?.label || company.status,
+        'Site': company.site || '',
+        'Holding': parentCompany?.nome_fantasia || '',
+        'Contato Principal': primaryContact?.nome || '',
+        'Email Contato': primaryContact?.email || '',
+        'Telefone Contato': primaryContact?.telefone || '',
+        'Nº Contatos': companyContacts.length,
+        'Nº Oportunidades': opportunities.filter(o => o.company_id === company.id).length,
+      };
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Empresas');
+
+    worksheet['!cols'] = [
+      { wch: 30 }, { wch: 30 }, { wch: 20 }, { wch: 18 }, { wch: 12 },
+      { wch: 18 }, { wch: 6 }, { wch: 15 }, { wch: 25 }, { wch: 25 },
+      { wch: 25 }, { wch: 25 }, { wch: 18 }, { wch: 12 }, { wch: 15 },
+    ];
+
+    XLSX.writeFile(workbook, `empresas_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    toast.success(`${dataToExport.length} empresas exportadas com sucesso!`);
   };
 
   if (isLoading) {
@@ -241,7 +275,7 @@ export default function Empresas() {
               <Upload className="h-4 w-4 mr-2" />
               Importar
             </Button>
-            <Button variant="outline">
+            <Button variant="outline" onClick={handleExport}>
               <Download className="h-4 w-4 mr-2" />
               Exportar
             </Button>
