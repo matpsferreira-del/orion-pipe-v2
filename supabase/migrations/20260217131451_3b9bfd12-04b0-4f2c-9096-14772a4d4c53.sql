@@ -1,0 +1,2 @@
+ALTER TABLE public.companies DROP CONSTRAINT companies_porte_check;
+ALTER TABLE public.companies ADD CONSTRAINT companies_porte_check CHECK (porte = ANY (ARRAY['', 'micro', 'pequena', 'media', 'grande', 'enterprise']));

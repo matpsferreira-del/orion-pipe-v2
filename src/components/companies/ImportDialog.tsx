@@ -330,7 +330,7 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
         const companySegmento = sanitizeText(company.segmento || '');
         const companyCidade = sanitizeText(company.cidade || '');
         const companyEstado = sanitizeText(company.estado || '');
-        const companyPorte = normalizePorte(company.porte) || 'media';
+        const companyPorte = normalizePorte(company.porte);
 
         // Create company
         const { data: newCompany, error: companyError } = await supabase
