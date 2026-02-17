@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,7 +11,7 @@ import { useContacts } from '@/hooks/useContacts';
 import { useOpportunities } from '@/hooks/useOpportunities';
 import { useInvoices } from '@/hooks/useInvoices';
 import { useProfiles } from '@/hooks/useProfiles';
-import { Plus, Search, Filter, MoreHorizontal, Building2, Eye, Pencil, Trash2, Download, Loader2, UserPlus, Upload, FileSpreadsheet, ArrowUpDown, ArrowUp, ArrowDown, X } from 'lucide-react';
+import { Plus, Search, Filter, MoreHorizontal, Building2, Eye, Pencil, Trash2, Download, Loader2, UserPlus, Upload, FileSpreadsheet, ArrowUpDown, ArrowUp, ArrowDown, X, ChevronRight, ChevronDown as ChevronDownIcon, Network } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -55,6 +55,7 @@ export default function Empresas() {
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [companyToDelete, setCompanyToDelete] = useState<CompanyRow | null>(null);
+  const [expandedHoldings, setExpandedHoldings] = useState<Set<string>>(new Set());
 
   const { data: companies = [], isLoading } = useCompanies();
   const { data: contacts = [] } = useContacts();
@@ -475,68 +476,130 @@ export default function Empresas() {
                 </TableCell>
               </TableRow>
             ) : (
-              filteredAndSortedCompanies.map((company) => {
-                const status = statusConfig[company.status] || statusConfig.prospect;
+              (() => {
+                // Build tree: holdings (no parent) first, then subsidiaries grouped
+                const childrenMap = new Map<string, CompanyRow[]>();
+                const topLevel: CompanyRow[] = [];
                 
-                return (
-                  <TableRow 
-                    key={company.id} 
-                    className="cursor-pointer hover:bg-muted/50"
-                    onClick={() => setSelectedCompany(company)}
-                  >
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center">
-                          <Building2 className="h-4 w-4 text-primary" />
-                        </div>
-                        <div>
-                          <p className="font-medium text-foreground">{company.nome_fantasia}</p>
-                          <p className="text-xs text-muted-foreground">{company.razao_social}</p>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">{company.cnpj}</TableCell>
-                    <TableCell>{company.segmento}</TableCell>
-                    <TableCell>{porteLabels[company.porte] || company.porte}</TableCell>
-                    <TableCell className="text-muted-foreground">{company.cidade}/{company.estado}</TableCell>
-                    <TableCell>
-                      <span className={cn(status.className)}>{status.label}</span>
-                    </TableCell>
-                    <TableCell className="text-center">{getContactsCount(company.id)}</TableCell>
-                    <TableCell className="text-center">{getOpportunitiesCount(company.id)}</TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setSelectedCompany(company); }}>
-                            <Eye className="h-4 w-4 mr-2" />
-                            Ver detalhes
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={(e) => { 
-                            e.stopPropagation(); 
-                            setCompanyToEdit(company);
-                            setDialogOpen(true);
-                          }}>
-                            <Pencil className="h-4 w-4 mr-2" />
-                            Editar
-                          </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            className="text-destructive" 
-                            onClick={(e) => handleDeleteClick(company, e)}
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Excluir
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                );
-              })
+                filteredAndSortedCompanies.forEach(c => {
+                  if (c.parent_company_id) {
+                    const siblings = childrenMap.get(c.parent_company_id) || [];
+                    siblings.push(c);
+                    childrenMap.set(c.parent_company_id, siblings);
+                  }
+                });
+                
+                filteredAndSortedCompanies.forEach(c => {
+                  if (!c.parent_company_id) {
+                    topLevel.push(c);
+                  }
+                });
+
+                // Also show orphaned children (parent not in filtered list)
+                filteredAndSortedCompanies.forEach(c => {
+                  if (c.parent_company_id && !filteredAndSortedCompanies.find(p => p.id === c.parent_company_id)) {
+                    topLevel.push(c);
+                  }
+                });
+
+                const renderCompanyRow = (company: CompanyRow, isChild: boolean = false) => {
+                  const status = statusConfig[company.status] || statusConfig.prospect;
+                  const children = childrenMap.get(company.id) || [];
+                  const hasChildren = children.length > 0;
+                  const isExpanded = expandedHoldings.has(company.id);
+
+                  return (
+                    <React.Fragment key={company.id}>
+                      <TableRow 
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => setSelectedCompany(company)}
+                      >
+                        <TableCell>
+                          <div className="flex items-center gap-2" style={{ paddingLeft: isChild ? '24px' : '0' }}>
+                            {hasChildren && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 shrink-0"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setExpandedHoldings(prev => {
+                                    const next = new Set(prev);
+                                    if (next.has(company.id)) next.delete(company.id);
+                                    else next.add(company.id);
+                                    return next;
+                                  });
+                                }}
+                              >
+                                {isExpanded ? <ChevronDownIcon className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                              </Button>
+                            )}
+                            {isChild && !hasChildren && (
+                              <span className="w-6 shrink-0 flex items-center justify-center text-muted-foreground">└</span>
+                            )}
+                            <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                              {hasChildren ? <Network className="h-4 w-4 text-primary" /> : <Building2 className="h-4 w-4 text-primary" />}
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <p className="font-medium text-foreground">{company.nome_fantasia}</p>
+                                {hasChildren && (
+                                  <Badge variant="outline" className="text-xs">
+                                    Grupo ({children.length})
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="text-xs text-muted-foreground">{company.razao_social}</p>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">{company.cnpj}</TableCell>
+                        <TableCell>{company.segmento}</TableCell>
+                        <TableCell>{porteLabels[company.porte] || company.porte}</TableCell>
+                        <TableCell className="text-muted-foreground">{company.cidade}/{company.estado}</TableCell>
+                        <TableCell>
+                          <span className={cn(status.className)}>{status.label}</span>
+                        </TableCell>
+                        <TableCell className="text-center">{getContactsCount(company.id)}</TableCell>
+                        <TableCell className="text-center">{getOpportunitiesCount(company.id)}</TableCell>
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setSelectedCompany(company); }}>
+                                <Eye className="h-4 w-4 mr-2" />
+                                Ver detalhes
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={(e) => { 
+                                e.stopPropagation(); 
+                                setCompanyToEdit(company);
+                                setDialogOpen(true);
+                              }}>
+                                <Pencil className="h-4 w-4 mr-2" />
+                                Editar
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                className="text-destructive" 
+                                onClick={(e) => handleDeleteClick(company, e)}
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Excluir
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                      {isExpanded && children.map(child => renderCompanyRow(child, true))}
+                    </React.Fragment>
+                  );
+                };
+
+                return topLevel.map(company => renderCompanyRow(company));
+              })()
             )}
           </TableBody>
         </Table>

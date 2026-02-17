@@ -15,6 +15,7 @@ export interface CompanyRow {
   estado: string;
   status: string;
   responsavel_id: string | null;
+  parent_company_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -30,6 +31,7 @@ export interface CompanyInsert {
   estado: string;
   status?: string;
   responsavel_id?: string;
+  parent_company_id?: string | null;
 }
 
 export function useCompanies() {

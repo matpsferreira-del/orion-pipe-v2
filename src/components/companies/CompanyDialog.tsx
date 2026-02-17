@@ -57,6 +57,7 @@ export function CompanyDialog({ open, onOpenChange, company }: CompanyDialogProp
   const [cidade, setCidade] = useState('');
   const [estado, setEstado] = useState('');
   const [status, setStatus] = useState('prospect');
+  const [parentCompanyId, setParentCompanyId] = useState<string>('none');
   const [cnpjError, setCnpjError] = useState<string | null>(null);
 
   const isEditing = !!company;
@@ -77,6 +78,7 @@ export function CompanyDialog({ open, onOpenChange, company }: CompanyDialogProp
       setCidade(company.cidade);
       setEstado(company.estado);
       setStatus(company.status);
+      setParentCompanyId(company.parent_company_id || 'none');
       setCnpjError(null);
     } else {
       resetForm();
@@ -129,6 +131,7 @@ export function CompanyDialog({ open, onOpenChange, company }: CompanyDialogProp
       cidade,
       estado,
       status,
+      parent_company_id: parentCompanyId === 'none' ? null : parentCompanyId,
     };
 
     if (isEditing && company) {
@@ -158,6 +161,7 @@ export function CompanyDialog({ open, onOpenChange, company }: CompanyDialogProp
     setCidade('');
     setEstado('');
     setStatus('prospect');
+    setParentCompanyId('none');
   };
 
   return (
@@ -300,6 +304,26 @@ export function CompanyDialog({ open, onOpenChange, company }: CompanyDialogProp
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          {/* Empresa Holding / Grupo */}
+          <div className="space-y-2">
+            <Label htmlFor="parentCompany">Empresa Holding (Grupo)</Label>
+            <Select value={parentCompanyId} onValueChange={setParentCompanyId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Nenhuma (independente)" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Nenhuma (independente)</SelectItem>
+                {companies
+                  .filter(c => c.id !== company?.id)
+                  .map(c => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.nome_fantasia}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="flex justify-end gap-3 pt-4">
