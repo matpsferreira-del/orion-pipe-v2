@@ -415,8 +415,8 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
 
   const downloadTemplate = () => {
     const template = [
-      { Contato: 'João Silva', Cargo: 'Diretor', Empresa: 'Tech Solutions', Email: 'joao@tech.com', Telefone: '11999998888', WhatsApp: '11999998888', LinkedIn: 'https://linkedin.com/in/joaosilva', CNPJ: '12.345.678/0001-90', Cidade: 'São Paulo', Estado: 'SP', Segmento: 'Tecnologia', Porte: 'media' },
-      { Contato: 'Maria Santos', Cargo: 'RH', Empresa: 'Nova Empresa', Email: 'maria@nova.com', Telefone: '11988887777', WhatsApp: '', LinkedIn: '', CNPJ: '', Cidade: 'Rio de Janeiro', Estado: 'RJ', Segmento: 'Varejo', Porte: 'grande' },
+      { Contato: 'João Silva', Cargo: 'Diretor', Empresa: 'Tech Solutions LTDA', 'Nome Fantasia': 'Tech Solutions', Email: 'joao@tech.com', Telefone: '11999998888', WhatsApp: '11999998888', LinkedIn: 'https://linkedin.com/in/joaosilva', CNPJ: '12.345.678/0001-90', Cidade: 'São Paulo', Estado: 'SP', Segmento: 'Tecnologia', Porte: 'media' },
+      { Contato: 'Maria Santos', Cargo: 'RH', Empresa: 'Nova Empresa LTDA', 'Nome Fantasia': 'Nova Empresa', Email: 'maria@nova.com', Telefone: '11988887777', WhatsApp: '', LinkedIn: '', CNPJ: '', Cidade: 'Rio de Janeiro', Estado: 'RJ', Segmento: 'Varejo', Porte: 'grande' },
     ];
     const ws = XLSX.utils.json_to_sheet(template);
     const wb = XLSX.utils.book_new();
