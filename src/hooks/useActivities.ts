@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { fetchAllRows } from '@/lib/fetchAllRows';
 
 export interface ActivityRow {
   id: string;
@@ -20,13 +21,10 @@ export function useActivities() {
   return useQuery({
     queryKey: ['activities'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('activities')
-        .select('*')
-        .order('data', { ascending: false });
-      
-      if (error) throw error;
-      return data as ActivityRow[];
+      return fetchAllRows<ActivityRow>('activities', {
+        orderBy: 'data',
+        ascending: false,
+      });
     },
   });
 }

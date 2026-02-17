@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { fetchAllRows } from '@/lib/fetchAllRows';
 
 export interface OpportunityRow {
   id: string;
@@ -43,13 +44,10 @@ export function useOpportunities() {
   return useQuery({
     queryKey: ['opportunities'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('opportunities')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      return data as OpportunityRow[];
+      return fetchAllRows<OpportunityRow>('opportunities', {
+        orderBy: 'created_at',
+        ascending: false,
+      });
     },
   });
 }
