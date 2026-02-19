@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,11 +8,13 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useContacts, useDeleteContact, ContactRow } from '@/hooks/useContacts';
 import { useCompanies } from '@/hooks/useCompanies';
-import { Plus, Search, Filter, MoreHorizontal, User, Pencil, Trash2, Download, Loader2, Mail, Phone, Building2, Upload, Linkedin, ArrowUpDown, ArrowUp, ArrowDown, X } from 'lucide-react';
+import { Plus, Search, Filter, MoreHorizontal, User, Pencil, Trash2, Download, Loader2, Mail, Phone, Building2, Upload, Linkedin, ArrowUpDown, ArrowUp, ArrowDown, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { ContactDialog } from '@/components/contacts/ContactDialog';
 import { ImportContactsDialog } from '@/components/contacts/ImportContactsDialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
+
+const PAGE_SIZE = 100;
 
 type SortField = 'nome' | 'company' | 'cargo' | 'email' | 'telefone';
 type SortDirection = 'asc' | 'desc';
@@ -29,10 +31,22 @@ export default function Contatos() {
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [contactToDelete, setContactToDelete] = useState<ContactRow | null>(null);
+  const [page, setPage] = useState(0);
 
   const { data: contacts = [], isLoading } = useContacts();
   const { data: companies = [] } = useCompanies();
   const deleteContact = useDeleteContact();
+
+  // O(1) lookup map for company names
+  const companyMap = useMemo(() => {
+    const map = new Map<string, string>();
+    companies.forEach(c => map.set(c.id, c.nome_fantasia));
+    return map;
+  }, [companies]);
+
+  const getCompanyName = useCallback((companyId: string) => {
+    return companyMap.get(companyId) || 'Empresa não encontrada';
+  }, [companyMap]);
 
   const cargos = useMemo(() => {
     return [...new Set(contacts.map(c => c.cargo).filter(Boolean))];
@@ -50,11 +64,7 @@ export default function Contatos() {
     setFilterCompany('all');
     setFilterCargo('all');
     setFilterPrimary('all');
-  };
-
-  const getCompanyName = (companyId: string) => {
-    const company = companies.find(c => c.id === companyId);
-    return company?.nome_fantasia || 'Empresa não encontrada';
+    setPage(0);
   };
 
   const filteredAndSortedContacts = useMemo(() => {
@@ -96,9 +106,16 @@ export default function Contatos() {
     }
 
     return result;
-  }, [contacts, companies, searchTerm, filterCompany, filterCargo, filterPrimary, sortField, sortDirection]);
+  }, [contacts, companyMap, searchTerm, filterCompany, filterCargo, filterPrimary, sortField, sortDirection, getCompanyName]);
+
+  // Pagination
+  const totalPages = Math.ceil(filteredAndSortedContacts.length / PAGE_SIZE);
+  const paginatedContacts = useMemo(() => {
+    return filteredAndSortedContacts.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  }, [filteredAndSortedContacts, page]);
 
   const handleSort = (field: SortField) => {
+    setPage(0);
     if (sortField === field) {
       if (sortDirection === 'asc') {
         setSortDirection('desc');
@@ -175,7 +192,7 @@ export default function Contatos() {
           <Input
             placeholder="Buscar por nome, email, empresa, telefone..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => { setSearchTerm(e.target.value); setPage(0); }}
             className="pl-9"
           />
         </div>
@@ -331,14 +348,14 @@ export default function Contatos() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredAndSortedContacts.length === 0 ? (
+            {paginatedContacts.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                   Nenhum contato encontrado
                 </TableCell>
               </TableRow>
             ) : (
-              filteredAndSortedContacts.map((contact) => (
+              paginatedContacts.map((contact) => (
                 <TableRow key={contact.id} className="hover:bg-muted/50">
                   <TableCell>
                     <div className="flex items-center gap-3">
@@ -390,7 +407,7 @@ export default function Contatos() {
                         href={`https://wa.me/${contact.whatsapp.replace(/\D/g, '')}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-green-600 hover:underline"
+                        className="hover:underline text-success"
                         onClick={(e) => e.stopPropagation()}
                       >
                         {contact.whatsapp}
@@ -403,7 +420,7 @@ export default function Contatos() {
                         href={contact.linkedin.startsWith('http') ? contact.linkedin : `https://${contact.linkedin}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-1 text-blue-600 hover:underline"
+                        className="flex items-center gap-1 text-primary hover:underline"
                         onClick={(e) => e.stopPropagation()}
                       >
                         <Linkedin className="h-3 w-3" />
@@ -443,6 +460,35 @@ export default function Contatos() {
           </TableBody>
         </Table>
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between text-sm text-muted-foreground">
+          <span>
+            {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, filteredAndSortedContacts.length)} de {filteredAndSortedContacts.length} contatos
+          </span>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage(p => Math.max(0, p - 1))}
+              disabled={page === 0}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <span>Página {page + 1} de {totalPages}</span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+              disabled={page >= totalPages - 1}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
+
 
       {/* Contact Dialog */}
       <ContactDialog 

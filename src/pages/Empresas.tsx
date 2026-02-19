@@ -11,7 +11,7 @@ import { useContacts } from '@/hooks/useContacts';
 import { useOpportunities } from '@/hooks/useOpportunities';
 import { useInvoices } from '@/hooks/useInvoices';
 import { useProfiles } from '@/hooks/useProfiles';
-import { Plus, Search, Filter, MoreHorizontal, Building2, Eye, Pencil, Trash2, Download, Loader2, UserPlus, Upload, FileSpreadsheet, ArrowUpDown, ArrowUp, ArrowDown, X, ChevronRight, ChevronDown as ChevronDownIcon, Network, Merge } from 'lucide-react';
+import { Plus, Search, Filter, MoreHorizontal, Building2, Eye, Pencil, Trash2, Download, Loader2, UserPlus, Upload, FileSpreadsheet, ArrowUpDown, ArrowUp, ArrowDown, X, ChevronRight, ChevronDown as ChevronDownIcon, Network, Merge, ChevronLeft } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -24,6 +24,8 @@ import { ImportCnpjDialog } from '@/components/companies/ImportCnpjDialog';
 import { CompanyDuplicatesDialog } from '@/components/companies/CompanyDuplicatesDialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
+
+const PAGE_SIZE = 100;
 
 const statusConfig: Record<string, { label: string; className: string }> = {
   prospect: { label: 'Prospect', className: 'status-badge prospect' },
@@ -61,12 +63,15 @@ export default function Empresas() {
   const [expandedHoldings, setExpandedHoldings] = useState<Set<string>>(new Set());
   const [duplicatesDialogOpen, setDuplicatesDialogOpen] = useState(false);
 
+  const [page, setPage] = useState(0);
+
   const { data: companies = [], isLoading } = useCompanies();
+  const { data: companyCounts = [] } = useCompanyCounts();
+  // Lazy-loaded: only needed when detail Sheet is open
   const { data: contacts = [] } = useContacts();
   const { data: opportunities = [] } = useOpportunities();
   const { data: invoices = [] } = useInvoices();
   const { data: profiles = [] } = useProfiles();
-  const { data: companyCounts = [] } = useCompanyCounts();
   const deleteCompany = useDeleteCompany();
 
   const countsMap = useMemo(() => {
@@ -99,6 +104,7 @@ export default function Empresas() {
     setFilterSegmento('all');
     setFilterPorte('all');
     setFilterCidade('all');
+    setPage(0);
   };
 
   const filteredAndSortedCompanies = useMemo(() => {
@@ -147,7 +153,14 @@ export default function Empresas() {
     return result;
   }, [companies, countsMap, searchTerm, filterStatus, filterSegmento, filterPorte, filterCidade, sortField, sortDirection]);
 
+  // Pagination for top-level list
+  const totalPages = Math.ceil(filteredAndSortedCompanies.length / PAGE_SIZE);
+  const paginatedCompanies = useMemo(() => {
+    return filteredAndSortedCompanies.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  }, [filteredAndSortedCompanies, page]);
+
   const handleSort = (field: SortField) => {
+    setPage(0);
     if (sortField === field) {
       if (sortDirection === 'asc') {
         setSortDirection('desc');
@@ -316,7 +329,7 @@ export default function Empresas() {
           <Input
             placeholder="Buscar por nome, CNPJ, contato, cidade..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => { setSearchTerm(e.target.value); setPage(0); }}
             className="pl-9"
           />
         </div>
@@ -521,7 +534,7 @@ export default function Empresas() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredAndSortedCompanies.length === 0 ? (
+            {paginatedCompanies.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                   Nenhuma empresa encontrada
@@ -533,7 +546,7 @@ export default function Empresas() {
                 const childrenMap = new Map<string, CompanyRow[]>();
                 const topLevel: CompanyRow[] = [];
                 
-                filteredAndSortedCompanies.forEach(c => {
+                paginatedCompanies.forEach(c => {
                   if (c.parent_company_id) {
                     const siblings = childrenMap.get(c.parent_company_id) || [];
                     siblings.push(c);
@@ -541,15 +554,15 @@ export default function Empresas() {
                   }
                 });
                 
-                filteredAndSortedCompanies.forEach(c => {
+                paginatedCompanies.forEach(c => {
                   if (!c.parent_company_id) {
                     topLevel.push(c);
                   }
                 });
 
                 // Also show orphaned children (parent not in filtered list)
-                filteredAndSortedCompanies.forEach(c => {
-                  if (c.parent_company_id && !filteredAndSortedCompanies.find(p => p.id === c.parent_company_id)) {
+                paginatedCompanies.forEach(c => {
+                  if (c.parent_company_id && !paginatedCompanies.find(p => p.id === c.parent_company_id)) {
                     topLevel.push(c);
                   }
                 });
@@ -657,7 +670,35 @@ export default function Empresas() {
         </Table>
       </div>
 
-      {/* Company Detail Sheet */}
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between text-sm text-muted-foreground">
+          <span>
+            {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, filteredAndSortedCompanies.length)} de {filteredAndSortedCompanies.length} empresas
+          </span>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage(p => Math.max(0, p - 1))}
+              disabled={page === 0}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <span>Página {page + 1} de {totalPages}</span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+              disabled={page >= totalPages - 1}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
+
+
       <Sheet open={!!selectedCompany} onOpenChange={() => setSelectedCompany(null)}>
         <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
           <SheetHeader>
