@@ -1,49 +1,71 @@
 
-## Finalizar integração com o portal externo
+## Adicionar "Nova Oportunidade" no menu de três pontinhos das Empresas
+
+### Contexto atual
+
+Na página de Empresas (`src/pages/Empresas.tsx`), o menu dropdown de cada linha da tabela (botão `MoreHorizontal`) tem três opções:
+- Ver detalhes
+- Editar
+- Excluir
+
+O `OpportunityDialog` já existe em `src/components/opportunities/OpportunityDialog.tsx`, mas aceita apenas `{ open, onOpenChange }` — sem suporte para receber uma empresa pré-selecionada.
 
 ### O que será feito
 
-**1. Atualizar `PORTAL_URL` no `JobDetail.tsx`**
+**1. Atualizar `OpportunityDialog` para aceitar `companyId` pré-definido**
 
-Substituir o placeholder pela URL real do portal:
+Adicionar uma prop opcional `defaultCompanyId` ao componente. Quando fornecida:
+- O campo "Empresa" começa preenchido e fica desabilitado (empresa já está definida pelo contexto)
+- O campo "Contato" já carrega os contatos dessa empresa automaticamente
 
 ```typescript
-// ANTES
-const PORTAL_URL = 'https://seu-portal-de-vagas.lovable.app';
-
-// DEPOIS
-const PORTAL_URL = 'https://recruit-sync-spot.lovable.app';
+interface OpportunityDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  defaultCompanyId?: string; // novo
+}
 ```
 
-Isso faz o botão "Copiar link" e o link "Abrir no portal" apontarem para o endereço correto.
+**2. Adicionar estado e handler em `Empresas.tsx`**
 
----
+```typescript
+const [opportunityDialogOpen, setOpportunityDialogOpen] = useState(false);
+const [opportunityCompanyId, setOpportunityCompanyId] = useState<string | null>(null);
 
-**2. Migration SQL — liberar leitura pública de companies**
-
-A tabela `companies` atualmente só pode ser lida por usuários autenticados. O portal externo faz a consulta como usuário anônimo e usa um join com `companies` para buscar o nome da empresa (`nome_fantasia`). Sem essa policy, o nome da empresa não aparece nas vagas do portal.
-
-```sql
-CREATE POLICY "Public can view companies with published jobs"
-  ON public.companies FOR SELECT
-  TO anon
-  USING (
-    id IN (
-      SELECT company_id FROM public.jobs 
-      WHERE published = true AND status = 'open'
-    )
-  );
+const handleNewOpportunity = (company: CompanyRow, e: React.MouseEvent) => {
+  e.stopPropagation();
+  setOpportunityCompanyId(company.id);
+  setOpportunityDialogOpen(true);
+};
 ```
 
-Essa policy é segura: o usuário anônimo só consegue ler dados de empresas que já têm pelo menos uma vaga pública e aberta — nenhum dado sensível fica exposto.
+**3. Inserir item no menu dropdown de cada linha**
 
----
+Adicionado entre "Editar" e "Excluir", com ícone `Target`:
 
-### Checklist para a vaga aparecer no portal
+```tsx
+<DropdownMenuItem onClick={(e) => handleNewOpportunity(company, e)}>
+  <Target className="h-4 w-4 mr-2" />
+  Nova Oportunidade
+</DropdownMenuItem>
+```
 
-Após as mudanças, para uma vaga aparecer no portal ela precisa:
+O ícone `Target` já está importado na página.
 
-1. Status = **Aberta** (não Rascunho)
-2. Clicar em **"Publicar no Site"** no detalhe da vaga (isso seta `published = true` e gera o `slug`)
+**4. Renderizar o `OpportunityDialog` ao final da página**
 
-Se a vaga que você criou ainda está como rascunho ou não foi publicada pelo botão, ela não vai aparecer.
+```tsx
+<OpportunityDialog
+  open={opportunityDialogOpen}
+  onOpenChange={(open) => {
+    setOpportunityDialogOpen(open);
+    if (!open) setOpportunityCompanyId(null);
+  }}
+  defaultCompanyId={opportunityCompanyId ?? undefined}
+/>
+```
+
+### Arquivos alterados
+
+- `src/components/opportunities/OpportunityDialog.tsx` — nova prop `defaultCompanyId`, campo empresa pré-selecionado e desabilitado quando fornecido
+- `src/pages/Empresas.tsx` — novo estado, handler e item no dropdown, renderização do dialog
