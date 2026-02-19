@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Search, Filter, Loader2 } from 'lucide-react';
+import { Plus, Search, Filter, Loader2, LayoutGrid, List } from 'lucide-react';
 import { useJobs } from '@/hooks/useJobs';
 import { useCompanies } from '@/hooks/useCompanies';
 import { useProfiles } from '@/hooks/useProfiles';
@@ -15,6 +15,7 @@ import { JobDetail } from '@/components/jobs/JobDetail';
 import { JobStatus, jobStatusLabels } from '@/types/ats';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { JobRow } from '@/hooks/useJobs';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
 export default function Vagas() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -22,6 +23,7 @@ export default function Vagas() {
   const [showNewDialog, setShowNewDialog] = useState(false);
   const [selectedJob, setSelectedJob] = useState<JobRow | null>(null);
   const [editingJob, setEditingJob] = useState<JobRow | null>(null);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   const { data: jobs = [], isLoading } = useJobs();
   const { data: companies = [] } = useCompanies();
@@ -64,7 +66,10 @@ export default function Vagas() {
   }
 
   const renderJobGrid = (jobsList: JobRow[]) => (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+    <div className={viewMode === 'grid'
+      ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
+      : "flex flex-col gap-2"
+    }>
       {jobsList.map((job) => {
         const company = companies.find(c => c.id === job.company_id);
         const responsavel = profiles.find(p => p.id === job.responsavel_id);
@@ -76,6 +81,7 @@ export default function Vagas() {
             responsavelName={responsavel?.name}
             applicationsCount={applicationCounts[job.id] || 0}
             onClick={() => setSelectedJob(job)}
+            listMode={viewMode === 'list'}
           />
         );
       })}
@@ -123,6 +129,20 @@ export default function Vagas() {
             ))}
           </SelectContent>
         </Select>
+
+        <ToggleGroup
+          type="single"
+          value={viewMode}
+          onValueChange={(v) => v && setViewMode(v as 'grid' | 'list')}
+          className="border border-input rounded-md"
+        >
+          <ToggleGroupItem value="grid" aria-label="Visualização em grade" className="h-10 px-3">
+            <LayoutGrid className="h-4 w-4" />
+          </ToggleGroupItem>
+          <ToggleGroupItem value="list" aria-label="Visualização em lista" className="h-10 px-3">
+            <List className="h-4 w-4" />
+          </ToggleGroupItem>
+        </ToggleGroup>
       </div>
 
       {/* Tabs */}
