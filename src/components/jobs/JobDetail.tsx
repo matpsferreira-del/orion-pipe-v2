@@ -48,7 +48,7 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
   const jobSlug = (job as any).slug as string | undefined;
 
   // URL do portal público separado — atualizar após criar o projeto externo no Lovable
-  const PORTAL_URL = 'https://seu-portal-de-vagas.lovable.app';
+  const PORTAL_URL = 'https://recruit-sync-spot.lovable.app';
   const portalUrl = jobSlug ? `${PORTAL_URL}/vagas/${jobSlug}` : null;
 
   const formatCurrency = (value: number) => {
