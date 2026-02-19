@@ -18,9 +18,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus, Search, Mail, Phone, Linkedin, Users, AlertTriangle } from 'lucide-react';
+import { Plus, Search, Mail, Phone, Linkedin, Users, AlertTriangle, Globe } from 'lucide-react';
 import { useParties, useDuplicateSuggestions } from '@/hooks/useParties';
-import { PartyRoleType, partyRoleLabels } from '@/types/party';
+import { PartyRoleType, partyRoleLabels, PartyCreatedFrom } from '@/types/party';
 import { PartyDialog } from '@/components/parties/PartyDialog';
 import { PartyDetailDialog } from '@/components/parties/PartyDetailDialog';
 import { DuplicatesDialog } from '@/components/parties/DuplicatesDialog';
@@ -28,6 +28,7 @@ import { DuplicatesDialog } from '@/components/parties/DuplicatesDialog';
 export default function Pessoas() {
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState<PartyRoleType | 'all'>('all');
+  const [originFilter, setOriginFilter] = useState<PartyCreatedFrom | 'all'>('all');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [selectedPartyId, setSelectedPartyId] = useState<string | null>(null);
   const [isDuplicatesOpen, setIsDuplicatesOpen] = useState(false);
@@ -36,6 +37,7 @@ export default function Pessoas() {
     search: search || undefined,
     role: roleFilter !== 'all' ? roleFilter : undefined,
     status: 'active',
+    createdFrom: originFilter !== 'all' ? originFilter : undefined,
   });
 
   const { data: duplicates } = useDuplicateSuggestions();
@@ -94,6 +96,18 @@ export default function Pessoas() {
             <SelectItem value="hiring_manager">Gestores de Contratação</SelectItem>
           </SelectContent>
         </Select>
+        <Select value={originFilter} onValueChange={(v) => setOriginFilter(v as PartyCreatedFrom | 'all')}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Filtrar por origem" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas as origens</SelectItem>
+            <SelectItem value="site">Via Portal</SelectItem>
+            <SelectItem value="crm">CRM</SelectItem>
+            <SelectItem value="ats">ATS (manual)</SelectItem>
+            <SelectItem value="import">Importação</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Table */}
@@ -133,7 +147,15 @@ export default function Pessoas() {
                 >
                   <TableCell>
                     <div>
-                      <p className="font-medium">{party.full_name}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium">{party.full_name}</p>
+                        {party.created_from === 'site' && (
+                          <Badge variant="secondary" className="text-xs flex items-center gap-1">
+                            <Globe className="h-3 w-3" />
+                            Via Portal
+                          </Badge>
+                        )}
+                      </div>
                       {party.headline && (
                         <p className="text-sm text-muted-foreground">{party.headline}</p>
                       )}

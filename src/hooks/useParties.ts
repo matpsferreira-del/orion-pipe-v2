@@ -8,6 +8,7 @@ export function useParties(filters?: {
   role?: PartyRoleType; 
   search?: string;
   status?: Party['status'];
+  createdFrom?: PartyCreatedFrom;
 }) {
   return useQuery({
     queryKey: ['parties', filters],
@@ -28,6 +29,10 @@ export function useParties(filters?: {
 
       if (filters?.search) {
         query = query.or(`full_name.ilike.%${filters.search}%,email_norm.ilike.%${filters.search}%,phone_raw.ilike.%${filters.search}%,city.ilike.%${filters.search}%,state.ilike.%${filters.search}%,headline.ilike.%${filters.search}%,linkedin_url.ilike.%${filters.search}%`);
+      }
+
+      if (filters?.createdFrom) {
+        query = query.eq('created_from', filters.createdFrom);
       }
 
       const { data, error } = await query;

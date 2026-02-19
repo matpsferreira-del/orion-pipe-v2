@@ -20,10 +20,12 @@ import {
 } from '@/components/ui/select';
 import { 
   Mail, Phone, Linkedin, MapPin, Calendar, Edit2, Save, X, 
-  UserPlus, Building2, Briefcase, FileText 
+  UserPlus, Building2, Briefcase, FileText, Globe 
 } from 'lucide-react';
 import { useParty, useUpdateParty, useAddPartyRole, useRemovePartyRole } from '@/hooks/useParties';
 import { PartyRoleType, partyRoleLabels, partyStatusLabels } from '@/types/party';
+import { usePartyApplications } from '@/hooks/useApplications';
+import { applicationStatusLabels, sourceLabels } from '@/types/ats';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -40,6 +42,7 @@ export function PartyDetailDialog({ partyId, open, onOpenChange }: PartyDetailDi
   const [editData, setEditData] = useState<Record<string, string>>({});
 
   const { data: party, isLoading } = useParty(partyId || undefined);
+  const { data: partyApplications, isLoading: appsLoading } = usePartyApplications(partyId || undefined);
   const updateParty = useUpdateParty();
   const addRole = useAddPartyRole();
   const removeRole = useRemovePartyRole();
@@ -323,13 +326,55 @@ export function PartyDetailDialog({ partyId, open, onOpenChange }: PartyDetailDi
           </TabsContent>
 
           <TabsContent value="ats" className="mt-4">
-            <div className="text-center py-8 text-muted-foreground">
-              <Briefcase className="h-8 w-8 mx-auto mb-2 opacity-50" />
-              <p>Candidaturas aparecerão aqui quando o módulo ATS for implementado.</p>
-              <Button variant="outline" className="mt-4" disabled>
-                Candidatar em Vaga
-              </Button>
-            </div>
+            {appsLoading ? (
+              <div className="text-center py-8 text-muted-foreground">Carregando candidaturas...</div>
+            ) : partyApplications && partyApplications.length > 0 ? (
+              <div className="space-y-3">
+                {partyApplications.map((app) => (
+                  <div key={app.id} className="border rounded-lg p-4 space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <p className="font-medium">{app._job?.title || 'Vaga não encontrada'}</p>
+                        {app._job?._company && (
+                          <p className="text-sm text-muted-foreground">{app._job._company.nome_fantasia}</p>
+                        )}
+                      </div>
+                      <div className="flex flex-col items-end gap-1">
+                        <Badge className="text-xs">
+                          {applicationStatusLabels[app.status as keyof typeof applicationStatusLabels] || app.status}
+                        </Badge>
+                        {app._stage && (
+                          <Badge variant="outline" className="text-xs">
+                            {app._stage.name}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                      <div className="flex items-center gap-1">
+                        <Calendar className="h-3 w-3" />
+                        {format(new Date(app.applied_at), "dd/MM/yyyy", { locale: ptBR })}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        {app.source === 'website' ? (
+                          <>
+                            <Globe className="h-3 w-3 text-primary" />
+                            <span className="text-primary font-medium">Via Portal</span>
+                          </>
+                        ) : (
+                          <span>{sourceLabels[app.source as keyof typeof sourceLabels] || app.source}</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <Briefcase className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                <p>Nenhuma candidatura encontrada.</p>
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="crm" className="mt-4">
