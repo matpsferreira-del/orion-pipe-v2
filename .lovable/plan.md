@@ -1,172 +1,90 @@
 
-# Portal Público de Vagas com Candidatura Online
 
-## Visão Geral
+# Portal Público de Vagas — Projeto Separado + Integração via API
 
-Criar um portal público de vagas (acessível sem login) integrado ao sistema interno. Quando um candidato se inscrever pelo portal, seus dados caem diretamente na tabela `party` e a candidatura aparece no kanban da vaga correspondente. Dentro do sistema interno, um botão "Publicar no Site" controla quais vagas aparecem no portal.
+## Por que projeto separado é a melhor escolha
 
-## Como vai funcionar
+O sistema atual tem um conflito de rotas que torna impossível manter o portal público e o sistema interno no mesmo app. Além disso, um portal separado oferece:
+
+- URL própria (ex: `vagas.suaempresa.com.br`)
+- Visual totalmente customizável sem afetar o sistema interno
+- Deploys independentes — atualizar o portal não afeta o CRM/ATS
+- Sem conflito de autenticação — o portal é 100% público
+
+## Como a integração funciona
 
 ```text
-[Sistema Interno]                          [Portal Público]
-  Vaga criada → "Publicar no Site"  →→→  /vagas (lista pública)
-                                              ↓
-                                         /vagas/:slug (detalhe)
-                                              ↓
-                                      Candidato preenche form
-                                              ↓
-                          ← ← ← ← ← party + application criados no banco
-                                              ↓
-                                   Aparece no kanban da vaga interna
+[PROJETO NOVO — Portal Público]          [PROJETO ATUAL — CRM/ATS]
+  React + Vite (Lovable)                   Banco de dados + Edge Function
+         |                                          |
+         |  GET /rest/v1/jobs                       |
+         |  (leitura pública via RLS)  ←————————————|
+         |                                          |
+         |  POST /functions/v1/public-apply         |
+         |  (candidatura anônima) ←————————————————|
+         |                                          |
+  Candidato se inscreve          Candidato aparece no Kanban ✓
 ```
 
----
+O backend (banco + edge function) já está 100% pronto neste projeto. O projeto novo só precisa das credenciais públicas para se comunicar com ele.
 
-## Parte 1: Banco de Dados (Migrations)
+## O que precisa ser feito neste projeto (CRM/ATS)
 
-### 1.1 — Adicionar campos `published` e `slug` na tabela `jobs`
-
-```sql
-ALTER TABLE jobs
-  ADD COLUMN published boolean NOT NULL DEFAULT false,
-  ADD COLUMN slug text UNIQUE,
-  ADD COLUMN published_at timestamptz;
-```
-
-- `published`: flag booleana que controla visibilidade no portal
-- `slug`: URL amigável gerada automaticamente (ex: `desenvolvedor-fullstack-senior-abc123`)
-- `published_at`: data em que foi publicada
-
-### 1.2 — RLS para leitura pública das vagas publicadas
-
-```sql
--- Vagas publicadas são visíveis para qualquer pessoa (sem login)
-CREATE POLICY "Public can view published jobs"
-  ON jobs FOR SELECT
-  USING (published = true AND status = 'open');
-```
-
-### 1.3 — RLS para candidaturas públicas (INSERT sem autenticação)
-
-A tabela `applications` já existe. Será necessário criar uma política que permita inserção anônima somente para vagas publicadas:
-
-```sql
-CREATE POLICY "Public can apply to published jobs"
-  ON applications FOR INSERT
-  WITH CHECK (
-    job_id IN (SELECT id FROM jobs WHERE published = true AND status = 'open')
-  );
-```
-
-### 1.4 — Função Edge Function para candidatura pública
-
-Uma Edge Function `public-apply` receberá os dados do candidato e:
-1. Chamará `resolve_party()` para criar ou localizar o partido (a função já existe no banco)
-2. Chamará `ensure_party_role()` para garantir o papel `candidate`
-3. Inserirá a candidatura em `applications` com `source = 'website'`
-4. Retornará sucesso ou erro
-
-Isso é necessário pois o RLS de `party` exige `auth.uid() IS NOT NULL` para INSERT — a Edge Function usará a service role internamente para contornar isso de forma segura.
-
----
-
-## Parte 2: Páginas Públicas (sem autenticação)
-
-### 2.1 — `/vagas` — Lista pública de vagas
-
-Nova página pública `src/pages/public/JobBoard.tsx`:
-- Lista cards de vagas publicadas (busca por título/localização)
-- Filtros por localização e palavras-chave
-- Design limpo e independente do AppLayout (sem sidebar/topnav)
-- Cada card leva para `/vagas/:slug`
-
-### 2.2 — `/vagas/:slug` — Detalhe da vaga + formulário de candidatura
-
-Nova página `src/pages/public/JobDetail.tsx`:
-- Exibe título, empresa (nome fantasia), localização, descrição, requisitos, faixa salarial
-- Formulário de candidatura com:
-  - Nome completo *
-  - E-mail *
-  - Telefone
-  - LinkedIn URL
-  - Cidade/Estado
-  - Texto de apresentação (campo `notes`)
-  - Upload de currículo (opcional — fase futura, por ora campo de texto)
-- Ao submeter, chama a Edge Function `public-apply`
-- Tela de confirmação "Candidatura enviada!"
-
----
-
-## Parte 3: Sistema Interno — Controle de Publicação
-
-### 3.1 — Botão "Publicar no Site" no `JobDetail.tsx`
-
-Dentro do detalhe da vaga (componente `JobDetail`), adicionar:
-- Badge indicando se a vaga está publicada ou não
-- Botão "Publicar no Site" → muda `published = true` e gera o `slug`
-- Botão "Despublicar" → muda `published = false`
-- Link copiável para o portal: `https://[url]/vagas/[slug]`
-
-### 3.2 — Indicador visual nos cards de vaga (`JobCard.tsx`)
-
-Adicionar ícone/badge "🌐 Publicada" no card quando `published = true`.
-
-### 3.3 — Hook `usePublishJob`
-
-Novo mutation em `useJobs.ts`:
-```typescript
-export function usePublishJob() {
-  // Gera slug a partir do título + id curto
-  // Atualiza published, slug, published_at
-}
-```
-
----
-
-## Parte 4: Roteamento
-
-Adicionar rotas públicas em `App.tsx` (fora do `ProtectedRoute`):
+### 1. Remover as rotas públicas do `App.tsx`
+As rotas `/vagas` (JobBoard) e `/vagas/:slug` (PublicJobDetail) devem ser removidas do `App.tsx`. Isso libera o `/vagas` interno para funcionar corretamente.
 
 ```typescript
+// Remover estas duas linhas:
 <Route path="/vagas" element={<JobBoard />} />
 <Route path="/vagas/:slug" element={<PublicJobDetail />} />
 ```
 
-Importante: essas rotas são completamente públicas, sem redirecionamento para login.
+### 2. Ajustar o `portalUrl` no `JobDetail.tsx`
+O link "Copiar link do portal" atualmente aponta para `window.location.origin/vagas/slug`. Como o portal vai ser um domínio separado, esse link precisa apontar para a URL do novo projeto.
 
----
-
-## Parte 5: Edge Function `public-apply`
-
+Solução: usar uma constante configurável:
 ```typescript
-// supabase/functions/public-apply/index.ts
-// Recebe: { job_slug, full_name, email, phone, linkedin_url, city, state, notes }
-// 1. Busca job_id pelo slug (verifica published + open)
-// 2. Chama resolve_party() via rpc com service role
-// 3. Chama ensure_party_role() para 'candidate'
-// 4. Insere em applications { job_id, party_id, source: 'website', status: 'new' }
-// 5. Retorna { success: true, application_id }
+const PORTAL_URL = 'https://[url-do-novo-projeto].lovable.app';
+const portalUrl = jobSlug ? `${PORTAL_URL}/vagas/${jobSlug}` : null;
 ```
 
----
+### 3. Remover imports desnecessários
+Remover as importações de `JobBoard` e `PublicJobDetail` do `App.tsx` e deletar (ou manter para referência) os arquivos `src/pages/public/JobBoard.tsx` e `src/pages/public/PublicJobDetail.tsx`.
 
-## Sequência de Implementação
+## O que o projeto novo precisa
 
-1. **Migration** — adicionar colunas `published`, `slug`, `published_at` na tabela `jobs` + políticas RLS
-2. **Edge Function** `public-apply` — lógica segura de candidatura anônima
-3. **Hook** `usePublishJob` em `useJobs.ts`
-4. **JobDetail.tsx** — botão publicar/despublicar + link copiável
-5. **JobCard.tsx** — badge de publicada
-6. **Página** `JobBoard.tsx` — lista pública de vagas
-7. **Página** `PublicJobDetail.tsx` — detalhe + formulário de candidatura
-8. **App.tsx** — adicionar rotas públicas
+O projeto novo (portal público) será criado no Lovable como um projeto React simples. Ele precisará de apenas **2 credenciais** deste projeto:
 
----
+| Credencial | Valor | Para que serve |
+|---|---|---|
+| URL do banco | `https://ocrsfcjiutvojzdfotou.supabase.co` | Buscar vagas publicadas |
+| Chave pública (anon key) | `eyJhbGci...` | Autenticar chamadas públicas |
+| URL da Edge Function | `https://ocrsfcjiutvojzdfotou.supabase.co/functions/v1/public-apply` | Enviar candidaturas |
 
-## Pontos de Segurança
+Essas credenciais são **públicas e seguras** — a chave anon key não dá acesso a dados privados, apenas ao que as políticas de segurança permitem (vagas publicadas).
 
-- A Edge Function usa `SUPABASE_SERVICE_ROLE_KEY` apenas internamente — nunca exposta ao browser
-- Validação de `published = true AND status = 'open'` antes de aceitar candidatura
-- Rate limiting natural via Lovable Cloud nas Edge Functions
-- Dados sensíveis da empresa (CNPJ, contatos internos) não são expostos ao portal
-- O nome da empresa exibido no portal é apenas o `nome_fantasia`
+## Estrutura do projeto novo (portal)
+
+O projeto novo será criado com o prompt abaixo no Lovable:
+
+```
+Crie um portal público de vagas em React que:
+1. Liste vagas abertas buscando da URL: https://ocrsfcjiutvojzdfotou.supabase.co/rest/v1/jobs
+   com filtro ?published=eq.true&status=eq.open&select=id,title,location,salary_min,salary_max,deadline,description,slug,published_at,companies(nome_fantasia)
+   Usando o header: apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9jcnNmY2ppdXR2b2p6ZGZvdG91Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQyOTc1MjMsImV4cCI6MjA3OTg3MzUyM30.gvisk-UTdz4_6auncDKJqmRc-aQraL4HIScACd5DHlg
+
+2. Exiba detalhes de cada vaga em /vagas/:slug
+
+3. Tenha formulário de candidatura que chama via POST:
+   https://ocrsfcjiutvojzdfotou.supabase.co/functions/v1/public-apply
+   com body JSON: { job_slug, full_name, email, phone, linkedin_url, city, state, notes }
+```
+
+## Sequência de execução neste projeto
+
+1. Remover as rotas públicas do `App.tsx` (resolve o bug de não conseguir criar vagas)
+2. Ajustar `JobDetail.tsx` para o `portalUrl` apontar para o novo domínio (com placeholder configurável)
+3. Limpar imports órfãos
+
+Após esses 3 passos, o sistema interno volta a funcionar normalmente — o botão "Vagas" na sidebar leva para o gerenciador interno, e o botão "Publicar no Site" gera um link que aponta para o novo projeto externo.
+
