@@ -17,6 +17,8 @@ import Configuracoes from "./pages/Configuracoes";
 import Tarefas from "./pages/Tarefas";
 import Pessoas from "./pages/Pessoas";
 import Vagas from "./pages/Vagas";
+import JobBoard from "./pages/public/JobBoard";
+import PublicJobDetail from "./pages/public/PublicJobDetail";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import { Loader2 } from "lucide-react";
@@ -67,6 +69,10 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
+            {/* Rotas públicas — sem autenticação */}
+            <Route path="/vagas" element={<JobBoard />} />
+            <Route path="/vagas/:slug" element={<PublicJobDetail />} />
+
             <Route path="/auth" element={
               <PublicRoute>
                 <Auth />
