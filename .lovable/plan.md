@@ -1,78 +1,172 @@
 
+# Portal Público de Vagas com Candidatura Online
 
-## Tela de Revisao de Empresas Duplicadas (por nome similar)
+## Visão Geral
 
-### Contexto
+Criar um portal público de vagas (acessível sem login) integrado ao sistema interno. Quando um candidato se inscrever pelo portal, seus dados caem diretamente na tabela `party` e a candidatura aparece no kanban da vaga correspondente. Dentro do sistema interno, um botão "Publicar no Site" controla quais vagas aparecem no portal.
 
-Foram encontrados diversos grupos de empresas com nomes muito parecidos no banco de dados. Exemplos:
+## Como vai funcionar
 
-| Grupo | Empresas |
-|-------|----------|
-| AbbVie | "AbbVie", "AbbVie (unidade Cidade Monções)" |
-| Aurora | "Aurora", "Aurora Coop", "Aurora Fine Brands" |
-| CPFL | "CPFL", "CPFL Piratininga", "CPFL Renováveis" |
-| ENGIE | "ENGIE", "ENGIE Brasil" |
-| Gran | "Gran", "Gran Cursos", "Gran Services" |
-| Schulz | "Schulz", "Schulz S/A e Controlada" |
-| Tupy | "Tupy", "Tupy S/A e Controladas" |
-| Sonoco | "Sonoco", "Sonoco do Brasil" |
-| Thomson Reuters | "Thomson Reuters", "Thomson Reuters Brasil" |
-| ...e mais ~30 grupos |
-
-Nenhuma dessas empresas tem oportunidades ou mais de 1-2 contatos, o que facilita a mesclagem.
-
-### O que sera construido
-
-Uma nova tela/dialog acessivel pela pagina de Empresas com um botao "Revisar Duplicatas" que:
-
-1. **Lista todos os grupos de nomes similares** agrupados pela primeira palavra do nome
-2. Para cada grupo, mostra as empresas com seus contatos
-3. Permite selecionar qual empresa **manter** (sobrevivente)
-4. Ao mesclar: move contatos, oportunidades, atividades e tarefas para a empresa sobrevivente e exclui as demais
-5. Permite marcar como "Nao e duplicata" para ignorar o grupo
-
-### Detalhes Tecnicos
-
-**1. Habilitar extensao `pg_trgm` (migracao SQL)**
-
-```sql
-CREATE EXTENSION IF NOT EXISTS pg_trgm;
+```text
+[Sistema Interno]                          [Portal Público]
+  Vaga criada → "Publicar no Site"  →→→  /vagas (lista pública)
+                                              ↓
+                                         /vagas/:slug (detalhe)
+                                              ↓
+                                      Candidato preenche form
+                                              ↓
+                          ← ← ← ← ← party + application criados no banco
+                                              ↓
+                                   Aparece no kanban da vaga interna
 ```
 
-Isso permite usar a funcao `similarity()` do PostgreSQL para encontrar nomes parecidos automaticamente.
+---
 
-**2. Criar funcao SQL `find_similar_companies`**
+## Parte 1: Banco de Dados (Migrations)
 
-Uma funcao no banco que retorna pares de empresas com nome similar (similaridade > 0.5), agrupados. Isso evita trazer 1284 empresas para o front-end e comparar no cliente.
+### 1.1 — Adicionar campos `published` e `slug` na tabela `jobs`
 
-**3. Novo componente `CompanyDuplicatesDialog.tsx`**
+```sql
+ALTER TABLE jobs
+  ADD COLUMN published boolean NOT NULL DEFAULT false,
+  ADD COLUMN slug text UNIQUE,
+  ADD COLUMN published_at timestamptz;
+```
 
-- Dialog com lista de grupos de empresas similares
-- Cada grupo mostra as empresas lado a lado com seus dados (nome, cidade, estado, contatos)
-- Radio button para selecionar a sobrevivente
-- Botao "Mesclar" e "Nao e duplicata"
-- Ao mesclar:
-  - `UPDATE contacts SET company_id = :survivor WHERE company_id = :merged`
-  - `UPDATE opportunities SET company_id = :survivor WHERE company_id = :merged`
-  - `UPDATE activities SET company_id = :survivor WHERE company_id = :merged`
-  - `UPDATE tasks SET company_id = :survivor WHERE company_id = :merged`
-  - `DELETE FROM companies WHERE id = :merged`
+- `published`: flag booleana que controla visibilidade no portal
+- `slug`: URL amigável gerada automaticamente (ex: `desenvolvedor-fullstack-senior-abc123`)
+- `published_at`: data em que foi publicada
 
-**4. Novo hook `useCompanyDuplicates.ts`**
+### 1.2 — RLS para leitura pública das vagas publicadas
 
-- `useCompanyDuplicates()` -- chama a funcao SQL para buscar pares similares
-- `useMergeCompanies()` -- executa a mesclagem (move referencias + deleta duplicada)
-- `useDismissCompanyDuplicate()` -- marca par como ignorado (opcional: tabela de dismissals ou lista local)
+```sql
+-- Vagas publicadas são visíveis para qualquer pessoa (sem login)
+CREATE POLICY "Public can view published jobs"
+  ON jobs FOR SELECT
+  USING (published = true AND status = 'open');
+```
 
-**5. Botao na pagina Empresas**
+### 1.3 — RLS para candidaturas públicas (INSERT sem autenticação)
 
-Adicionar botao "Revisar Duplicatas" ao lado dos botoes existentes no header da pagina.
+A tabela `applications` já existe. Será necessário criar uma política que permita inserção anônima somente para vagas publicadas:
 
-### Fluxo do usuario
+```sql
+CREATE POLICY "Public can apply to published jobs"
+  ON applications FOR INSERT
+  WITH CHECK (
+    job_id IN (SELECT id FROM jobs WHERE published = true AND status = 'open')
+  );
+```
 
-1. Clica em "Revisar Duplicatas" na pagina de Empresas
-2. Dialog abre mostrando o primeiro grupo de empresas similares
-3. Seleciona qual empresa manter
-4. Clica "Mesclar" -- contatos e dados sao movidos, duplicata e excluida
-5. Proximo grupo aparece automaticamente
-6. Ao terminar todos os grupos, mostra mensagem de sucesso
+### 1.4 — Função Edge Function para candidatura pública
+
+Uma Edge Function `public-apply` receberá os dados do candidato e:
+1. Chamará `resolve_party()` para criar ou localizar o partido (a função já existe no banco)
+2. Chamará `ensure_party_role()` para garantir o papel `candidate`
+3. Inserirá a candidatura em `applications` com `source = 'website'`
+4. Retornará sucesso ou erro
+
+Isso é necessário pois o RLS de `party` exige `auth.uid() IS NOT NULL` para INSERT — a Edge Function usará a service role internamente para contornar isso de forma segura.
+
+---
+
+## Parte 2: Páginas Públicas (sem autenticação)
+
+### 2.1 — `/vagas` — Lista pública de vagas
+
+Nova página pública `src/pages/public/JobBoard.tsx`:
+- Lista cards de vagas publicadas (busca por título/localização)
+- Filtros por localização e palavras-chave
+- Design limpo e independente do AppLayout (sem sidebar/topnav)
+- Cada card leva para `/vagas/:slug`
+
+### 2.2 — `/vagas/:slug` — Detalhe da vaga + formulário de candidatura
+
+Nova página `src/pages/public/JobDetail.tsx`:
+- Exibe título, empresa (nome fantasia), localização, descrição, requisitos, faixa salarial
+- Formulário de candidatura com:
+  - Nome completo *
+  - E-mail *
+  - Telefone
+  - LinkedIn URL
+  - Cidade/Estado
+  - Texto de apresentação (campo `notes`)
+  - Upload de currículo (opcional — fase futura, por ora campo de texto)
+- Ao submeter, chama a Edge Function `public-apply`
+- Tela de confirmação "Candidatura enviada!"
+
+---
+
+## Parte 3: Sistema Interno — Controle de Publicação
+
+### 3.1 — Botão "Publicar no Site" no `JobDetail.tsx`
+
+Dentro do detalhe da vaga (componente `JobDetail`), adicionar:
+- Badge indicando se a vaga está publicada ou não
+- Botão "Publicar no Site" → muda `published = true` e gera o `slug`
+- Botão "Despublicar" → muda `published = false`
+- Link copiável para o portal: `https://[url]/vagas/[slug]`
+
+### 3.2 — Indicador visual nos cards de vaga (`JobCard.tsx`)
+
+Adicionar ícone/badge "🌐 Publicada" no card quando `published = true`.
+
+### 3.3 — Hook `usePublishJob`
+
+Novo mutation em `useJobs.ts`:
+```typescript
+export function usePublishJob() {
+  // Gera slug a partir do título + id curto
+  // Atualiza published, slug, published_at
+}
+```
+
+---
+
+## Parte 4: Roteamento
+
+Adicionar rotas públicas em `App.tsx` (fora do `ProtectedRoute`):
+
+```typescript
+<Route path="/vagas" element={<JobBoard />} />
+<Route path="/vagas/:slug" element={<PublicJobDetail />} />
+```
+
+Importante: essas rotas são completamente públicas, sem redirecionamento para login.
+
+---
+
+## Parte 5: Edge Function `public-apply`
+
+```typescript
+// supabase/functions/public-apply/index.ts
+// Recebe: { job_slug, full_name, email, phone, linkedin_url, city, state, notes }
+// 1. Busca job_id pelo slug (verifica published + open)
+// 2. Chama resolve_party() via rpc com service role
+// 3. Chama ensure_party_role() para 'candidate'
+// 4. Insere em applications { job_id, party_id, source: 'website', status: 'new' }
+// 5. Retorna { success: true, application_id }
+```
+
+---
+
+## Sequência de Implementação
+
+1. **Migration** — adicionar colunas `published`, `slug`, `published_at` na tabela `jobs` + políticas RLS
+2. **Edge Function** `public-apply` — lógica segura de candidatura anônima
+3. **Hook** `usePublishJob` em `useJobs.ts`
+4. **JobDetail.tsx** — botão publicar/despublicar + link copiável
+5. **JobCard.tsx** — badge de publicada
+6. **Página** `JobBoard.tsx` — lista pública de vagas
+7. **Página** `PublicJobDetail.tsx` — detalhe + formulário de candidatura
+8. **App.tsx** — adicionar rotas públicas
+
+---
+
+## Pontos de Segurança
+
+- A Edge Function usa `SUPABASE_SERVICE_ROLE_KEY` apenas internamente — nunca exposta ao browser
+- Validação de `published = true AND status = 'open'` antes de aceitar candidatura
+- Rate limiting natural via Lovable Cloud nas Edge Functions
+- Dados sensíveis da empresa (CNPJ, contatos internos) não são expostos ao portal
+- O nome da empresa exibido no portal é apenas o `nome_fantasia`
