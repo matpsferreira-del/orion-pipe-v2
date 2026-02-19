@@ -32,10 +32,11 @@ const serviceOptions = [
 interface OpportunityDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  defaultCompanyId?: string;
 }
 
-export function OpportunityDialog({ open, onOpenChange }: OpportunityDialogProps) {
-  const [companyId, setCompanyId] = useState('');
+export function OpportunityDialog({ open, onOpenChange, defaultCompanyId }: OpportunityDialogProps) {
+  const [companyId, setCompanyId] = useState(defaultCompanyId ?? '');
   const [contactId, setContactId] = useState('');
   const [responsavelId, setResponsavelId] = useState('');
   const [valorPotencial, setValorPotencial] = useState('');
@@ -56,6 +57,11 @@ export function OpportunityDialog({ open, onOpenChange }: OpportunityDialogProps
       setResponsavelId(profile.id);
     }
   }, [profile]);
+
+  useEffect(() => {
+    setCompanyId(defaultCompanyId ?? '');
+    setContactId('');
+  }, [defaultCompanyId, open]);
 
   useEffect(() => {
     setContactId('');
@@ -85,7 +91,7 @@ export function OpportunityDialog({ open, onOpenChange }: OpportunityDialogProps
   };
 
   const resetForm = () => {
-    setCompanyId('');
+    setCompanyId(defaultCompanyId ?? '');
     setContactId('');
     setValorPotencial('');
     setProbabilidade('20');
@@ -105,7 +111,7 @@ export function OpportunityDialog({ open, onOpenChange }: OpportunityDialogProps
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="company">Empresa *</Label>
-              <Select value={companyId} onValueChange={setCompanyId} required>
+              <Select value={companyId} onValueChange={setCompanyId} required disabled={!!defaultCompanyId}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione..." />
                 </SelectTrigger>

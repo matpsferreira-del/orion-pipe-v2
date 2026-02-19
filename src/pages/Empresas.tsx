@@ -11,7 +11,7 @@ import { useContacts } from '@/hooks/useContacts';
 import { useOpportunities } from '@/hooks/useOpportunities';
 import { useInvoices } from '@/hooks/useInvoices';
 import { useProfiles } from '@/hooks/useProfiles';
-import { Plus, Search, Filter, MoreHorizontal, Building2, Eye, Pencil, Trash2, Download, Loader2, UserPlus, Upload, FileSpreadsheet, ArrowUpDown, ArrowUp, ArrowDown, X, ChevronRight, ChevronDown as ChevronDownIcon, Network, Merge, ChevronLeft } from 'lucide-react';
+import { Plus, Search, Filter, MoreHorizontal, Building2, Eye, Pencil, Trash2, Download, Loader2, UserPlus, Upload, FileSpreadsheet, ArrowUpDown, ArrowUp, ArrowDown, X, ChevronRight, ChevronDown as ChevronDownIcon, Network, Merge, ChevronLeft, Target } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -22,6 +22,7 @@ import { ContactDialog } from '@/components/contacts/ContactDialog';
 import { ImportDialog } from '@/components/companies/ImportDialog';
 import { ImportCnpjDialog } from '@/components/companies/ImportCnpjDialog';
 import { CompanyDuplicatesDialog } from '@/components/companies/CompanyDuplicatesDialog';
+import { OpportunityDialog } from '@/components/opportunities/OpportunityDialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 
@@ -62,6 +63,8 @@ export default function Empresas() {
   const [companyToDelete, setCompanyToDelete] = useState<CompanyRow | null>(null);
   const [expandedHoldings, setExpandedHoldings] = useState<Set<string>>(new Set());
   const [duplicatesDialogOpen, setDuplicatesDialogOpen] = useState(false);
+  const [opportunityDialogOpen, setOpportunityDialogOpen] = useState(false);
+  const [opportunityCompanyId, setOpportunityCompanyId] = useState<string | null>(null);
 
   const [page, setPage] = useState(0);
 
@@ -187,6 +190,12 @@ export default function Empresas() {
 
   const getOpportunitiesCount = (companyId: string) => {
     return countsMap.get(companyId)?.opportunities ?? 0;
+  };
+
+  const handleNewOpportunity = (company: CompanyRow, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setOpportunityCompanyId(company.id);
+    setOpportunityDialogOpen(true);
   };
 
   const handleDeleteClick = (company: CompanyRow, e: React.MouseEvent) => {
@@ -647,6 +656,10 @@ export default function Empresas() {
                                 <Pencil className="h-4 w-4 mr-2" />
                                 Editar
                               </DropdownMenuItem>
+                              <DropdownMenuItem onClick={(e) => handleNewOpportunity(company, e)}>
+                                <Target className="h-4 w-4 mr-2" />
+                                Nova Oportunidade
+                              </DropdownMenuItem>
                               <DropdownMenuItem 
                                 className="text-destructive" 
                                 onClick={(e) => handleDeleteClick(company, e)}
@@ -737,6 +750,16 @@ export default function Empresas() {
 
       {/* Company Duplicates Dialog */}
       <CompanyDuplicatesDialog open={duplicatesDialogOpen} onOpenChange={setDuplicatesDialogOpen} />
+
+      {/* Opportunity Dialog */}
+      <OpportunityDialog
+        open={opportunityDialogOpen}
+        onOpenChange={(open) => {
+          setOpportunityDialogOpen(open);
+          if (!open) setOpportunityCompanyId(null);
+        }}
+        defaultCompanyId={opportunityCompanyId ?? undefined}
+      />
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
