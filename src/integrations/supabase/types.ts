@@ -452,10 +452,13 @@ export type Database = {
           id: string
           location: string | null
           priority: string
+          published: boolean
+          published_at: string | null
           requirements: string | null
           responsavel_id: string | null
           salary_max: number | null
           salary_min: number | null
+          slug: string | null
           status: Database["public"]["Enums"]["job_status"]
           title: string
           updated_at: string
@@ -471,10 +474,13 @@ export type Database = {
           id?: string
           location?: string | null
           priority?: string
+          published?: boolean
+          published_at?: string | null
           requirements?: string | null
           responsavel_id?: string | null
           salary_max?: number | null
           salary_min?: number | null
+          slug?: string | null
           status?: Database["public"]["Enums"]["job_status"]
           title: string
           updated_at?: string
@@ -490,10 +496,13 @@ export type Database = {
           id?: string
           location?: string | null
           priority?: string
+          published?: boolean
+          published_at?: string | null
           requirements?: string | null
           responsavel_id?: string | null
           salary_max?: number | null
           salary_min?: number | null
+          slug?: string | null
           status?: Database["public"]["Enums"]["job_status"]
           title?: string
           updated_at?: string

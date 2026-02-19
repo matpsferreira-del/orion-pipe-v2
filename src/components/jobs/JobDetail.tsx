@@ -5,9 +5,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { 
   Building2, MapPin, Calendar, DollarSign, User, Clock, 
-  Edit, UserPlus, Play, Pause, CheckCircle, XCircle 
+  Edit, UserPlus, Play, Pause, CheckCircle, XCircle,
+  Globe, GlobeLock, Copy, ExternalLink
 } from 'lucide-react';
-import { JobRow, useUpdateJobStatus, useJobStages } from '@/hooks/useJobs';
+import { JobRow, useUpdateJobStatus, useJobStages, usePublishJob } from '@/hooks/useJobs';
 import { useApplicationsWithParties, useUpdateApplicationStage } from '@/hooks/useApplications';
 import { useCompanies } from '@/hooks/useCompanies';
 import { useProfiles } from '@/hooks/useProfiles';
@@ -37,9 +38,16 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
   const { data: applications = [], isLoading: loadingApps } = useApplicationsWithParties(job.id);
   const updateStatus = useUpdateJobStatus();
   const updateAppStage = useUpdateApplicationStage();
+  const publishJob = usePublishJob();
 
   const company = companies.find(c => c.id === job.company_id);
   const responsavel = profiles.find(p => p.id === job.responsavel_id);
+
+  // Campos extras que vêm do banco mas não estão no tipo antigo
+  const jobPublished = (job as any).published as boolean | undefined;
+  const jobSlug = (job as any).slug as string | undefined;
+
+  const portalUrl = jobSlug ? `${window.location.origin}/vagas/${jobSlug}` : null;
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -61,6 +69,31 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
     }
   };
 
+  const handlePublish = async () => {
+    try {
+      await publishJob.mutateAsync({ id: job.id, title: job.title });
+      toast.success('Vaga publicada no portal!');
+    } catch {
+      toast.error('Erro ao publicar vaga');
+    }
+  };
+
+  const handleUnpublish = async () => {
+    try {
+      await publishJob.mutateAsync({ id: job.id, title: job.title, unpublish: true });
+      toast.success('Vaga removida do portal');
+    } catch {
+      toast.error('Erro ao despublicar vaga');
+    }
+  };
+
+  const handleCopyLink = () => {
+    if (portalUrl) {
+      navigator.clipboard.writeText(portalUrl);
+      toast.success('Link copiado!');
+    }
+  };
+
   const handleMoveCandidate = async (applicationId: string, newStageId: string) => {
     try {
       await updateAppStage.mutateAsync({ 
@@ -79,13 +112,24 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
       {/* Header Info */}
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-2">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <Badge variant="outline" className={cn('text-xs', jobStatusColors[job.status])}>
               {jobStatusLabels[job.status]}
             </Badge>
             <Badge variant="outline" className={cn('text-xs', priorityColors[job.priority as JobPriority])}>
               {priorityLabels[job.priority as JobPriority]}
             </Badge>
+            {jobPublished ? (
+              <Badge variant="outline" className="text-xs border-primary/30 text-primary bg-primary/5 gap-1">
+                <Globe className="h-3 w-3" />
+                Publicada no Portal
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="text-xs text-muted-foreground gap-1">
+                <GlobeLock className="h-3 w-3" />
+                Não publicada
+              </Badge>
+            )}
           </div>
           
           {company && (
@@ -110,6 +154,54 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
           </Button>
         </div>
       </div>
+
+      {/* Portal publish controls */}
+      {job.status === 'open' && (
+        <div className="flex flex-wrap items-center gap-2 p-3 rounded-lg bg-muted/50 border border-border">
+          {jobPublished ? (
+            <>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-muted-foreground mb-1">Link público da vaga:</p>
+                <div className="flex items-center gap-2">
+                  <code className="text-xs text-foreground truncate max-w-xs">{portalUrl}</code>
+                  <Button size="icon" variant="ghost" className="h-6 w-6 flex-shrink-0" onClick={handleCopyLink}>
+                    <Copy className="h-3 w-3" />
+                  </Button>
+                  <Button size="icon" variant="ghost" className="h-6 w-6 flex-shrink-0" asChild>
+                    <a href={portalUrl!} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
+                  </Button>
+                </div>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-destructive hover:text-destructive flex-shrink-0"
+                onClick={handleUnpublish}
+                disabled={publishJob.isPending}
+              >
+                <GlobeLock className="h-4 w-4 mr-1" />
+                Despublicar
+              </Button>
+            </>
+          ) : (
+            <>
+              <p className="text-sm text-muted-foreground flex-1">
+                Esta vaga não está visível no portal público.
+              </p>
+              <Button
+                size="sm"
+                onClick={handlePublish}
+                disabled={publishJob.isPending}
+              >
+                <Globe className="h-4 w-4 mr-1" />
+                Publicar no Site
+              </Button>
+            </>
+          )}
+        </div>
+      )}
 
       {/* Quick Actions */}
       <div className="flex flex-wrap gap-2">

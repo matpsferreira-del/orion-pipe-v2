@@ -1,7 +1,7 @@
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Building2, MapPin, Calendar, Users, DollarSign } from 'lucide-react';
+import { Building2, MapPin, Calendar, Users, DollarSign, Globe } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { JobRow } from '@/hooks/useJobs';
 import { jobStatusLabels, jobStatusColors, priorityLabels, priorityColors, JobPriority } from '@/types/ats';
@@ -53,7 +53,13 @@ export function JobCard({ job, companyName, responsavelName, applicationsCount =
           <CardTitle className="text-base font-semibold line-clamp-1">
             {job.title}
           </CardTitle>
-          <div className="flex gap-1.5 flex-shrink-0">
+          <div className="flex gap-1.5 flex-shrink-0 flex-wrap justify-end">
+            {(job as any).published && (
+              <Badge variant="outline" className="text-xs border-primary/30 text-primary bg-primary/5 gap-1">
+                <Globe className="h-3 w-3" />
+                Publicada
+              </Badge>
+            )}
             <Badge variant="outline" className={cn('text-xs', priorityColors[job.priority as JobPriority])}>
               {priorityLabels[job.priority as JobPriority]}
             </Badge>

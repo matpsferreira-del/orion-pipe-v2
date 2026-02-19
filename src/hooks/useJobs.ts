@@ -167,6 +167,48 @@ export function useDeleteJob() {
   });
 }
 
+export function usePublishJob() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, title, unpublish }: { id: string; title: string; unpublish?: boolean }) => {
+      if (unpublish) {
+        const { data, error } = await supabase
+          .from('jobs')
+          .update({ published: false, published_at: null })
+          .eq('id', id)
+          .select()
+          .single();
+        if (error) throw error;
+        return data as JobRow;
+      }
+
+      // Gera slug: title → kebab-case + primeiros 8 chars do id
+      const base = title
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '')
+        .slice(0, 60);
+      const slug = `${base}-${id.slice(0, 8)}`;
+
+      const { data, error } = await supabase
+        .from('jobs')
+        .update({ published: true, slug, published_at: new Date().toISOString() })
+        .eq('id', id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data as JobRow;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['jobs'] });
+      queryClient.invalidateQueries({ queryKey: ['jobs', data.id] });
+    },
+  });
+}
+
 export function useUpdateJobStage() {
   const queryClient = useQueryClient();
 
