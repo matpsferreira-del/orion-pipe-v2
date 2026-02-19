@@ -1156,6 +1156,14 @@ export type Database = {
         Args: { merged_id: string; survivor_id: string }
         Returns: undefined
       }
+      merge_exact_duplicate_companies: {
+        Args: never
+        Returns: {
+          merged_count: number
+          merged_name: string
+          survivor_id: string
+        }[]
+      }
       normalize_email: { Args: { raw_email: string }; Returns: string }
       normalize_phone_br: { Args: { raw_phone: string }; Returns: string }
       resolve_party: {
