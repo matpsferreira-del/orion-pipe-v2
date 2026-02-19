@@ -12,9 +12,10 @@ interface JobCardProps {
   responsavelName?: string;
   applicationsCount?: number;
   onClick?: () => void;
+  listMode?: boolean;
 }
 
-export function JobCard({ job, companyName, responsavelName, applicationsCount = 0, onClick }: JobCardProps) {
+export function JobCard({ job, companyName, responsavelName, applicationsCount = 0, onClick, listMode = false }: JobCardProps) {
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -42,6 +43,69 @@ export function JobCard({ job, companyName, responsavelName, applicationsCount =
         ? `A partir de ${formatCurrency(job.salary_min)}`
         : `Até ${formatCurrency(job.salary_max!)}`
     : null;
+
+  if (listMode) {
+    return (
+      <Card
+        className="cursor-pointer hover:shadow-md transition-shadow"
+        onClick={onClick}
+      >
+        <CardContent className="py-3 px-4">
+          <div className="flex items-center gap-4">
+            <div className="flex-1 min-w-0">
+              <span className="text-sm font-semibold truncate block">{job.title}</span>
+              <div className="flex items-center gap-3 mt-0.5 flex-wrap">
+                {companyName && (
+                  <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <Building2 className="h-3 w-3" />{companyName}
+                  </span>
+                )}
+                {job.location && (
+                  <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <MapPin className="h-3 w-3" />{job.location}
+                  </span>
+                )}
+                {salaryText && (
+                  <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <DollarSign className="h-3 w-3" />{salaryText}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 flex-shrink-0">
+              <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                <Users className="h-3 w-3" />{applicationsCount}
+              </span>
+              {job.deadline && (
+                <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <Calendar className="h-3 w-3" />{formatDate(job.deadline)}
+                </span>
+              )}
+              {responsavelName && (
+                <Avatar className="h-5 w-5">
+                  <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
+                    {getInitials(responsavelName)}
+                  </AvatarFallback>
+                </Avatar>
+              )}
+              {(job as any).published && (
+                <Badge variant="outline" className="text-xs border-primary/30 text-primary bg-primary/5 gap-1">
+                  <Globe className="h-3 w-3" />Publicada
+                </Badge>
+              )}
+              <Badge variant="outline" className={cn('text-xs', priorityColors[job.priority as JobPriority])}>
+                {priorityLabels[job.priority as JobPriority]}
+              </Badge>
+              <Badge variant="outline" className={cn('text-xs', jobStatusColors[job.status])}>
+                {jobStatusLabels[job.status]}
+              </Badge>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card 
