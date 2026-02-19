@@ -47,7 +47,9 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
   const jobPublished = (job as any).published as boolean | undefined;
   const jobSlug = (job as any).slug as string | undefined;
 
-  const portalUrl = jobSlug ? `${window.location.origin}/vagas/${jobSlug}` : null;
+  // URL do portal público separado — atualizar após criar o projeto externo no Lovable
+  const PORTAL_URL = 'https://seu-portal-de-vagas.lovable.app';
+  const portalUrl = jobSlug ? `${PORTAL_URL}/vagas/${jobSlug}` : null;
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
