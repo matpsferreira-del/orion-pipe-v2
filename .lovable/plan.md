@@ -1,71 +1,76 @@
 
-## Adicionar "Nova Oportunidade" no menu de três pontinhos das Empresas
+## Diagnóstico e correção: candidatos do portal não aparecem no sistema
 
-### Contexto atual
+### O que foi investigado
 
-Na página de Empresas (`src/pages/Empresas.tsx`), o menu dropdown de cada linha da tabela (botão `MoreHorizontal`) tem três opções:
-- Ver detalhes
-- Editar
-- Excluir
+Testei a edge function `public-apply` diretamente e ela **funciona perfeitamente**. Um candidato de teste foi criado no banco com:
+- `created_from = 'site'` na tabela `party`
+- Role `candidate` atribuída automaticamente
+- Candidatura registrada na tabela `applications` com `source = 'website'`
 
-O `OpportunityDialog` já existe em `src/components/opportunities/OpportunityDialog.tsx`, mas aceita apenas `{ open, onOpenChange }` — sem suporte para receber uma empresa pré-selecionada.
+O dado está no banco. O problema é de **exibição e integração na interface**.
 
-### O que será feito
+### Dois problemas identificados
 
-**1. Atualizar `OpportunityDialog` para aceitar `companyId` pré-definido**
+**Problema 1 — Aba ATS na ficha de pessoa está vazia (placeholder)**
 
-Adicionar uma prop opcional `defaultCompanyId` ao componente. Quando fornecida:
-- O campo "Empresa" começa preenchido e fica desabilitado (empresa já está definida pelo contexto)
-- O campo "Contato" já carrega os contatos dessa empresa automaticamente
+Em `src/components/parties/PartyDetailDialog.tsx`, a aba "ATS" mostra uma mensagem de placeholder desativada:
+```tsx
+<p>Candidaturas aparecerão aqui quando o módulo ATS for implementado.</p>
+```
+Não busca candidaturas reais do candidato. Precisa ser implementada.
+
+**Problema 2 — Portal externo provavelmente com banco diferente**
+
+O portal `recruit-sync-spot.lovable.app` é um projeto separado. Se ele não estiver configurado com as credenciais deste projeto, as candidaturas feitas lá vão para outro banco e nunca chegam aqui. Isso requer ajuste no projeto do portal (fora do escopo desta mudança, mas vamos deixar instruções claras).
+
+---
+
+### O que será implementado
+
+#### 1. Aba ATS funcional no perfil de pessoa (PartyDetailDialog)
+
+Criar um hook `usePartyApplications(partyId)` em `src/hooks/useApplications.ts` que busca todas as candidaturas da pessoa, incluindo dados da vaga.
+
+A aba ATS mostrará:
+- Lista de vagas para as quais a pessoa se candidatou
+- Nome da vaga, empresa, data de candidatura, status atual e etapa do funil
+- Badge de status colorido (novo, em análise, contratado, reprovado, etc.)
+- Origem da candidatura (site, manual, importação)
 
 ```typescript
-interface OpportunityDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  defaultCompanyId?: string; // novo
+// Novo hook
+export function usePartyApplications(partyId: string | undefined) {
+  return useQuery({
+    queryKey: ['party-applications', partyId],
+    queryFn: async () => {
+      // Busca candidaturas + vaga + etapa
+    },
+    enabled: !!partyId,
+  });
 }
 ```
 
-**2. Adicionar estado e handler em `Empresas.tsx`**
+#### 2. Banco de Talentos — badge indicando candidatos do portal
 
-```typescript
-const [opportunityDialogOpen, setOpportunityDialogOpen] = useState(false);
-const [opportunityCompanyId, setOpportunityCompanyId] = useState<string | null>(null);
+Na página `Pessoas.tsx`, adicionar um badge "Via Portal" para pessoas com `created_from = 'site'`, facilitando a identificação visual de candidatos que vieram do portal público.
 
-const handleNewOpportunity = (company: CompanyRow, e: React.MouseEvent) => {
-  e.stopPropagation();
-  setOpportunityCompanyId(company.id);
-  setOpportunityDialogOpen(true);
-};
-```
+#### 3. Filtro "Via Portal" no Banco de Talentos
 
-**3. Inserir item no menu dropdown de cada linha**
+Adicionar uma opção de filtro por origem (`created_from = 'site'`) na página de Pessoas, para que o time possa filtrar apenas candidatos que se candidataram pelo portal.
 
-Adicionado entre "Editar" e "Excluir", com ícone `Target`:
+---
 
-```tsx
-<DropdownMenuItem onClick={(e) => handleNewOpportunity(company, e)}>
-  <Target className="h-4 w-4 mr-2" />
-  Nova Oportunidade
-</DropdownMenuItem>
-```
+### Arquivos a serem alterados
 
-O ícone `Target` já está importado na página.
+| Arquivo | O que muda |
+|---|---|
+| `src/hooks/useApplications.ts` | Novo hook `usePartyApplications(partyId)` |
+| `src/components/parties/PartyDetailDialog.tsx` | Aba ATS implementada com candidaturas reais |
+| `src/pages/Pessoas.tsx` | Badge "Via Portal" + filtro por origem |
 
-**4. Renderizar o `OpportunityDialog` ao final da página**
+---
 
-```tsx
-<OpportunityDialog
-  open={opportunityDialogOpen}
-  onOpenChange={(open) => {
-    setOpportunityDialogOpen(open);
-    if (!open) setOpportunityCompanyId(null);
-  }}
-  defaultCompanyId={opportunityCompanyId ?? undefined}
-/>
-```
+### Observação sobre o portal externo
 
-### Arquivos alterados
-
-- `src/components/opportunities/OpportunityDialog.tsx` — nova prop `defaultCompanyId`, campo empresa pré-selecionado e desabilitado quando fornecido
-- `src/pages/Empresas.tsx` — novo estado, handler e item no dropdown, renderização do dialog
+Se candidaturas feitas no portal ainda não aparecem, é porque o projeto `recruit-sync-spot` precisa ser configurado com as credenciais deste projeto. Isso é uma configuração no projeto separado do portal — não neste arquivo.
