@@ -97,6 +97,41 @@ export function useCreateOpportunity() {
   });
 }
 
+export interface OpportunityUpdate {
+  company_id?: string;
+  contact_id?: string;
+  responsavel_id?: string;
+  stage?: string;
+  valor_potencial?: number;
+  probabilidade?: number;
+  data_previsao_fechamento?: string;
+  origem_lead?: string;
+  tipo_servico?: string;
+  observacoes?: string | null;
+}
+
+export function useUpdateOpportunity() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: OpportunityUpdate }) => {
+      const { error } = await supabase
+        .from('opportunities')
+        .update(data)
+        .eq('id', id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['opportunities'] });
+      toast.success('Oportunidade atualizada com sucesso!');
+    },
+    onError: (error) => {
+      toast.error('Erro ao atualizar oportunidade: ' + error.message);
+    },
+  });
+}
+
 export function useDeleteOpportunity() {
   const queryClient = useQueryClient();
   

@@ -41,6 +41,7 @@ export default function Oportunidades() {
   const [filterStage, setFilterStage] = useState<string>('all');
   const [filterResponsavel, setFilterResponsavel] = useState<string>('all');
   const [selectedOpportunity, setSelectedOpportunity] = useState<OpportunityRow | null>(null);
+  const [editingOpportunity, setEditingOpportunity] = useState<OpportunityRow | null>(null);
   const [showNewDialog, setShowNewDialog] = useState(false);
 
   const { data: opportunities = [], isLoading } = useOpportunities();
@@ -239,7 +240,7 @@ export default function Oportunidades() {
                             <Eye className="h-4 w-4 mr-2" />
                             Ver detalhes
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={(e) => e.stopPropagation()}>
+                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setEditingOpportunity(opp); }}>
                             <Pencil className="h-4 w-4 mr-2" />
                             Editar
                           </DropdownMenuItem>
@@ -275,6 +276,13 @@ export default function Oportunidades() {
 
       {/* New Opportunity Dialog */}
       <OpportunityDialog open={showNewDialog} onOpenChange={setShowNewDialog} />
+
+      {/* Edit Opportunity Dialog */}
+      <OpportunityDialog
+        open={!!editingOpportunity}
+        onOpenChange={(open) => { if (!open) setEditingOpportunity(null); }}
+        opportunity={editingOpportunity ?? undefined}
+      />
     </div>
   );
 }

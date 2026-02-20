@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useCreateOpportunity, OpportunityInsert } from '@/hooks/useOpportunities';
+import { useCreateOpportunity, useUpdateOpportunity, OpportunityInsert, OpportunityRow } from '@/hooks/useOpportunities';
 import { useCompanies } from '@/hooks/useCompanies';
 import { useContactsByCompany } from '@/hooks/useContacts';
 import { useProfiles } from '@/hooks/useProfiles';
@@ -33,10 +33,13 @@ interface OpportunityDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   defaultCompanyId?: string;
+  opportunity?: OpportunityRow; // when set, dialog is in edit mode
 }
 
-export function OpportunityDialog({ open, onOpenChange, defaultCompanyId }: OpportunityDialogProps) {
-  const [companyId, setCompanyId] = useState(defaultCompanyId ?? '');
+export function OpportunityDialog({ open, onOpenChange, defaultCompanyId, opportunity }: OpportunityDialogProps) {
+  const isEditing = !!opportunity;
+
+  const [companyId, setCompanyId] = useState('');
   const [contactId, setContactId] = useState('');
   const [responsavelId, setResponsavelId] = useState('');
   const [valorPotencial, setValorPotencial] = useState('');
@@ -51,26 +54,48 @@ export function OpportunityDialog({ open, onOpenChange, defaultCompanyId }: Oppo
   const { data: contacts = [] } = useContactsByCompany(companyId);
   const { data: profiles = [] } = useProfiles();
   const createOpportunity = useCreateOpportunity();
+  const updateOpportunity = useUpdateOpportunity();
+
+  // Populate fields when editing
+  useEffect(() => {
+    if (opportunity) {
+      setCompanyId(opportunity.company_id);
+      setContactId(opportunity.contact_id);
+      setResponsavelId(opportunity.responsavel_id);
+      setValorPotencial(String(opportunity.valor_potencial));
+      setProbabilidade(String(opportunity.probabilidade));
+      setDataPrevisao(opportunity.data_previsao_fechamento);
+      setOrigemLead(opportunity.origem_lead);
+      setTipoServico(opportunity.tipo_servico);
+      setObservacoes(opportunity.observacoes ?? '');
+    } else {
+      resetForm();
+    }
+  }, [opportunity, open]);
 
   useEffect(() => {
-    if (profile?.id) {
+    if (!isEditing && profile?.id) {
       setResponsavelId(profile.id);
     }
-  }, [profile]);
+  }, [profile, isEditing]);
 
   useEffect(() => {
-    setCompanyId(defaultCompanyId ?? '');
-    setContactId('');
-  }, [defaultCompanyId, open]);
+    if (!isEditing) {
+      setCompanyId(defaultCompanyId ?? '');
+      setContactId('');
+    }
+  }, [defaultCompanyId, open, isEditing]);
 
   useEffect(() => {
-    setContactId('');
-  }, [companyId]);
+    if (!isEditing) {
+      setContactId('');
+    }
+  }, [companyId, isEditing]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    const opportunity: OpportunityInsert = {
+
+    const data = {
       company_id: companyId,
       contact_id: contactId,
       responsavel_id: responsavelId,
@@ -82,12 +107,18 @@ export function OpportunityDialog({ open, onOpenChange, defaultCompanyId }: Oppo
       observacoes: observacoes || undefined,
     };
 
-    createOpportunity.mutate(opportunity, {
-      onSuccess: () => {
-        onOpenChange(false);
-        resetForm();
-      },
-    });
+    if (isEditing) {
+      updateOpportunity.mutate({ id: opportunity.id, data }, {
+        onSuccess: () => onOpenChange(false),
+      });
+    } else {
+      createOpportunity.mutate(data as OpportunityInsert, {
+        onSuccess: () => {
+          onOpenChange(false);
+          resetForm();
+        },
+      });
+    }
   };
 
   const resetForm = () => {
@@ -101,17 +132,19 @@ export function OpportunityDialog({ open, onOpenChange, defaultCompanyId }: Oppo
     setObservacoes('');
   };
 
+  const isPending = createOpportunity.isPending || updateOpportunity.isPending;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Nova Oportunidade</DialogTitle>
+          <DialogTitle>{isEditing ? 'Editar Oportunidade' : 'Nova Oportunidade'}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="company">Empresa *</Label>
-              <Select value={companyId} onValueChange={setCompanyId} required disabled={!!defaultCompanyId}>
+              <Select value={companyId} onValueChange={setCompanyId} required disabled={!!defaultCompanyId && !isEditing}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione..." />
                 </SelectTrigger>
@@ -124,7 +157,7 @@ export function OpportunityDialog({ open, onOpenChange, defaultCompanyId }: Oppo
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="contact">Contato *</Label>
               <Select value={contactId} onValueChange={setContactId} required disabled={!companyId}>
@@ -154,7 +187,7 @@ export function OpportunityDialog({ open, onOpenChange, defaultCompanyId }: Oppo
                 required
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="probabilidade">Probabilidade (%) *</Label>
               <Input
@@ -180,7 +213,7 @@ export function OpportunityDialog({ open, onOpenChange, defaultCompanyId }: Oppo
                 required
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="responsavel">Responsável *</Label>
               <Select value={responsavelId} onValueChange={setResponsavelId} required>
@@ -214,7 +247,7 @@ export function OpportunityDialog({ open, onOpenChange, defaultCompanyId }: Oppo
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="servico">Tipo de Serviço *</Label>
               <Select value={tipoServico} onValueChange={setTipoServico}>
@@ -247,9 +280,9 @@ export function OpportunityDialog({ open, onOpenChange, defaultCompanyId }: Oppo
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={createOpportunity.isPending}>
-              {createOpportunity.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Criar Oportunidade
+            <Button type="submit" disabled={isPending}>
+              {isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              {isEditing ? 'Salvar Alterações' : 'Criar Oportunidade'}
             </Button>
           </div>
         </form>
