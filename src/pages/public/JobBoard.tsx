@@ -5,7 +5,8 @@ import { useQuery } from '@tanstack/react-query';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Search, MapPin, Building2, DollarSign, Calendar, ArrowRight, Briefcase } from 'lucide-react';
+import { Search, MapPin, Building2, DollarSign, Calendar, ArrowRight, Briefcase, Layers } from 'lucide-react';
+import { jobAreaLabels, JobArea } from '@/types/ats';
 
 interface PublicJob {
   id: string;
@@ -17,6 +18,7 @@ interface PublicJob {
   description: string | null;
   slug: string;
   published_at: string | null;
+  area: string | null;
   companies: { nome_fantasia: string } | null;
 }
 
@@ -26,7 +28,7 @@ function usePublicJobs() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('jobs')
-        .select('id, title, location, salary_min, salary_max, deadline, description, slug, published_at, companies(nome_fantasia)')
+        .select('id, title, location, salary_min, salary_max, deadline, description, slug, published_at, area, companies(nome_fantasia)')
         .eq('published', true)
         .eq('status', 'open')
         .order('published_at', { ascending: false });
@@ -37,19 +39,30 @@ function usePublicJobs() {
   });
 }
 
+const ALL_AREAS = 'all';
+
 export default function JobBoard() {
   const [search, setSearch] = useState('');
+  const [filterArea, setFilterArea] = useState(ALL_AREAS);
   const { data: jobs = [], isLoading } = usePublicJobs();
+
+  // Collect only areas present in the job list
+  const availableAreas = useMemo(() => {
+    const areas = new Set(jobs.map(j => j.area).filter(Boolean) as string[]);
+    return Array.from(areas);
+  }, [jobs]);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
-    if (!q) return jobs;
-    return jobs.filter(j =>
-      j.title.toLowerCase().includes(q) ||
-      j.location?.toLowerCase().includes(q) ||
-      j.companies?.nome_fantasia.toLowerCase().includes(q)
-    );
-  }, [jobs, search]);
+    return jobs.filter(j => {
+      const matchesSearch = !q ||
+        j.title.toLowerCase().includes(q) ||
+        j.location?.toLowerCase().includes(q) ||
+        j.companies?.nome_fantasia.toLowerCase().includes(q);
+      const matchesArea = filterArea === ALL_AREAS || j.area === filterArea;
+      return matchesSearch && matchesArea;
+    });
+  }, [jobs, search, filterArea]);
 
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', notation: 'compact' }).format(value);
@@ -98,6 +111,36 @@ export default function JobBoard() {
 
       {/* Job list */}
       <main className="max-w-5xl mx-auto px-4 py-8">
+        {/* Area filter chips */}
+        {availableAreas.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-6">
+            <button
+              onClick={() => setFilterArea(ALL_AREAS)}
+              className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors border ${
+                filterArea === ALL_AREAS
+                  ? 'bg-primary text-primary-foreground border-primary'
+                  : 'bg-card text-muted-foreground border-border hover:border-primary/50 hover:text-foreground'
+              }`}
+            >
+              Todas as áreas
+            </button>
+            {availableAreas.map(area => (
+              <button
+                key={area}
+                onClick={() => setFilterArea(area === filterArea ? ALL_AREAS : area)}
+                className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors border flex items-center gap-1.5 ${
+                  filterArea === area
+                    ? 'bg-primary text-primary-foreground border-primary'
+                    : 'bg-card text-muted-foreground border-border hover:border-primary/50 hover:text-foreground'
+                }`}
+              >
+                <Layers className="h-3.5 w-3.5" />
+                {jobAreaLabels[area as JobArea] || area}
+              </button>
+            ))}
+          </div>
+        )}
+
         {isLoading ? (
           <div className="space-y-4">
             {[...Array(4)].map((_, i) => (
@@ -108,11 +151,11 @@ export default function JobBoard() {
           <div className="text-center py-20 text-muted-foreground">
             <Briefcase className="h-14 w-14 mx-auto mb-4 opacity-30" />
             <p className="text-lg font-medium">
-              {search ? 'Nenhuma vaga encontrada para essa busca' : 'Nenhuma vaga disponível no momento'}
+              {search || filterArea !== ALL_AREAS ? 'Nenhuma vaga encontrada para esse filtro' : 'Nenhuma vaga disponível no momento'}
             </p>
-            {search && (
-              <Button variant="link" onClick={() => setSearch('')} className="mt-2">
-                Limpar busca
+            {(search || filterArea !== ALL_AREAS) && (
+              <Button variant="link" onClick={() => { setSearch(''); setFilterArea(ALL_AREAS); }} className="mt-2">
+                Limpar filtros
               </Button>
             )}
           </div>
@@ -131,9 +174,16 @@ export default function JobBoard() {
                   <div className="border border-border rounded-xl p-5 bg-card hover:border-primary/50 hover:shadow-md transition-all">
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1 min-w-0">
-                        <h3 className="text-base font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-1">
-                          {job.title}
-                        </h3>
+                        <div className="flex items-center gap-2 flex-wrap mb-1">
+                          <h3 className="text-base font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-1">
+                            {job.title}
+                          </h3>
+                          {job.area && (
+                            <Badge variant="outline" className="text-xs border-primary/30 text-primary bg-primary/5 flex-shrink-0">
+                              {jobAreaLabels[job.area as JobArea] || job.area}
+                            </Badge>
+                          )}
+                        </div>
 
                         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2">
                           {job.companies?.nome_fantasia && (

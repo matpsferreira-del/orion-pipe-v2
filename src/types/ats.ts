@@ -1,6 +1,7 @@
 // ATS Types for Recruitment Management
 
 export type JobStatus = 'draft' | 'open' | 'paused' | 'filled' | 'cancelled';
+export type JobArea = 'financas' | 'juridico' | 'marketing' | 'sales' | 'engenharia' | 'rh' | 'tech';
 export type ApplicationStatus = 'new' | 'screening' | 'interviewing' | 'offer' | 'hired' | 'rejected' | 'withdrawn';
 export type JobPriority = 'baixa' | 'media' | 'alta' | 'urgente';
 export type ApplicationSource = 'manual' | 'referral' | 'linkedin' | 'website' | 'hunting' | 'other';
@@ -19,6 +20,7 @@ export interface Job {
   salary_max: number | null;
   status: JobStatus;
   priority: JobPriority;
+  area: JobArea | null;
   deadline: string | null;
   filled_at: string | null;
   created_at: string;
@@ -82,6 +84,16 @@ export interface ApplicationWithRelations extends Application {
 }
 
 // Labels and display helpers
+export const jobAreaLabels: Record<JobArea, string> = {
+  financas: 'Finanças',
+  juridico: 'Jurídico',
+  marketing: 'Marketing',
+  sales: 'Sales',
+  engenharia: 'Engenharia',
+  rh: 'RH',
+  tech: 'Tech',
+};
+
 export const jobStatusLabels: Record<JobStatus, string> = {
   draft: 'Rascunho',
   open: 'Aberta',
