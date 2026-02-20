@@ -1,76 +1,52 @@
 
-## Diagnóstico e correção: candidatos do portal não aparecem no sistema
 
-### O que foi investigado
+## Integrar o portal Orion Talent Compass com este sistema
 
-Testei a edge function `public-apply` diretamente e ela **funciona perfeitamente**. Um candidato de teste foi criado no banco com:
-- `created_from = 'site'` na tabela `party`
-- Role `candidate` atribuída automaticamente
-- Candidatura registrada na tabela `applications` com `source = 'website'`
+### Situacao atual
 
-O dado está no banco. O problema é de **exibição e integração na interface**.
+O portal [Orion Talent Compass](/projects/d9bf9eb8-06f5-464c-9364-8aa366353d12) ja esta **quase 100% integrado**:
 
-### Dois problemas identificados
+- Ele le as vagas diretamente do nosso banco (usando a anon key via `saasSupabase`)
+- Ele tem uma edge function `submit-application` que salva localmente E sincroniza com o nosso sistema
+- A sincronizacao usa `resolve_party` + insert em `applications` — exatamente o que precisamos
 
-**Problema 1 — Aba ATS na ficha de pessoa está vazia (placeholder)**
+### O que falta (unica coisa)
 
-Em `src/components/parties/PartyDetailDialog.tsx`, a aba "ATS" mostra uma mensagem de placeholder desativada:
-```tsx
-<p>Candidaturas aparecerão aqui quando o módulo ATS for implementado.</p>
-```
-Não busca candidaturas reais do candidato. Precisa ser implementada.
+A edge function do portal precisa da secret **`SAAS_SERVICE_ROLE_KEY`** para conseguir escrever no nosso banco. Sem ela, o sync e pulado silenciosamente (o candidato ve sucesso, mas os dados nao chegam aqui).
 
-**Problema 2 — Portal externo provavelmente com banco diferente**
-
-O portal `recruit-sync-spot.lovable.app` é um projeto separado. Se ele não estiver configurado com as credenciais deste projeto, as candidaturas feitas lá vão para outro banco e nunca chegam aqui. Isso requer ajuste no projeto do portal (fora do escopo desta mudança, mas vamos deixar instruções claras).
-
----
-
-### O que será implementado
-
-#### 1. Aba ATS funcional no perfil de pessoa (PartyDetailDialog)
-
-Criar um hook `usePartyApplications(partyId)` em `src/hooks/useApplications.ts` que busca todas as candidaturas da pessoa, incluindo dados da vaga.
-
-A aba ATS mostrará:
-- Lista de vagas para as quais a pessoa se candidatou
-- Nome da vaga, empresa, data de candidatura, status atual e etapa do funil
-- Badge de status colorido (novo, em análise, contratado, reprovado, etc.)
-- Origem da candidatura (site, manual, importação)
-
-```typescript
-// Novo hook
-export function usePartyApplications(partyId: string | undefined) {
-  return useQuery({
-    queryKey: ['party-applications', partyId],
-    queryFn: async () => {
-      // Busca candidaturas + vaga + etapa
-    },
-    enabled: !!partyId,
-  });
+Na linha 95-101 da edge function:
+```text
+const saasKey = Deno.env.get("SAAS_SERVICE_ROLE_KEY");
+if (!saasKey) {
+  console.warn("SAAS_SERVICE_ROLE_KEY not configured – skipping SaaS sync");
+  return { success: true, saas_synced: false };
 }
 ```
 
-#### 2. Banco de Talentos — badge indicando candidatos do portal
+### Passo a passo para resolver
 
-Na página `Pessoas.tsx`, adicionar um badge "Via Portal" para pessoas com `created_from = 'site'`, facilitando a identificação visual de candidatos que vieram do portal público.
+1. **Abra o projeto [Orion Talent Compass](/projects/d9bf9eb8-06f5-464c-9364-8aa366353d12)**
+2. **Peca ao Lovable para adicionar a secret** `SAAS_SERVICE_ROLE_KEY` com o valor da service role key deste projeto
+3. Pronto — as candidaturas feitas pelo portal passarao a aparecer automaticamente:
+   - Na pagina **Pessoas** (com badge "Via Portal")
+   - Na **vaga correspondente** (lista de candidatos)
 
-#### 3. Filtro "Via Portal" no Banco de Talentos
+### O que NAO precisa mudar neste projeto
 
-Adicionar uma opção de filtro por origem (`created_from = 'site'`) na página de Pessoas, para que o time possa filtrar apenas candidatos que se candidataram pelo portal.
+Nenhuma alteracao e necessaria aqui. A edge function `public-apply` deste sistema nao e nem usada pelo novo portal — ele faz a insercao direta via service role key, o que e ate mais eficiente.
 
----
+### Como obter a service role key
 
-### Arquivos a serem alterados
+Voce pode encontra-la acessando o backend deste projeto (Lovable Cloud). Ela esta listada nas configuracoes do projeto.
 
-| Arquivo | O que muda |
-|---|---|
-| `src/hooks/useApplications.ts` | Novo hook `usePartyApplications(partyId)` |
-| `src/components/parties/PartyDetailDialog.tsx` | Aba ATS implementada com candidaturas reais |
-| `src/pages/Pessoas.tsx` | Badge "Via Portal" + filtro por origem |
+### Validacao
 
----
+Apos configurar a secret no portal:
+1. Candidate-se a uma vaga pelo portal
+2. Verifique na pagina **Pessoas** deste sistema se o candidato aparece com `created_from = 'site'`
+3. Verifique na vaga correspondente se a candidatura foi registrada
 
-### Observação sobre o portal externo
+### Sobre o campo "area" das vagas
 
-Se candidaturas feitas no portal ainda não aparecem, é porque o projeto `recruit-sync-spot` precisa ser configurado com as credenciais deste projeto. Isso é uma configuração no projeto separado do portal — não neste arquivo.
+O portal ja busca as vagas diretamente do nosso banco, entao o campo `area` que adicionamos recentemente ja esta disponivel automaticamente para filtros no portal — basta o portal usar esse campo na interface dele (se ainda nao estiver usando).
+
