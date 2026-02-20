@@ -442,6 +442,7 @@ export type Database = {
       }
       jobs: {
         Row: {
+          area: string | null
           company_id: string
           contact_id: string | null
           created_at: string
@@ -464,6 +465,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          area?: string | null
           company_id: string
           contact_id?: string | null
           created_at?: string
@@ -486,6 +488,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          area?: string | null
           company_id?: string
           contact_id?: string | null
           created_at?: string

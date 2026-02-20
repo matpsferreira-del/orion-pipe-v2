@@ -18,7 +18,7 @@ import { CandidateDetailDialog } from './CandidateDetailDialog';
 import { ApplicationWithRelations } from '@/types/ats';
 import { 
   jobStatusLabels, jobStatusColors, priorityLabels, priorityColors, 
-  JobPriority 
+  JobPriority, jobAreaLabels, JobArea
 } from '@/types/ats';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -145,6 +145,13 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <MapPin className="h-4 w-4" />
               {job.location}
+            </div>
+          )}
+          {(job as any).area && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-muted border border-border">
+                {jobAreaLabels[(job as any).area as JobArea]}
+              </span>
             </div>
           )}
         </div>

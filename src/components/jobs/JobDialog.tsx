@@ -11,7 +11,7 @@ import { useCompanies } from '@/hooks/useCompanies';
 import { useContacts } from '@/hooks/useContacts';
 import { useProfiles } from '@/hooks/useProfiles';
 import { toast } from 'sonner';
-import { JobStatus, JobPriority, priorityLabels, jobStatusLabels } from '@/types/ats';
+import { JobStatus, JobPriority, JobArea, priorityLabels, jobStatusLabels, jobAreaLabels } from '@/types/ats';
 import { Loader2, Globe } from 'lucide-react';
 import { BRAZIL_STATES, BRAZIL_CITIES, COUNTRIES } from '@/data/brazilLocations';
 
@@ -76,6 +76,7 @@ export function JobDialog({ open, onOpenChange, job }: JobDialogProps) {
     salary_max: '',
     status: 'draft' as JobStatus,
     priority: 'media' as JobPriority,
+    area: '' as JobArea | '',
     deadline: '',
   });
 
@@ -115,6 +116,7 @@ export function JobDialog({ open, onOpenChange, job }: JobDialogProps) {
         salary_max: job.salary_max?.toString() || '',
         status: job.status,
         priority: job.priority as JobPriority,
+        area: ((job as any).area as JobArea) || '',
         deadline: job.deadline || '',
       });
       setIsInternational(loc.isInternational);
@@ -134,6 +136,7 @@ export function JobDialog({ open, onOpenChange, job }: JobDialogProps) {
         salary_max: '',
         status: 'draft',
         priority: 'media',
+        area: '',
         deadline: '',
       });
       setIsInternational(false);
@@ -191,8 +194,9 @@ export function JobDialog({ open, onOpenChange, job }: JobDialogProps) {
         salary_max: formData.salary_max ? parseFloat(formData.salary_max) : null,
         status: formData.status,
         priority: formData.priority,
+        area: (formData.area as JobArea) || null,
         deadline: formData.deadline || null,
-      };
+      } as any;
 
       if (isEditing && job) {
         await updateJob.mutateAsync({ id: job.id, ...payload });
@@ -383,6 +387,25 @@ export function JobDialog({ open, onOpenChange, job }: JobDialogProps) {
                   </div>
                 </div>
               )}
+            </div>
+
+            {/* Area */}
+            <div>
+              <Label htmlFor="area">Área</Label>
+              <Select
+                value={formData.area || 'none'}
+                onValueChange={(value) => setFormData({ ...formData, area: value === 'none' ? '' : value as JobArea })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione a área" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Não especificado</SelectItem>
+                  {Object.entries(jobAreaLabels).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>{label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Status */}

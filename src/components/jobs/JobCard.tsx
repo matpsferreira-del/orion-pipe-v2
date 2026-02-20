@@ -1,10 +1,10 @@
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Building2, MapPin, Calendar, Users, DollarSign, Globe } from 'lucide-react';
+import { Building2, MapPin, Calendar, Users, DollarSign, Globe, Layers } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { JobRow } from '@/hooks/useJobs';
-import { jobStatusLabels, jobStatusColors, priorityLabels, priorityColors, JobPriority } from '@/types/ats';
+import { jobStatusLabels, jobStatusColors, priorityLabels, priorityColors, JobPriority, jobAreaLabels, JobArea } from '@/types/ats';
 
 interface JobCardProps {
   job: JobRow;
@@ -145,6 +145,13 @@ export function JobCard({ job, companyName, responsavelName, applicationsCount =
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <MapPin className="h-4 w-4" />
             <span className="truncate">{job.location}</span>
+          </div>
+        )}
+
+        {(job as any).area && (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Layers className="h-4 w-4" />
+            <span>{jobAreaLabels[(job as any).area as JobArea]}</span>
           </div>
         )}
 
