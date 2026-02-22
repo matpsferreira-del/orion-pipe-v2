@@ -23,7 +23,7 @@ export default function Vagas() {
   const [showNewDialog, setShowNewDialog] = useState(false);
   const [selectedJob, setSelectedJob] = useState<JobRow | null>(null);
   const [editingJob, setEditingJob] = useState<JobRow | null>(null);
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
 
   const { data: jobs = [], isLoading } = useJobs();
   const { data: companies = [] } = useCompanies();

@@ -113,24 +113,22 @@ export function JobCard({ job, companyName, responsavelName, applicationsCount =
       onClick={onClick}
     >
       <CardHeader className="pb-2">
-        <div className="flex items-start justify-between gap-2">
-          <CardTitle className="text-base font-semibold line-clamp-1">
-            {job.title}
-          </CardTitle>
-          <div className="flex gap-1.5 flex-shrink-0 flex-wrap justify-end">
-            {(job as any).published && (
-              <Badge variant="outline" className="text-xs border-primary/30 text-primary bg-primary/5 gap-1">
-                <Globe className="h-3 w-3" />
-                Publicada
-              </Badge>
-            )}
-            <Badge variant="outline" className={cn('text-xs', priorityColors[job.priority as JobPriority])}>
-              {priorityLabels[job.priority as JobPriority]}
+        <CardTitle className="text-base font-semibold line-clamp-2">
+          {job.title}
+        </CardTitle>
+        <div className="flex gap-1.5 flex-wrap mt-1.5">
+          {(job as any).published && (
+            <Badge variant="outline" className="text-xs border-primary/30 text-primary bg-primary/5 gap-1">
+              <Globe className="h-3 w-3" />
+              Publicada
             </Badge>
-            <Badge variant="outline" className={cn('text-xs', jobStatusColors[job.status])}>
-              {jobStatusLabels[job.status]}
-            </Badge>
-          </div>
+          )}
+          <Badge variant="outline" className={cn('text-xs', priorityColors[job.priority as JobPriority])}>
+            {priorityLabels[job.priority as JobPriority]}
+          </Badge>
+          <Badge variant="outline" className={cn('text-xs', jobStatusColors[job.status])}>
+            {jobStatusLabels[job.status]}
+          </Badge>
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
