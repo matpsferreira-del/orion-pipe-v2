@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { toPng } from 'html-to-image';
 import { jsPDF } from 'jspdf';
 import pptxgen from 'pptxgenjs';
+import orionLogo from '@/assets/orion-logo.png';
 
 export default function ProposalGenerator() {
   const { id } = useParams<{id: string;}>();
@@ -390,56 +391,7 @@ export default function ProposalGenerator() {
               <div style={{ position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(to right, rgba(6,182,212,0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(6,182,212,0.05) 1px, transparent 1px)', backgroundSize: '40px 40px', zIndex: 0, pointerEvents: 'none' as const }} />
               
               
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" style={{ width: 90, height: 90 }}>
-                {/* Outer circle */}
-                <circle cx="100" cy="100" r="92" fill="none" stroke="#22d3ee" strokeWidth="3" />
-                {/* Inner ellipse (vertical oval) */}
-                <ellipse cx="100" cy="100" rx="38" ry="60" fill="none" stroke="#22d3ee" strokeWidth="3" />
-
-                {/* === Geometric facet lines connecting circle to ellipse === */}
-                {/* Top vertex to upper-left and upper-right */}
-                <line x1="100" y1="8" x2="62" y2="40" stroke="#22d3ee" strokeWidth="2.2" />
-                <line x1="100" y1="8" x2="138" y2="40" stroke="#22d3ee" strokeWidth="2.2" />
-                {/* Upper-left region */}
-                <line x1="62" y1="40" x2="10" y2="68" stroke="#22d3ee" strokeWidth="2.2" />
-                <line x1="62" y1="40" x2="18" y2="130" stroke="#22d3ee" strokeWidth="2.2" />
-                <line x1="10" y1="68" x2="64" y2="82" stroke="#22d3ee" strokeWidth="2.2" />
-                <line x1="10" y1="68" x2="18" y2="130" stroke="#22d3ee" strokeWidth="2.2" />
-                {/* Upper-right region */}
-                <line x1="138" y1="40" x2="190" y2="68" stroke="#22d3ee" strokeWidth="2.2" />
-                <line x1="138" y1="40" x2="182" y2="130" stroke="#22d3ee" strokeWidth="2.2" />
-                <line x1="190" y1="68" x2="136" y2="82" stroke="#22d3ee" strokeWidth="2.2" />
-                <line x1="190" y1="68" x2="182" y2="130" stroke="#22d3ee" strokeWidth="2.2" />
-                {/* Left side to bottom */}
-                <line x1="18" y1="130" x2="62" y2="160" stroke="#22d3ee" strokeWidth="2.2" />
-                <line x1="64" y1="118" x2="18" y2="130" stroke="#22d3ee" strokeWidth="2.2" />
-                {/* Right side to bottom */}
-                <line x1="182" y1="130" x2="138" y2="160" stroke="#22d3ee" strokeWidth="2.2" />
-                <line x1="136" y1="118" x2="182" y2="130" stroke="#22d3ee" strokeWidth="2.2" />
-                {/* Bottom vertex */}
-                <line x1="62" y1="160" x2="100" y2="192" stroke="#22d3ee" strokeWidth="2.2" />
-                <line x1="138" y1="160" x2="100" y2="192" stroke="#22d3ee" strokeWidth="2.2" />
-                {/* Cross braces */}
-                <line x1="62" y1="40" x2="138" y2="160" stroke="#22d3ee" strokeWidth="1.8" />
-                <line x1="138" y1="40" x2="62" y2="160" stroke="#22d3ee" strokeWidth="1.8" />
-                {/* Horizontal mid connectors */}
-                <line x1="64" y1="82" x2="62" y2="40" stroke="#22d3ee" strokeWidth="1.5" />
-                <line x1="136" y1="82" x2="138" y2="40" stroke="#22d3ee" strokeWidth="1.5" />
-                <line x1="64" y1="118" x2="62" y2="160" stroke="#22d3ee" strokeWidth="1.5" />
-                <line x1="136" y1="118" x2="138" y2="160" stroke="#22d3ee" strokeWidth="1.5" />
-
-                {/* === Dots at intersection points === */}
-                <circle cx="100" cy="8" r="5" fill="#22d3ee" />
-                <circle cx="62" cy="40" r="5" fill="#22d3ee" />
-                <circle cx="138" cy="40" r="5" fill="#22d3ee" />
-                <circle cx="10" cy="68" r="5" fill="#22d3ee" />
-                <circle cx="190" cy="68" r="5" fill="#22d3ee" />
-                <circle cx="18" cy="130" r="5" fill="#22d3ee" />
-                <circle cx="182" cy="130" r="5" fill="#22d3ee" />
-                <circle cx="62" cy="160" r="5" fill="#22d3ee" />
-                <circle cx="138" cy="160" r="5" fill="#22d3ee" />
-                <circle cx="100" cy="192" r="5" fill="#22d3ee" />
-              </svg>
+               <img src={orionLogo} alt="Orion Logo" style={{ width: 90, height: 90, objectFit: 'contain' }} />
               <p style={{ fontSize: '48px', fontWeight: 800, marginTop: '24px', lineHeight: 1.2 }}>
                 <span style={{ color: '#ffffff' }}>ORION </span>
                 <span style={{ color: '#06b6d4' }}>Recruitment</span>
