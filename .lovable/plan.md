@@ -1,70 +1,45 @@
 
 
-## Gerador de Posts para LinkedIn - Componente React
+## Corrigir Capa da Proposta e Exportacao PDF
 
-Converter o HTML/Tailwind do gerador de imagens de vagas para LinkedIn num componente React integrado ao ATS, acessivel a partir do detalhe de cada vaga.
+### Problema 1: Nome do cliente ausente na capa
+O slide 1 (capa) nao exibe o nome da empresa. Precisa adicionar "Proposta Comercial Exclusiva para:" seguido do nome do cliente abaixo do slogan.
 
-### O que sera criado
+### Problema 2: PDF exportando paginas em branco
+A funcao `handleExportPDF` clona os slides e usa `html-to-image` (`toPng`), mas:
+- O clone perde os estilos do `<style>` tag (pseudo-elementos `::before` para o grid de fundo)
+- O clone perde estilos computados das classes CSS definidas na tag `<style>`
+- Resultado: paginas completamente escuras/vazias no PDF
 
-**1. Novo componente: `src/components/jobs/LinkedInPostGenerator.tsx`**
-- Converter todo o HTML para JSX com classes Tailwind intactas
-- Substituir `document.getElementById` por `useState` para cada campo (area, title, model, location, badge)
-- Usar `useRef` para referenciar o elemento de captura
-- Manter os estilos CSS inline e custom (glow orbs, grid background, preview scaling) via objetos de estilo React
-- Pre-preencher campos automaticamente com dados da vaga recebida via props:
-  - `title` → campo Cargo
-  - `area` → campo Area (usando `jobAreaLabels` para traduzir)
-  - `location` → campo Localizacao
-- Manter a logica de clone off-screen para captura exata em 1080x1080px
-- Usar `html-to-image` (mais leve e moderno que html2canvas) para gerar o PNG
-- O SVG do logo Orion sera convertido para JSX inline
+### Solucao
 
-**2. Instalar dependencia: `html-to-image`**
-- Alternativa moderna ao html2canvas, sem dependencias externas de CDN
-- Funcao `toPng` para captura direta do elemento
+**Arquivo: `src/pages/ProposalGenerator.tsx`**
 
-**3. Novo Dialog wrapper: `src/components/jobs/LinkedInPostDialog.tsx`**
-- Dialog/Sheet que envolve o gerador
-- Recebe a `job: JobRow` como prop
-- Acessivel via botao no `JobDetail.tsx`
+**1. Adicionar nome do cliente na capa (Slide 1, linhas 340-341)**
 
-**4. Integracao no `JobDetail.tsx`**
-- Adicionar botao "Gerar Post LinkedIn" nas acoes da vaga (ao lado de "Editar")
-- Abrir o dialog do gerador passando os dados da vaga
-
-### Mapeamento de dados da vaga para os campos
-
+Inserir apos o slogan "Seu sucesso e o nosso sucesso.":
 ```text
-Job.title        → Campo "Cargo / Vaga"
-Job.area         → Campo "Area de Atuacao" (traduzido via jobAreaLabels)
-Job.location     → Campo "Localizacao Base"
-"VAGA EM DESTAQUE" → Campo "Destaque Superior" (valor padrao)
-""               → Campo "Modelo de Trabalho" (sem dado no banco, editavel manualmente)
+Proposta Comercial Exclusiva para:
+{empresa}
 ```
+Com estilo consistente (texto slate-400 para o label, texto branco/cyan bold para o nome).
 
-### Fluxo do usuario
+**2. Corrigir exportacao PDF**
 
-```text
-Vagas → Clica numa vaga → Sheet de detalhe → Botao "Gerar Post" → Dialog com:
-  - Painel esquerdo: formulario com campos pre-preenchidos (editaveis)
-  - Painel direito: preview da arte 1080x1080 (escalada para caber na tela)
-  - Botao "Transferir Imagem (PNG)" que faz download
-```
+Substituir a abordagem de clone + `toPng` por captura direta dos slides originais (sem clonar). O problema e que o clone perde todos os estilos injetados via `<style>`. A solucao:
 
-### Detalhes tecnicos
+- Capturar cada slide **diretamente** (sem clone) usando `toPng` no elemento original
+- Antes da captura, temporariamente remover `border-radius`, `box-shadow` e `border` via style inline
+- Restaurar apos a captura
+- Isso garante que os pseudo-elementos `::before` (grid background) e todos os estilos CSS da tag `<style>` sejam preservados
 
-- A funcao de download cria um clone off-screen do elemento de captura (exatamente como o original), renderiza com `html-to-image` no tamanho 1080x1080, gera um data URL PNG e faz download automatico
-- O preview na tela usa `transform: scale(0.5)` com `transform-origin: top left` dentro de um container de 540x540, identico ao original
-- Os estilos custom (pseudo-elementos `::before` para o grid, glow orbs) serao convertidos para divs com estilos inline no React (ja que pseudo-elementos nao funcionam inline)
-- O icone de briefcase e location usara Lucide (`Briefcase`, `MapPin`) em vez de Font Awesome
-- A fonte Inter ja esta disponivel no projeto via Tailwind
+Alternativamente, se o pseudo-elemento continuar problematico, converter o `::before` do grid para uma `<div>` real com os mesmos estilos inline (assim funciona tanto no preview quanto na captura). Esta e a abordagem mais robusta.
 
-### Arquivos modificados
+**Resumo das alteracoes:**
 
-| Arquivo | Acao |
-|---------|------|
-| `src/components/jobs/LinkedInPostGenerator.tsx` | Criar - componente principal do gerador |
-| `src/components/jobs/LinkedInPostDialog.tsx` | Criar - dialog wrapper |
-| `src/components/jobs/JobDetail.tsx` | Modificar - adicionar botao "Gerar Post" |
-| `package.json` | Modificar - adicionar `html-to-image` |
+| Local | Mudanca |
+|-------|---------|
+| Slide 1 (linhas 340-341) | Adicionar "Proposta Comercial Exclusiva para: {empresa}" |
+| CSS `proposal-slide::before` | Converter para div real com estilos inline dentro de cada slide |
+| `handleExportPDF` (linhas 121-175) | Capturar slides originais sem clonar, removendo border-radius/shadow temporariamente |
 
