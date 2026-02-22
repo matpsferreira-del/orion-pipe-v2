@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Search, Filter, Loader2, LayoutGrid, List } from 'lucide-react';
+import { Plus, Search, Filter, Loader2, LayoutGrid, List, Maximize2, Minimize2 } from 'lucide-react';
 import { useJobs } from '@/hooks/useJobs';
 import { useCompanies } from '@/hooks/useCompanies';
 import { useProfiles } from '@/hooks/useProfiles';
@@ -24,6 +24,7 @@ export default function Vagas() {
   const [selectedJob, setSelectedJob] = useState<JobRow | null>(null);
   const [editingJob, setEditingJob] = useState<JobRow | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
+  const [isExpanded, setIsExpanded] = useState(false);
 
   const { data: jobs = [], isLoading } = useJobs();
   const { data: companies = [] } = useCompanies();
@@ -177,10 +178,15 @@ export default function Vagas() {
       </Tabs>
 
       {/* Job Detail Sheet */}
-      <Sheet open={!!selectedJob} onOpenChange={() => setSelectedJob(null)}>
-        <SheetContent className="w-full sm:max-w-3xl overflow-y-auto">
+      <Sheet open={!!selectedJob} onOpenChange={() => { setSelectedJob(null); setIsExpanded(false); }}>
+        <SheetContent className={`w-full ${isExpanded ? 'sm:max-w-full' : 'sm:max-w-3xl'} overflow-y-auto transition-all duration-300`}>
           <SheetHeader>
-            <SheetTitle>{selectedJob?.title}</SheetTitle>
+            <div className="flex items-center justify-between pr-8">
+              <SheetTitle>{selectedJob?.title}</SheetTitle>
+              <Button variant="ghost" size="icon" onClick={() => setIsExpanded(!isExpanded)}>
+                {isExpanded ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+              </Button>
+            </div>
           </SheetHeader>
           {selectedJob && (
             <JobDetail 
