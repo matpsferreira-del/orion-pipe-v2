@@ -447,12 +447,17 @@ export default function ProposalGenerator() {
                 <span style={{ color: '#06b6d4' }}>Recruitment</span>
               </p>
               <p className="text-slate-500 text-lg mt-4">Seu sucesso é o nosso sucesso.</p>
-              {empresa &&
               <div style={{ marginTop: '32px' }}>
                   <p style={{ color: '#94a3b8', fontSize: '16px', letterSpacing: '0.05em' }}>Proposta Comercial Exclusiva para:</p>
-                  <p style={{ color: '#06b6d4', fontSize: '28px', fontWeight: 700, marginTop: '8px' }}>{empresa}</p>
+                  <input
+                    value={empresa}
+                    onChange={(e) => setEmpresa(e.target.value)}
+                    placeholder="Nome da Empresa"
+                    style={{ color: '#06b6d4', fontSize: '28px', fontWeight: 700, marginTop: '8px', background: 'transparent', border: 'none', outline: 'none', textAlign: 'center', width: '100%' }}
+                    onFocus={(e) => { e.target.style.outline = '1px solid rgba(6,182,212,0.4)'; e.target.style.borderRadius = '4px'; }}
+                    onBlur={(e) => { e.target.style.outline = 'none'; }}
+                  />
                 </div>
-              }
             </div>
 
             {/* Slide 2 — Compromisso */}
