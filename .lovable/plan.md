@@ -1,27 +1,26 @@
 
 
-## Corrigir SVG da Logo Orion para Reproduzir Fielmente a Imagem
+## Tornar o nome da empresa editavel diretamente na capa do slide
 
-### Problema
-O SVG atual tem apenas 4 linhas diagonais simples, resultando num design muito diferente da logo real. A imagem real mostra um padrao de facetas complexo (tipo corte de gema/diamante visto de cima) com muitas linhas conectando pontos do circulo externo a oval interna.
+### Situacao atual
+A capa da proposta ja esta fiel ao PDF: logo SVG, "ORION Recruitment", "Seu sucesso e o nosso sucesso.", e a secao "Proposta Comercial Exclusiva para: {empresa}". O nome da empresa vem do estado `empresa` (preenchido automaticamente pelo nome fantasia da empresa vinculada a oportunidade).
 
-### Analise da imagem real
-A logo real possui:
-- **Circulo externo** (traço grosso, ~3px)
-- **Oval/elipse interna** (traço grosso, ~3px)
-- **~16 linhas** que conectam pontos no circulo externo a pontos na oval, criando facetas triangulares no espaço entre as duas formas (similar a um corte brilhante de diamante visto de cima)
-- **~12 pontos** (circulos preenchidos) nas intersecoes onde as linhas encontram o circulo externo
-- As linhas formam um padrao simetrico com facetas na parte superior (tipo "coroa" do diamante) e na parte inferior
+Porem, o nome da empresa e exibido como texto estatico no slide. O usuario quer poder editar o nome diretamente no slide.
 
 ### Solucao
-Substituir o SVG atual (linhas 394-418) por um SVG muito mais detalhado que reproduz fielmente o padrao de facetas da logo, com:
-- Tracos mais grossos (strokeWidth ~2.5-3) para corresponder ao visual da imagem
-- Multiplas linhas formando triangulos/facetas entre o circulo e a oval
-- Pontos posicionados corretamente nas intersecoes com o circulo externo
-- Mesma cor `#22d3ee`
+Substituir o `<p>` que exibe `{empresa}` (linha 453) por um `<input>` estilizado para parecer texto normal do slide (sem borda visivel, fundo transparente), mas que permite edicao direta clicando no texto. O input tera:
+
+- Fundo transparente
+- Sem borda (so aparece ao focar/hover com um leve outline cyan)
+- Mesma cor, tamanho e peso de fonte do texto atual (`#06b6d4`, `28px`, `fontWeight: 700`)
+- Texto centralizado
+- `value={empresa}` e `onChange` ligado ao `setEmpresa`
+
+Tambem remover a condicao `{empresa &&` para que a secao sempre apareca (mesmo sem empresa preenchida), permitindo que o usuario digite o nome manualmente.
 
 ### Detalhes tecnicos
-- **Arquivo**: `src/pages/ProposalGenerator.tsx`, linhas 394-418
-- Substituir o SVG simplificado por um com ~16 linhas e ~12 pontos posicionados para criar o padrao de facetas correto
-- Manter dimensoes 90x90 e viewBox 0 0 100 100
+- **Arquivo**: `src/pages/ProposalGenerator.tsx`
+- **Linhas 450-455**: Remover condicional `{empresa &&`, manter o `div` sempre visivel
+- **Linha 453**: Trocar `<p>` por `<input>` com estilos inline para transparencia e consistencia visual
+- Placeholder: "Nome da Empresa"
 - Nenhuma outra alteracao no componente
