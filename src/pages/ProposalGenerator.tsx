@@ -10,26 +10,26 @@ import { jsPDF } from 'jspdf';
 import pptxgen from 'pptxgenjs';
 
 export default function ProposalGenerator() {
-  const { id } = useParams<{ id: string }>();
+  const { id } = useParams<{id: string;}>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   const { data: opportunity, isLoading } = useQuery({
     queryKey: ['opportunity', id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('opportunities')
-        .select('*')
-        .eq('id', id!)
-        .single();
+      const { data, error } = await supabase.
+      from('opportunities').
+      select('*').
+      eq('id', id!).
+      single();
       if (error) throw error;
       return data;
     },
-    enabled: !!id,
+    enabled: !!id
   });
 
   const { data: companies = [] } = useCompanies();
-  const company = companies.find(c => c.id === opportunity?.company_id);
+  const company = companies.find((c) => c.id === opportunity?.company_id);
 
   const [empresa, setEmpresa] = useState('');
   const [sla, setSla] = useState('10 a 12 dias úteis');
@@ -59,20 +59,20 @@ export default function ProposalGenerator() {
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase
-        .from('opportunities')
-        .update({
-          proposal_sla: sla,
-          proposal_exclusivity: exclusividade,
-          proposal_guarantee: garantia,
-          proposal_fee: fee,
-          proposal_payment_model: paymentModel,
-          proposal_retainer_type: retainerType,
-          proposal_fee_p1: feeP1,
-          proposal_fee_p2: feeP2,
-          proposal_fee_p3: feeP3,
-        })
-        .eq('id', id!);
+      const { error } = await supabase.
+      from('opportunities').
+      update({
+        proposal_sla: sla,
+        proposal_exclusivity: exclusividade,
+        proposal_guarantee: garantia,
+        proposal_fee: fee,
+        proposal_payment_model: paymentModel,
+        proposal_retainer_type: retainerType,
+        proposal_fee_p1: feeP1,
+        proposal_fee_p2: feeP2,
+        proposal_fee_p3: feeP3
+      }).
+      eq('id', id!);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -80,7 +80,7 @@ export default function ProposalGenerator() {
       queryClient.invalidateQueries({ queryKey: ['opportunities'] });
       toast.success('Padrões salvos com sucesso!');
     },
-    onError: (err: Error) => toast.error('Erro ao salvar: ' + err.message),
+    onError: (err: Error) => toast.error('Erro ao salvar: ' + err.message)
   });
 
   const paneRef = useRef<HTMLDivElement>(null);
@@ -130,7 +130,7 @@ export default function ProposalGenerator() {
       const pdf = new jsPDF({
         orientation: 'landscape',
         unit: 'px',
-        format: [1280, 720],
+        format: [1280, 720]
       });
 
       for (let i = 0; i < slides.length; i++) {
@@ -150,7 +150,7 @@ export default function ProposalGenerator() {
           width: 1280,
           height: 720,
           pixelRatio: 2,
-          backgroundColor: '#0f172a',
+          backgroundColor: '#0f172a'
         });
 
         // Restore original styles
@@ -162,9 +162,9 @@ export default function ProposalGenerator() {
         pdf.addImage(dataUrl, 'PNG', 0, 0, 1280, 720);
       }
 
-      const filename = empresa
-        ? `Orion_Recruitment_-_Proposta_${empresa.replace(/\s+/g, '_')}.pdf`
-        : 'Orion_Recruitment_-_Proposta_Comercial.pdf';
+      const filename = empresa ?
+      `Orion_Recruitment_-_Proposta_${empresa.replace(/\s+/g, '_')}.pdf` :
+      'Orion_Recruitment_-_Proposta_Comercial.pdf';
       pdf.save(filename);
       toast.success('PDF exportado com sucesso!');
     } catch (err) {
@@ -201,7 +201,7 @@ export default function ProposalGenerator() {
           width: 1280,
           height: 720,
           pixelRatio: 2,
-          backgroundColor: '#0f172a',
+          backgroundColor: '#0f172a'
         });
 
         slide.style.borderRadius = origBorderRadius;
@@ -215,13 +215,13 @@ export default function ProposalGenerator() {
           x: 0,
           y: 0,
           w: '100%',
-          h: '100%',
+          h: '100%'
         });
       }
 
-      const filename = empresa
-        ? `Orion_Recruitment_-_Proposta_${empresa.replace(/\s+/g, '_')}`
-        : 'Orion_Recruitment_-_Proposta_Comercial';
+      const filename = empresa ?
+      `Orion_Recruitment_-_Proposta_${empresa.replace(/\s+/g, '_')}` :
+      'Orion_Recruitment_-_Proposta_Comercial';
       await pres.writeFile({ fileName: `${filename}.pptx` });
       toast.success('PPT exportado com sucesso!');
     } catch (err) {
@@ -236,8 +236,8 @@ export default function ProposalGenerator() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#020617]">
         <Loader2 className="h-8 w-8 animate-spin text-cyan-500" />
-      </div>
-    );
+      </div>);
+
   }
 
   return (
@@ -275,17 +275,17 @@ export default function ProposalGenerator() {
         <div className="p-5 space-y-4 flex-1">
           <div>
             <label className="text-xs text-slate-400 mb-1 block">Cliente / Empresa</label>
-            <input value={empresa} onChange={e => setEmpresa(e.target.value)} className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white focus:border-cyan-500 focus:outline-none text-sm shadow-inner" />
+            <input value={empresa} onChange={(e) => setEmpresa(e.target.value)} className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white focus:border-cyan-500 focus:outline-none text-sm shadow-inner" />
           </div>
 
           <div>
             <label className="text-xs text-slate-400 mb-1 block">SLA de Entrega</label>
-            <input value={sla} onChange={e => setSla(e.target.value)} className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white focus:border-cyan-500 focus:outline-none text-sm shadow-inner" />
+            <input value={sla} onChange={(e) => setSla(e.target.value)} className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white focus:border-cyan-500 focus:outline-none text-sm shadow-inner" />
           </div>
 
           <div>
             <label className="text-xs text-slate-400 mb-1 block">Exclusividade</label>
-            <select value={exclusividade} onChange={e => setExclusividade(e.target.value)} className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white focus:border-cyan-500 focus:outline-none text-sm cursor-pointer appearance-none shadow-inner">
+            <select value={exclusividade} onChange={(e) => setExclusividade(e.target.value)} className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white focus:border-cyan-500 focus:outline-none text-sm cursor-pointer appearance-none shadow-inner">
               <option value="com exclusividade no processo">Sim (Com Exclusividade)</option>
               <option value="sem exclusividade no processo">Não (Sem Exclusividade)</option>
             </select>
@@ -293,7 +293,7 @@ export default function ProposalGenerator() {
 
           <div>
             <label className="text-xs text-slate-400 mb-1 block">Período de Garantia</label>
-            <select value={garantia} onChange={e => setGarantia(e.target.value)} className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white focus:border-cyan-500 focus:outline-none text-sm cursor-pointer appearance-none shadow-inner">
+            <select value={garantia} onChange={(e) => setGarantia(e.target.value)} className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white focus:border-cyan-500 focus:outline-none text-sm cursor-pointer appearance-none shadow-inner">
               <option value="30 dias">30 dias</option>
               <option value="45 dias">45 dias</option>
               <option value="60 dias">60 dias</option>
@@ -307,24 +307,24 @@ export default function ProposalGenerator() {
             <div>
               <label className="text-xs text-slate-400 mb-1 block">Honorário Total (Base)</label>
               <div className="flex items-center gap-2">
-                <input value={fee} onChange={e => setFee(e.target.value)} className="w-24 bg-slate-900 border border-cyan-700/50 rounded-lg p-3 text-white font-bold focus:border-cyan-500 focus:outline-none text-sm text-center shadow-inner" />
+                <input value={fee} onChange={(e) => setFee(e.target.value)} className="w-24 bg-slate-900 border border-cyan-700/50 rounded-lg p-3 text-white font-bold focus:border-cyan-500 focus:outline-none text-sm text-center shadow-inner" />
                 <span className="text-slate-400 text-xs">da remuneração</span>
               </div>
             </div>
 
             <div>
               <label className="text-xs text-slate-400 mb-1 block">Modelo de Pagamento</label>
-              <select value={paymentModel} onChange={e => setPaymentModel(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-white focus:border-cyan-500 focus:outline-none text-sm cursor-pointer appearance-none shadow-inner">
+              <select value={paymentModel} onChange={(e) => setPaymentModel(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-white focus:border-cyan-500 focus:outline-none text-sm cursor-pointer appearance-none shadow-inner">
                 <option value="sucesso">100% no Sucesso</option>
                 <option value="retainer">Retainer (Parcelado)</option>
               </select>
             </div>
 
-            {paymentModel === 'retainer' && (
-              <div className="bg-slate-800/50 rounded-lg p-3 space-y-3 border border-slate-700/50">
+            {paymentModel === 'retainer' &&
+            <div className="bg-slate-800/50 rounded-lg p-3 space-y-3 border border-slate-700/50">
                 <div>
                   <label className="text-xs text-slate-400 mb-1 block">Qtd. de Parcelas</label>
-                  <select value={retainerType} onChange={e => handleRetainerChange(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-md p-2 text-white focus:border-cyan-500 focus:outline-none text-xs appearance-none cursor-pointer">
+                  <select value={retainerType} onChange={(e) => handleRetainerChange(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-md p-2 text-white focus:border-cyan-500 focus:outline-none text-xs appearance-none cursor-pointer">
                     <option value="3x">3x (Upfront, Shortlist, Sucesso)</option>
                     <option value="2x">2x (Upfront, Sucesso)</option>
                   </select>
@@ -332,21 +332,21 @@ export default function ProposalGenerator() {
                 <div className="flex gap-2">
                   <div className="flex-1">
                     <label className="text-[10px] text-slate-500 block mb-1">Upfront</label>
-                    <input value={feeP1} onChange={e => setFeeP1(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-md p-2 text-cyan-400 text-center text-xs font-bold" />
+                    <input value={feeP1} onChange={(e) => setFeeP1(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-md p-2 text-cyan-400 text-center text-xs font-bold" />
                   </div>
-                  {retainerType === '3x' && (
-                    <div className="flex-1">
+                  {retainerType === '3x' &&
+                <div className="flex-1">
                       <label className="text-[10px] text-slate-500 block mb-1">Shortlist</label>
-                      <input value={feeP2} onChange={e => setFeeP2(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-md p-2 text-cyan-400 text-center text-xs font-bold" />
+                      <input value={feeP2} onChange={(e) => setFeeP2(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-md p-2 text-cyan-400 text-center text-xs font-bold" />
                     </div>
-                  )}
+                }
                   <div className="flex-1">
                     <label className="text-[10px] text-slate-500 block mb-1">Sucesso</label>
-                    <input value={feeP3} onChange={e => setFeeP3(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-md p-2 text-cyan-400 text-center text-xs font-bold" />
+                    <input value={feeP3} onChange={(e) => setFeeP3(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-md p-2 text-cyan-400 text-center text-xs font-bold" />
                   </div>
                 </div>
               </div>
-            )}
+            }
           </div>
         </div>
 
@@ -358,24 +358,24 @@ export default function ProposalGenerator() {
           <button
             onClick={handleExportPDF}
             disabled={isExporting}
-            className="w-full bg-cyan-500 hover:bg-cyan-400 text-slate-900 font-bold py-3 rounded-lg transition-all shadow-lg flex justify-center items-center gap-2 text-sm disabled:opacity-50"
-          >
-            {isExporting ? (
-              <><Loader2 className="h-4 w-4 animate-spin" /> Gerando...</>
-            ) : (
-              <><Download className="h-4 w-4" /> Exportar PDF</>
-            )}
+            className="w-full bg-cyan-500 hover:bg-cyan-400 text-slate-900 font-bold py-3 rounded-lg transition-all shadow-lg flex justify-center items-center gap-2 text-sm disabled:opacity-50">
+
+            {isExporting ?
+            <><Loader2 className="h-4 w-4 animate-spin" /> Gerando...</> :
+
+            <><Download className="h-4 w-4" /> Exportar PDF</>
+            }
           </button>
           <button
             onClick={handleExportPPT}
             disabled={isExporting}
-            className="w-full bg-orange-500 hover:bg-orange-400 text-white font-bold py-3 rounded-lg transition-all shadow-lg flex justify-center items-center gap-2 text-sm disabled:opacity-50"
-          >
-            {isExporting ? (
-              <><Loader2 className="h-4 w-4 animate-spin" /> Gerando...</>
-            ) : (
-              <><FileDown className="h-4 w-4" /> Exportar PPT</>
-            )}
+            className="w-full bg-orange-500 hover:bg-orange-400 text-white font-bold py-3 rounded-lg transition-all shadow-lg flex justify-center items-center gap-2 text-sm disabled:opacity-50">
+
+            {isExporting ?
+            <><Loader2 className="h-4 w-4 animate-spin" /> Gerando...</> :
+
+            <><FileDown className="h-4 w-4" /> Exportar PPT</>
+            }
           </button>
         </div>
       </div>
@@ -389,7 +389,7 @@ export default function ProposalGenerator() {
             <div className="proposal-slide" style={{ justifyContent: 'center', alignItems: 'center', textAlign: 'center' as const }}>
               <div style={{ position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(to right, rgba(6,182,212,0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(6,182,212,0.05) 1px, transparent 1px)', backgroundSize: '40px 40px', zIndex: 0, pointerEvents: 'none' as const }} />
               <div style={{ position: 'absolute', top: 80, right: 80, width: 200, height: 200, background: 'radial-gradient(circle, rgba(6,182,212,0.15) 0%, transparent 70%)', borderRadius: '50%' }} />
-              <div style={{ position: 'absolute', bottom: 60, left: 60, width: 300, height: 300, background: 'radial-gradient(circle, rgba(99,102,241,0.1) 0%, transparent 70%)', borderRadius: '50%' }} />
+              
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" style={{ width: 90, height: 90 }}>
                 {/* Outer circle */}
                 <circle cx="100" cy="100" r="92" fill="none" stroke="#22d3ee" strokeWidth="3" />
@@ -445,12 +445,12 @@ export default function ProposalGenerator() {
                 <span style={{ color: '#06b6d4' }}>Recruitment</span>
               </p>
               <p className="text-slate-500 text-lg mt-4">Seu sucesso é o nosso sucesso.</p>
-              {empresa && (
-                <div style={{ marginTop: '32px' }}>
+              {empresa &&
+              <div style={{ marginTop: '32px' }}>
                   <p style={{ color: '#94a3b8', fontSize: '16px', letterSpacing: '0.05em' }}>Proposta Comercial Exclusiva para:</p>
                   <p style={{ color: '#06b6d4', fontSize: '28px', fontWeight: 700, marginTop: '8px' }}>{empresa}</p>
                 </div>
-              )}
+              }
             </div>
 
             {/* Slide 2 — Compromisso */}
@@ -481,20 +481,20 @@ export default function ProposalGenerator() {
               <div className="flex-1 flex items-center">
                 <div className="grid grid-cols-5 gap-4 w-full">
                   {[
-                    { icon: '💻', title: 'Tecnologia', desc: 'Mapeamento de devs, dados, infra e produto. Liderança técnica de ponta.' },
-                    { icon: '⚖️', title: 'Finanças & Jurídico', desc: 'Posições críticas de C-Level, controladoria, tributário e compliance.' },
-                    { icon: '⚙️', title: 'Engenharia', desc: 'Líderes de manufatura, supply chain e operações para a indústria.' },
-                    { icon: '📈', title: 'Marketing & Sales', desc: 'Estratégia de growth, performance, branding e força de vendas B2B/B2C.' },
-                    { icon: '👥', title: 'Recursos Humanos', desc: 'Business partners, talent acquisition e líderes para desenvolvimento humano.' },
-                  ].map(item => (
-                    <div key={item.title} className="bg-slate-800/50 p-5 rounded-xl border border-slate-700/50 text-center flex flex-col items-center">
+                  { icon: '💻', title: 'Tecnologia', desc: 'Mapeamento de devs, dados, infra e produto. Liderança técnica de ponta.' },
+                  { icon: '⚖️', title: 'Finanças & Jurídico', desc: 'Posições críticas de C-Level, controladoria, tributário e compliance.' },
+                  { icon: '⚙️', title: 'Engenharia', desc: 'Líderes de manufatura, supply chain e operações para a indústria.' },
+                  { icon: '📈', title: 'Marketing & Sales', desc: 'Estratégia de growth, performance, branding e força de vendas B2B/B2C.' },
+                  { icon: '👥', title: 'Recursos Humanos', desc: 'Business partners, talent acquisition e líderes para desenvolvimento humano.' }].
+                  map((item) =>
+                  <div key={item.title} className="bg-slate-800/50 p-5 rounded-xl border border-slate-700/50 text-center flex flex-col items-center">
                       <div className="w-12 h-12 rounded-full bg-cyan-500/10 flex items-center justify-center mb-3">
                         <span className="text-xl">{item.icon}</span>
                       </div>
                       <p className="font-bold text-cyan-400 text-sm mb-2">{item.title}</p>
                       <p className="text-slate-400 text-xs leading-relaxed">{item.desc}</p>
                     </div>
-                  ))}
+                  )}
                 </div>
               </div>
             </div>
@@ -507,8 +507,8 @@ export default function ProposalGenerator() {
                 <span style={{ color: '#06b6d4' }}>Investimento</span>
               </h2>
               <div className="flex-1 flex items-center">
-                {paymentModel === 'sucesso' ? (
-                  <div className="flex gap-10 w-full items-center highlight-numbers-layout">
+                {paymentModel === 'sucesso' ?
+                <div className="flex gap-10 w-full items-center highlight-numbers-layout">
                     <div>
                       <p className="text-7xl font-black text-cyan-400">{fee}</p>
                       <p className="text-slate-400 mt-2 text-lg">Honorário no Sucesso</p>
@@ -521,9 +521,9 @@ export default function ProposalGenerator() {
                         <p className="text-slate-400 text-sm">* <strong className="text-slate-300">Garantia de Reposição de {garantia}:</strong> O processo não termina na assinatura. Refazemos todo o trabalho de hunting sem nenhum custo adicional caso haja saída ou desligamento do profissional neste período inicial.</p>
                       </div>
                     </div>
-                  </div>
-                ) : (
-                  <div className="w-full space-y-6">
+                  </div> :
+
+                <div className="w-full space-y-6">
                     <h3 className="text-2xl font-bold text-white">Comprometimento Compartilhado</h3>
                     <div className={`grid ${retainerType === '3x' ? 'grid-cols-3' : 'grid-cols-2'} gap-6`}>
                       <div className="bg-slate-800/50 p-6 rounded-xl border border-cyan-700/30 text-center">
@@ -531,13 +531,13 @@ export default function ProposalGenerator() {
                         <p className="text-white font-bold mt-2">Upfront (Kick-off)</p>
                         <p className="text-slate-400 text-sm mt-2">Faturamento no início do projeto, garantindo a dedicação exclusiva da equipe.</p>
                       </div>
-                      {retainerType === '3x' && (
-                        <div className="bg-slate-800/50 p-6 rounded-xl border border-slate-700/50 text-center">
+                      {retainerType === '3x' &&
+                    <div className="bg-slate-800/50 p-6 rounded-xl border border-slate-700/50 text-center">
                           <p className="text-4xl font-black text-cyan-400">{feeP2}</p>
                           <p className="text-white font-bold mt-2">Shortlist</p>
                           <p className="text-slate-400 text-sm mt-2">Apresentação dos finalistas validados técnica e culturalmente.</p>
                         </div>
-                      )}
+                    }
                       <div className="bg-slate-800/50 p-6 rounded-xl border border-slate-700/50 text-center">
                         <p className="text-4xl font-black text-cyan-400">{feeP3}</p>
                         <p className="text-white font-bold mt-2">Success Fee</p>
@@ -548,7 +548,7 @@ export default function ProposalGenerator() {
                       <p className="text-slate-300 text-sm">Honorário Total: <strong className="text-cyan-400">{fee}</strong> da remuneração | Garantia de Reposição: <strong className="text-cyan-400">{garantia}</strong></p>
                     </div>
                   </div>
-                )}
+                }
               </div>
             </div>
 
@@ -570,6 +570,6 @@ export default function ProposalGenerator() {
           </div>
         </div>
       </div>
-    </div>
-  );
+    </div>);
+
 }
