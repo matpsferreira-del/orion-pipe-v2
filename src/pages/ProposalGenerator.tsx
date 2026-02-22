@@ -119,7 +119,7 @@ export default function ProposalGenerator() {
   };
 
   const handleExportPDF = async () => {
-    const slides = document.querySelectorAll('.proposal-slide');
+    const slides = document.querySelectorAll('.proposal-slide') as NodeListOf<HTMLElement>;
     if (slides.length === 0) return;
 
     setIsExporting(true);
@@ -133,29 +133,29 @@ export default function ProposalGenerator() {
       });
 
       for (let i = 0; i < slides.length; i++) {
-        const slide = slides[i] as HTMLElement;
+        const slide = slides[i];
 
-        // Clone slide off-screen at full resolution
-        const clone = slide.cloneNode(true) as HTMLElement;
-        clone.style.transform = 'none';
-        clone.style.position = 'absolute';
-        clone.style.left = '-9999px';
-        clone.style.top = '0';
-        clone.style.width = '1280px';
-        clone.style.height = '720px';
-        clone.style.borderRadius = '0';
-        clone.style.boxShadow = 'none';
-        clone.style.border = 'none';
-        document.body.appendChild(clone);
+        // Save original styles
+        const origBorderRadius = slide.style.borderRadius;
+        const origBoxShadow = slide.style.boxShadow;
+        const origBorder = slide.style.border;
 
-        const dataUrl = await toPng(clone, {
+        // Temporarily remove decorative styles for clean capture
+        slide.style.borderRadius = '0';
+        slide.style.boxShadow = 'none';
+        slide.style.border = 'none';
+
+        const dataUrl = await toPng(slide, {
           width: 1280,
           height: 720,
           pixelRatio: 2,
           backgroundColor: '#0f172a',
         });
 
-        document.body.removeChild(clone);
+        // Restore original styles
+        slide.style.borderRadius = origBorderRadius;
+        slide.style.boxShadow = origBoxShadow;
+        slide.style.border = origBorder;
 
         if (i > 0) pdf.addPage([1280, 720], 'landscape');
         pdf.addImage(dataUrl, 'PNG', 0, 0, 1280, 720);
@@ -190,11 +190,6 @@ export default function ProposalGenerator() {
           display: flex; flex-direction: column; justify-content: center; overflow: hidden; padding: 60px;
           position: relative; width: 1280px !important; height: 720px !important; flex: 0 0 720px !important;
           box-sizing: border-box; border: 1px solid #1e293b;
-        }
-        .proposal-slide::before {
-          content: ''; position: absolute; inset: 0;
-          background-image: linear-gradient(to right, rgba(6,182,212,0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(6,182,212,0.05) 1px, transparent 1px);
-          background-size: 40px 40px; z-index: 0; pointer-events: none;
         }
         .proposal-slide > * { position: relative; z-index: 1; }
         .highlight-numbers-layout > div:first-child { flex: 0 0 40%; text-align: center; }
@@ -323,6 +318,7 @@ export default function ProposalGenerator() {
 
             {/* Slide 1 — Cover (matches standard) */}
             <div className="proposal-slide" style={{ justifyContent: 'center', alignItems: 'center', textAlign: 'center' as const }}>
+              <div style={{ position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(to right, rgba(6,182,212,0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(6,182,212,0.05) 1px, transparent 1px)', backgroundSize: '40px 40px', zIndex: 0, pointerEvents: 'none' as const }} />
               <div style={{ position: 'absolute', top: 80, right: 80, width: 200, height: 200, background: 'radial-gradient(circle, rgba(6,182,212,0.15) 0%, transparent 70%)', borderRadius: '50%' }} />
               <div style={{ position: 'absolute', bottom: 60, left: 60, width: 300, height: 300, background: 'radial-gradient(circle, rgba(99,102,241,0.1) 0%, transparent 70%)', borderRadius: '50%' }} />
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" style={{ width: 80, height: 80, color: '#06b6d4' }}>
@@ -338,10 +334,17 @@ export default function ProposalGenerator() {
                 <span style={{ color: '#06b6d4' }}>Recruitment</span>
               </p>
               <p className="text-slate-500 text-lg mt-4">Seu sucesso é o nosso sucesso.</p>
+              {empresa && (
+                <div style={{ marginTop: '32px' }}>
+                  <p style={{ color: '#94a3b8', fontSize: '16px', letterSpacing: '0.05em' }}>Proposta Comercial Exclusiva para:</p>
+                  <p style={{ color: '#06b6d4', fontSize: '28px', fontWeight: 700, marginTop: '8px' }}>{empresa}</p>
+                </div>
+              )}
             </div>
 
             {/* Slide 2 — Compromisso */}
             <div className="proposal-slide">
+              <div style={{ position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(to right, rgba(6,182,212,0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(6,182,212,0.05) 1px, transparent 1px)', backgroundSize: '40px 40px', zIndex: 0, pointerEvents: 'none' as const }} />
               <h2 style={{ fontSize: '36px', fontWeight: 800, marginBottom: '40px' }}>
                 <span style={{ color: '#ffffff' }}>Nosso </span>
                 <span style={{ color: '#06b6d4' }}>Compromisso</span>
@@ -362,6 +365,7 @@ export default function ProposalGenerator() {
 
             {/* Slide 3 — Especialidades */}
             <div className="proposal-slide">
+              <div style={{ position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(to right, rgba(6,182,212,0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(6,182,212,0.05) 1px, transparent 1px)', backgroundSize: '40px 40px', zIndex: 0, pointerEvents: 'none' as const }} />
               <h2 style={{ fontSize: '36px', fontWeight: 800, color: '#ffffff', marginBottom: '32px' }}>Especialistas, não Generalistas.</h2>
               <div className="flex-1 flex items-center">
                 <div className="grid grid-cols-5 gap-4 w-full">
@@ -386,6 +390,7 @@ export default function ProposalGenerator() {
 
             {/* Slide 4 — Investimento */}
             <div className="proposal-slide">
+              <div style={{ position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(to right, rgba(6,182,212,0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(6,182,212,0.05) 1px, transparent 1px)', backgroundSize: '40px 40px', zIndex: 0, pointerEvents: 'none' as const }} />
               <h2 style={{ fontSize: '36px', fontWeight: 800, marginBottom: '32px' }}>
                 <span style={{ color: '#ffffff' }}>Modelo de </span>
                 <span style={{ color: '#06b6d4' }}>Investimento</span>
@@ -438,6 +443,7 @@ export default function ProposalGenerator() {
 
             {/* Slide 5 — CTA */}
             <div className="proposal-slide" style={{ justifyContent: 'center', alignItems: 'center', textAlign: 'center' as const }}>
+              <div style={{ position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(to right, rgba(6,182,212,0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(6,182,212,0.05) 1px, transparent 1px)', backgroundSize: '40px 40px', zIndex: 0, pointerEvents: 'none' as const }} />
               <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 500, height: 500, background: 'radial-gradient(circle, rgba(6,182,212,0.08) 0%, transparent 70%)', borderRadius: '50%' }} />
               <h2 style={{ fontSize: '56px', fontWeight: 800, lineHeight: 1.2 }}>
                 <span style={{ color: '#ffffff' }}>Vamos </span>
