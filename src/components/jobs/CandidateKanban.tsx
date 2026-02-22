@@ -186,13 +186,19 @@ function CandidateCard({ application, onClick }: CandidateCardProps) {
 
       <div className="flex items-center gap-2 mt-2">
         {party?.email_raw && (
-          <Mail className="h-3 w-3 text-muted-foreground" />
+          <a href={`mailto:${party.email_raw}`} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-muted-foreground hover:text-primary transition-colors">
+            <Mail className="h-3 w-3" />
+          </a>
         )}
         {party?.phone_raw && (
-          <Phone className="h-3 w-3 text-muted-foreground" />
+          <a href={`https://wa.me/${(party.phone_raw || '').replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-muted-foreground hover:text-green-500 transition-colors">
+            <Phone className="h-3 w-3" />
+          </a>
         )}
         {party?.linkedin_url && (
-          <Linkedin className="h-3 w-3 text-muted-foreground" />
+          <a href={party.linkedin_url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-muted-foreground hover:text-blue-500 transition-colors">
+            <Linkedin className="h-3 w-3" />
+          </a>
         )}
         
         <div className="flex-1" />
