@@ -392,40 +392,53 @@ export default function ProposalGenerator() {
               <div style={{ position: 'absolute', bottom: 60, left: 60, width: 300, height: 300, background: 'radial-gradient(circle, rgba(99,102,241,0.1) 0%, transparent 70%)', borderRadius: '50%' }} />
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" style={{ width: 90, height: 90 }}>
                 {/* Outer circle */}
-                <circle cx="100" cy="100" r="90" fill="none" stroke="#22d3ee" strokeWidth="2.5" />
-                {/* Inner ellipse */}
-                <ellipse cx="100" cy="100" rx="36" ry="58" fill="none" stroke="#22d3ee" strokeWidth="2" />
-                {/* Diagonal lines connecting outer circle to inner ellipse — upper left facets */}
-                <line x1="14" y1="72" x2="64" y2="42" stroke="#22d3ee" strokeWidth="1.5" />
-                <line x1="28" y1="38" x2="78" y2="48" stroke="#22d3ee" strokeWidth="1.5" />
-                <line x1="64" y1="42" x2="100" y2="42" stroke="#22d3ee" strokeWidth="1.5" />
-                {/* Upper right facets */}
-                <line x1="186" y1="72" x2="136" y2="42" stroke="#22d3ee" strokeWidth="1.5" />
-                <line x1="172" y1="38" x2="122" y2="48" stroke="#22d3ee" strokeWidth="1.5" />
-                <line x1="136" y1="42" x2="100" y2="42" stroke="#22d3ee" strokeWidth="1.5" />
-                {/* Lower left facets */}
-                <line x1="14" y1="128" x2="64" y2="158" stroke="#22d3ee" strokeWidth="1.5" />
-                <line x1="28" y1="162" x2="78" y2="152" stroke="#22d3ee" strokeWidth="1.5" />
-                <line x1="64" y1="158" x2="100" y2="158" stroke="#22d3ee" strokeWidth="1.5" />
-                {/* Lower right facets */}
-                <line x1="186" y1="128" x2="136" y2="158" stroke="#22d3ee" strokeWidth="1.5" />
-                <line x1="172" y1="162" x2="122" y2="152" stroke="#22d3ee" strokeWidth="1.5" />
-                <line x1="136" y1="158" x2="100" y2="158" stroke="#22d3ee" strokeWidth="1.5" />
-                {/* Cross diagonal lines */}
-                <line x1="64" y1="42" x2="136" y2="158" stroke="#22d3ee" strokeWidth="1.2" opacity="0.5" />
-                <line x1="136" y1="42" x2="64" y2="158" stroke="#22d3ee" strokeWidth="1.2" opacity="0.5" />
-                {/* Dots at key intersections on outer circle */}
-                <circle cx="14" cy="72" r="3.5" fill="#22d3ee" />
-                <circle cx="28" cy="38" r="3" fill="#22d3ee" />
-                <circle cx="186" cy="72" r="3.5" fill="#22d3ee" />
-                <circle cx="172" cy="38" r="3" fill="#22d3ee" />
-                <circle cx="14" cy="128" r="3.5" fill="#22d3ee" />
-                <circle cx="28" cy="162" r="3" fill="#22d3ee" />
-                <circle cx="186" cy="128" r="3.5" fill="#22d3ee" />
-                <circle cx="172" cy="162" r="3" fill="#22d3ee" />
-                {/* Top and bottom dots */}
-                <circle cx="100" cy="10" r="3" fill="#22d3ee" />
-                <circle cx="100" cy="190" r="3" fill="#22d3ee" />
+                <circle cx="100" cy="100" r="92" fill="none" stroke="#22d3ee" strokeWidth="3" />
+                {/* Inner ellipse (vertical oval) */}
+                <ellipse cx="100" cy="100" rx="38" ry="60" fill="none" stroke="#22d3ee" strokeWidth="3" />
+
+                {/* === Geometric facet lines connecting circle to ellipse === */}
+                {/* Top vertex to upper-left and upper-right */}
+                <line x1="100" y1="8" x2="62" y2="40" stroke="#22d3ee" strokeWidth="2.2" />
+                <line x1="100" y1="8" x2="138" y2="40" stroke="#22d3ee" strokeWidth="2.2" />
+                {/* Upper-left region */}
+                <line x1="62" y1="40" x2="10" y2="68" stroke="#22d3ee" strokeWidth="2.2" />
+                <line x1="62" y1="40" x2="18" y2="130" stroke="#22d3ee" strokeWidth="2.2" />
+                <line x1="10" y1="68" x2="64" y2="82" stroke="#22d3ee" strokeWidth="2.2" />
+                <line x1="10" y1="68" x2="18" y2="130" stroke="#22d3ee" strokeWidth="2.2" />
+                {/* Upper-right region */}
+                <line x1="138" y1="40" x2="190" y2="68" stroke="#22d3ee" strokeWidth="2.2" />
+                <line x1="138" y1="40" x2="182" y2="130" stroke="#22d3ee" strokeWidth="2.2" />
+                <line x1="190" y1="68" x2="136" y2="82" stroke="#22d3ee" strokeWidth="2.2" />
+                <line x1="190" y1="68" x2="182" y2="130" stroke="#22d3ee" strokeWidth="2.2" />
+                {/* Left side to bottom */}
+                <line x1="18" y1="130" x2="62" y2="160" stroke="#22d3ee" strokeWidth="2.2" />
+                <line x1="64" y1="118" x2="18" y2="130" stroke="#22d3ee" strokeWidth="2.2" />
+                {/* Right side to bottom */}
+                <line x1="182" y1="130" x2="138" y2="160" stroke="#22d3ee" strokeWidth="2.2" />
+                <line x1="136" y1="118" x2="182" y2="130" stroke="#22d3ee" strokeWidth="2.2" />
+                {/* Bottom vertex */}
+                <line x1="62" y1="160" x2="100" y2="192" stroke="#22d3ee" strokeWidth="2.2" />
+                <line x1="138" y1="160" x2="100" y2="192" stroke="#22d3ee" strokeWidth="2.2" />
+                {/* Cross braces */}
+                <line x1="62" y1="40" x2="138" y2="160" stroke="#22d3ee" strokeWidth="1.8" />
+                <line x1="138" y1="40" x2="62" y2="160" stroke="#22d3ee" strokeWidth="1.8" />
+                {/* Horizontal mid connectors */}
+                <line x1="64" y1="82" x2="62" y2="40" stroke="#22d3ee" strokeWidth="1.5" />
+                <line x1="136" y1="82" x2="138" y2="40" stroke="#22d3ee" strokeWidth="1.5" />
+                <line x1="64" y1="118" x2="62" y2="160" stroke="#22d3ee" strokeWidth="1.5" />
+                <line x1="136" y1="118" x2="138" y2="160" stroke="#22d3ee" strokeWidth="1.5" />
+
+                {/* === Dots at intersection points === */}
+                <circle cx="100" cy="8" r="5" fill="#22d3ee" />
+                <circle cx="62" cy="40" r="5" fill="#22d3ee" />
+                <circle cx="138" cy="40" r="5" fill="#22d3ee" />
+                <circle cx="10" cy="68" r="5" fill="#22d3ee" />
+                <circle cx="190" cy="68" r="5" fill="#22d3ee" />
+                <circle cx="18" cy="130" r="5" fill="#22d3ee" />
+                <circle cx="182" cy="130" r="5" fill="#22d3ee" />
+                <circle cx="62" cy="160" r="5" fill="#22d3ee" />
+                <circle cx="138" cy="160" r="5" fill="#22d3ee" />
+                <circle cx="100" cy="192" r="5" fill="#22d3ee" />
               </svg>
               <p style={{ fontSize: '48px', fontWeight: 800, marginTop: '24px', lineHeight: 1.2 }}>
                 <span style={{ color: '#ffffff' }}>ORION </span>
