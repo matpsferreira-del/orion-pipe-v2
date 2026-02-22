@@ -565,6 +565,15 @@ export type Database = {
           observacoes: string | null
           origem_lead: string
           probabilidade: number
+          proposal_exclusivity: string | null
+          proposal_fee: string | null
+          proposal_fee_p1: string | null
+          proposal_fee_p2: string | null
+          proposal_fee_p3: string | null
+          proposal_guarantee: string | null
+          proposal_payment_model: string | null
+          proposal_retainer_type: string | null
+          proposal_sla: string | null
           responsavel_id: string
           spin_implicacao_impacto: string | null
           spin_implicacao_perda: string | null
@@ -588,6 +597,15 @@ export type Database = {
           observacoes?: string | null
           origem_lead?: string
           probabilidade?: number
+          proposal_exclusivity?: string | null
+          proposal_fee?: string | null
+          proposal_fee_p1?: string | null
+          proposal_fee_p2?: string | null
+          proposal_fee_p3?: string | null
+          proposal_guarantee?: string | null
+          proposal_payment_model?: string | null
+          proposal_retainer_type?: string | null
+          proposal_sla?: string | null
           responsavel_id: string
           spin_implicacao_impacto?: string | null
           spin_implicacao_perda?: string | null
@@ -611,6 +629,15 @@ export type Database = {
           observacoes?: string | null
           origem_lead?: string
           probabilidade?: number
+          proposal_exclusivity?: string | null
+          proposal_fee?: string | null
+          proposal_fee_p1?: string | null
+          proposal_fee_p2?: string | null
+          proposal_fee_p3?: string | null
+          proposal_guarantee?: string | null
+          proposal_payment_model?: string | null
+          proposal_retainer_type?: string | null
+          proposal_sla?: string | null
           responsavel_id?: string
           spin_implicacao_impacto?: string | null
           spin_implicacao_perda?: string | null
