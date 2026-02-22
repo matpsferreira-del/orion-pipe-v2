@@ -393,28 +393,54 @@ export default function ProposalGenerator() {
               
                <svg width="90" height="90" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
                  {/* Outer circle */}
-                 <circle cx="50" cy="50" r="46" stroke="#22d3ee" strokeWidth="1.5" />
+                 <circle cx="50" cy="50" r="46" stroke="#22d3ee" strokeWidth="2.5" />
                  {/* Inner oval */}
-                 <ellipse cx="50" cy="50" rx="22" ry="36" stroke="#22d3ee" strokeWidth="1.5" />
-                 {/* Diagonal lines - top-left to bottom-right */}
-                 <line x1="12" y1="18" x2="88" y2="82" stroke="#22d3ee" strokeWidth="1.2" />
-                 <line x1="18" y1="8" x2="82" y2="92" stroke="#22d3ee" strokeWidth="1.2" />
-                 {/* Diagonal lines - top-right to bottom-left */}
-                 <line x1="88" y1="18" x2="12" y2="82" stroke="#22d3ee" strokeWidth="1.2" />
-                 <line x1="82" y1="8" x2="18" y2="92" stroke="#22d3ee" strokeWidth="1.2" />
-                 {/* Dots at intersections */}
-                 <circle cx="50" cy="4" r="2.5" fill="#22d3ee" />
-                 <circle cx="50" cy="96" r="2.5" fill="#22d3ee" />
-                 <circle cx="4" cy="50" r="2.5" fill="#22d3ee" />
-                 <circle cx="96" cy="50" r="2.5" fill="#22d3ee" />
-                 <circle cx="20" cy="20" r="2" fill="#22d3ee" />
-                 <circle cx="80" cy="20" r="2" fill="#22d3ee" />
-                 <circle cx="20" cy="80" r="2" fill="#22d3ee" />
-                 <circle cx="80" cy="80" r="2" fill="#22d3ee" />
-                 <circle cx="50" cy="14" r="2" fill="#22d3ee" />
-                 <circle cx="50" cy="86" r="2" fill="#22d3ee" />
-                 <circle cx="28" cy="50" r="2" fill="#22d3ee" />
-                 <circle cx="72" cy="50" r="2" fill="#22d3ee" />
+                 <ellipse cx="50" cy="50" rx="20" ry="34" stroke="#22d3ee" strokeWidth="2.5" />
+                 
+                 {/* Facet lines - upper crown (top of diamond) */}
+                 {/* Top center to upper-left oval */}
+                 <line x1="50" y1="4" x2="33" y2="20" stroke="#22d3ee" strokeWidth="1.5" />
+                 <line x1="50" y1="4" x2="67" y2="20" stroke="#22d3ee" strokeWidth="1.5" />
+                 {/* Upper-left connections */}
+                 <line x1="15" y1="15" x2="33" y2="20" stroke="#22d3ee" strokeWidth="1.5" />
+                 <line x1="15" y1="15" x2="30" y2="50" stroke="#22d3ee" strokeWidth="1.5" />
+                 <line x1="33" y1="20" x2="30" y2="50" stroke="#22d3ee" strokeWidth="1.5" />
+                 {/* Upper-right connections */}
+                 <line x1="85" y1="15" x2="67" y2="20" stroke="#22d3ee" strokeWidth="1.5" />
+                 <line x1="85" y1="15" x2="70" y2="50" stroke="#22d3ee" strokeWidth="1.5" />
+                 <line x1="67" y1="20" x2="70" y2="50" stroke="#22d3ee" strokeWidth="1.5" />
+                 {/* Left side */}
+                 <line x1="4" y1="50" x2="30" y2="50" stroke="#22d3ee" strokeWidth="1.5" />
+                 <line x1="15" y1="15" x2="4" y2="50" stroke="#22d3ee" strokeWidth="1.5" />
+                 <line x1="15" y1="85" x2="4" y2="50" stroke="#22d3ee" strokeWidth="1.5" />
+                 {/* Right side */}
+                 <line x1="96" y1="50" x2="70" y2="50" stroke="#22d3ee" strokeWidth="1.5" />
+                 <line x1="85" y1="15" x2="96" y2="50" stroke="#22d3ee" strokeWidth="1.5" />
+                 <line x1="85" y1="85" x2="96" y2="50" stroke="#22d3ee" strokeWidth="1.5" />
+                 
+                 {/* Facet lines - lower crown (bottom of diamond) */}
+                 <line x1="50" y1="96" x2="33" y2="80" stroke="#22d3ee" strokeWidth="1.5" />
+                 <line x1="50" y1="96" x2="67" y2="80" stroke="#22d3ee" strokeWidth="1.5" />
+                 <line x1="15" y1="85" x2="33" y2="80" stroke="#22d3ee" strokeWidth="1.5" />
+                 <line x1="15" y1="85" x2="30" y2="50" stroke="#22d3ee" strokeWidth="1.5" />
+                 <line x1="33" y1="80" x2="30" y2="50" stroke="#22d3ee" strokeWidth="1.5" />
+                 <line x1="85" y1="85" x2="67" y2="80" stroke="#22d3ee" strokeWidth="1.5" />
+                 <line x1="85" y1="85" x2="70" y2="50" stroke="#22d3ee" strokeWidth="1.5" />
+                 <line x1="67" y1="80" x2="70" y2="50" stroke="#22d3ee" strokeWidth="1.5" />
+                 
+                 {/* Dots at circle intersections */}
+                 <circle cx="50" cy="4" r="3" fill="#22d3ee" />
+                 <circle cx="50" cy="96" r="3" fill="#22d3ee" />
+                 <circle cx="4" cy="50" r="3" fill="#22d3ee" />
+                 <circle cx="96" cy="50" r="3" fill="#22d3ee" />
+                 <circle cx="15" cy="15" r="2.5" fill="#22d3ee" />
+                 <circle cx="85" cy="15" r="2.5" fill="#22d3ee" />
+                 <circle cx="15" cy="85" r="2.5" fill="#22d3ee" />
+                 <circle cx="85" cy="85" r="2.5" fill="#22d3ee" />
+                 <circle cx="33" cy="20" r="2" fill="#22d3ee" />
+                 <circle cx="67" cy="20" r="2" fill="#22d3ee" />
+                 <circle cx="33" cy="80" r="2" fill="#22d3ee" />
+                 <circle cx="67" cy="80" r="2" fill="#22d3ee" />
                </svg>
               <p style={{ fontSize: '48px', fontWeight: 800, marginTop: '24px', lineHeight: 1.2 }}>
                 <span style={{ color: '#ffffff' }}>ORION </span>
