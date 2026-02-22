@@ -1,23 +1,46 @@
 
 
-## Tornar icones de LinkedIn e Telefone clicaveis nos cards de candidatos do Kanban
+## Adicionar politicas RLS para acesso anonimo
 
-### Problema
-Nos cards de candidatos no quadro Kanban (pagina de Vagas), os icones de LinkedIn, Telefone e Email sao apenas indicadores visuais estaticos. O usuario quer que sejam clicaveis diretamente no card, sem precisar abrir o detalhe do candidato. O icone do telefone deve abrir o WhatsApp Web.
+### O que sera feito
+Adicionar 4 novas politicas RLS para permitir integracao com o outro projeto:
 
-### Solucao
-Transformar os icones de Phone e LinkedIn em links clicaveis (`<a>`) com `e.stopPropagation()` para nao disparar o onClick do card.
+1. **Allow anon insert on `companies`** - INSERT sem restricao
+2. **Allow anon insert on `contacts`** - INSERT sem restricao
+3. **Allow anon insert on `opportunities`** - INSERT sem restricao
+4. **Allow anon read on `profiles`** - SELECT sem restricao
 
-- **LinkedIn**: abre `party.linkedin_url` em nova aba
-- **Telefone**: abre `https://wa.me/{numero}` (WhatsApp Web), limpando caracteres nao numericos do telefone (usa `phone_e164` se disponivel, senao `phone_raw`)
-- Ao passar o mouse, os icones mudam de cor (hover) para indicar que sao clicaveis
+### Observacao importante sobre nomes das tabelas
+As tabelas no banco de dados usam nomes em ingles (`companies`, `contacts`, `opportunities`, `profiles`), nao em portugues. Os comandos SQL serao ajustados para os nomes corretos.
+
+### Alerta de seguranca
+Essas politicas permitem que **qualquer pessoa** (sem autenticacao) insira dados nessas tabelas e leia todos os perfis. Isso e aceitavel para integracao entre projetos, mas e importante estar ciente do risco. Se no futuro quiser restringir, podemos adicionar validacao por token ou API key.
 
 ### Detalhes tecnicos
-- **Arquivo**: `src/components/jobs/CandidateKanban.tsx`
-- **Linhas 188-196**: Substituir os `<Mail>`, `<Phone>` e `<Linkedin>` simples por elementos `<a>` com:
-  - `href` apropriado para cada tipo
-  - `target="_blank"` e `rel="noopener noreferrer"` para links externos
-  - `onClick={(e) => e.stopPropagation()}` para evitar abrir o detalhe do candidato
-  - Classes de hover: `hover:text-green-500` (WhatsApp), `hover:text-blue-500` (LinkedIn)
-- Para o WhatsApp, formatar o numero removendo tudo que nao e digito: `phone_e164?.replace(/\D/g, '') || phone_raw?.replace(/\D/g, '')`
-- O icone de Email permanece apenas visual (sem link clicavel), ou opcionalmente abre `mailto:`
+
+Migration SQL a ser executada:
+
+```sql
+-- Allow anonymous inserts on companies
+CREATE POLICY "Allow anon insert companies"
+  ON public.companies FOR INSERT
+  WITH CHECK (true);
+
+-- Allow anonymous inserts on contacts
+CREATE POLICY "Allow anon insert contacts"
+  ON public.contacts FOR INSERT
+  WITH CHECK (true);
+
+-- Allow anonymous inserts on opportunities
+CREATE POLICY "Allow anon insert opportunities"
+  ON public.opportunities FOR INSERT
+  WITH CHECK (true);
+
+-- Allow anonymous read on profiles
+CREATE POLICY "Allow anon read profiles"
+  ON public.profiles FOR SELECT
+  USING (true);
+```
+
+Nenhuma alteracao de codigo frontend sera necessaria.
+
