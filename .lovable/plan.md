@@ -1,20 +1,19 @@
 
 
-## Atualizar Logo da Orion na Capa da Proposta
+## Remover fundo da logo Orion na capa da proposta
 
-### O que sera feito
-Substituir o SVG atual da logo (que e um diamante/gem simples) pelo design correto da Orion: um circulo externo com uma elipse/oval interna, conectados por linhas geometricas diagonais formando um padrao de constelacao, com pontos (circulos) nas intersecoes. Tudo na cor cyan claro `#22d3ee` (mais claro que o `#06b6d4` atual, seguindo a paleta da marca).
+### Problema
+A imagem `orion-logo.png` possui um fundo solido (branco ou colorido) que nao combina com o fundo escuro do slide (`#020617`). Precisamos que a logo apareca sem fundo, integrada ao slide.
 
-### Alteracao
+### Solucao
+Substituir a tag `<img>` por um SVG inline que reproduz fielmente o design da logo Orion (da imagem fornecida pelo usuario: circulo externo, oval interna, linhas geometricas diagonais e pontos nas intersecoes). O SVG tera fundo transparente por natureza, entao a logo vai se integrar perfeitamente ao fundo escuro do slide.
 
-**Arquivo: `src/pages/ProposalGenerator.tsx` (linhas 393-415)**
+A cor sera `#22d3ee` (cyan claro da paleta da marca), consistente com o que foi definido anteriormente.
 
-Substituir o SVG atual por um novo SVG que reproduz fielmente o design da imagem:
-- Circulo externo grande
-- Elipse/oval interna centralizada
-- Linhas geometricas diagonais conectando o circulo externo a elipse interna, formando facetas tipo diamante/constelacao
-- Pontos (circulos pequenos) nas intersecoes das linhas com o circulo externo
-- Cor: `#22d3ee` (cyan mais claro da paleta)
-- Sem fundo (transparente)
+### Detalhes tecnicos
+- **Arquivo**: `src/pages/ProposalGenerator.tsx`, linha 394
+- Substituir `<img src={orionLogo} .../>` por um `<svg>` inline com o design correto da logo
+- O SVG tera `fill="none"` e `stroke="#22d3ee"` para garantir fundo transparente
+- Manter as mesmas dimensoes (90x90)
+- Nenhuma outra alteracao no componente
 
-Nenhuma outra alteracao sera feita no componente.
