@@ -388,7 +388,7 @@ export default function ProposalGenerator() {
             {/* Slide 1 — Cover (matches standard) */}
             <div className="proposal-slide" style={{ justifyContent: 'center', alignItems: 'center', textAlign: 'center' as const }}>
               <div style={{ position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(to right, rgba(6,182,212,0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(6,182,212,0.05) 1px, transparent 1px)', backgroundSize: '40px 40px', zIndex: 0, pointerEvents: 'none' as const }} />
-              <div style={{ position: 'absolute', top: 80, right: 80, width: 200, height: 200, background: 'radial-gradient(circle, rgba(6,182,212,0.15) 0%, transparent 70%)', borderRadius: '50%' }} />
+              
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" style={{ width: 90, height: 90 }}>
                 {/* Outer circle */}
