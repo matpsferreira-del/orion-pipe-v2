@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Printer, ArrowLeft, Loader2, Save } from 'lucide-react';
+import { Printer, ArrowLeft, Loader2, Save, Download } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useCompanies } from '@/hooks/useCompanies';
 import { toast } from 'sonner';
+import { toPng } from 'html-to-image';
+import { jsPDF } from 'jspdf';
 
 export default function ProposalGenerator() {
   const { id } = useParams<{ id: string }>();
@@ -38,8 +40,8 @@ export default function ProposalGenerator() {
   const [feeP1, setFeeP1] = useState('30%');
   const [feeP2, setFeeP2] = useState('30%');
   const [feeP3, setFeeP3] = useState('40%');
+  const [isExporting, setIsExporting] = useState(false);
 
-  // Populate from DB
   useEffect(() => {
     if (!opportunity) return;
     setEmpresa(company?.nome_fantasia || '');
@@ -113,6 +115,62 @@ export default function ProposalGenerator() {
       setFeeP1('30%');
       setFeeP2('30%');
       setFeeP3('40%');
+    }
+  };
+
+  const handleExportPDF = async () => {
+    const slides = document.querySelectorAll('.proposal-slide');
+    if (slides.length === 0) return;
+
+    setIsExporting(true);
+    toast.info('Gerando PDF...');
+
+    try {
+      const pdf = new jsPDF({
+        orientation: 'landscape',
+        unit: 'px',
+        format: [1280, 720],
+      });
+
+      for (let i = 0; i < slides.length; i++) {
+        const slide = slides[i] as HTMLElement;
+
+        // Clone slide off-screen at full resolution
+        const clone = slide.cloneNode(true) as HTMLElement;
+        clone.style.transform = 'none';
+        clone.style.position = 'absolute';
+        clone.style.left = '-9999px';
+        clone.style.top = '0';
+        clone.style.width = '1280px';
+        clone.style.height = '720px';
+        clone.style.borderRadius = '0';
+        clone.style.boxShadow = 'none';
+        clone.style.border = 'none';
+        document.body.appendChild(clone);
+
+        const dataUrl = await toPng(clone, {
+          width: 1280,
+          height: 720,
+          pixelRatio: 2,
+          backgroundColor: '#0f172a',
+        });
+
+        document.body.removeChild(clone);
+
+        if (i > 0) pdf.addPage([1280, 720], 'landscape');
+        pdf.addImage(dataUrl, 'PNG', 0, 0, 1280, 720);
+      }
+
+      const filename = empresa
+        ? `Orion_Recruitment_-_Proposta_${empresa.replace(/\s+/g, '_')}.pdf`
+        : 'Orion_Recruitment_-_Proposta_Comercial.pdf';
+      pdf.save(filename);
+      toast.success('PDF exportado com sucesso!');
+    } catch (err) {
+      console.error('PDF export error:', err);
+      toast.error('Erro ao gerar PDF. Tente novamente.');
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -244,9 +302,16 @@ export default function ProposalGenerator() {
             <Save className="h-4 w-4" />
             {saveMutation.isPending ? 'Salvando...' : 'Salvar Padrões'}
           </button>
-          <button onClick={() => window.print()} className="w-full bg-cyan-500 hover:bg-cyan-400 text-slate-900 font-bold py-4 rounded-lg transition-all shadow-lg flex justify-center items-center gap-2 text-lg">
-            <Printer className="h-5 w-5" />
-            Exportar Proposta (PDF)
+          <button
+            onClick={handleExportPDF}
+            disabled={isExporting}
+            className="w-full bg-cyan-500 hover:bg-cyan-400 text-slate-900 font-bold py-4 rounded-lg transition-all shadow-lg flex justify-center items-center gap-2 text-lg disabled:opacity-50"
+          >
+            {isExporting ? (
+              <><Loader2 className="h-5 w-5 animate-spin" /> Gerando PDF...</>
+            ) : (
+              <><Download className="h-5 w-5" /> Exportar Proposta (PDF)</>
+            )}
           </button>
         </div>
       </div>
@@ -256,7 +321,7 @@ export default function ProposalGenerator() {
         <div id="proposal-scale-container" ref={containerRef} className="origin-top-left">
           <div id="proposal-scale-wrapper" ref={wrapperRef} className="flex flex-col gap-8 origin-top-left" style={{ width: 1280 }}>
 
-            {/* Slide 1 — Cover */}
+            {/* Slide 1 — Cover (matches standard) */}
             <div className="proposal-slide" style={{ justifyContent: 'center', alignItems: 'center', textAlign: 'center' as const }}>
               <div style={{ position: 'absolute', top: 80, right: 80, width: 200, height: 200, background: 'radial-gradient(circle, rgba(6,182,212,0.15) 0%, transparent 70%)', borderRadius: '50%' }} />
               <div style={{ position: 'absolute', bottom: 60, left: 60, width: 300, height: 300, background: 'radial-gradient(circle, rgba(99,102,241,0.1) 0%, transparent 70%)', borderRadius: '50%' }} />
@@ -268,25 +333,28 @@ export default function ProposalGenerator() {
                 <circle cx="50" cy="96" r="3" fill="currentColor" /><circle cx="18" cy="83" r="3" fill="currentColor" />
                 <circle cx="4" cy="50" r="3" fill="currentColor" /><circle cx="18" cy="17" r="3" fill="currentColor" />
               </svg>
-              <p className="text-cyan-400 text-lg tracking-[0.3em] mt-6 font-semibold">ORION Recruitment</p>
-              <p className="text-slate-500 text-sm mt-2">Seu sucesso é o nosso sucesso.</p>
-              <div className="w-16 h-px bg-cyan-800 mx-auto my-8" />
-              <p className="text-slate-400 text-base">Proposta Comercial Exclusiva para:</p>
-              <p className="text-4xl font-bold text-white mt-2">{empresa}</p>
+              <p style={{ fontSize: '48px', fontWeight: 800, marginTop: '24px', lineHeight: 1.2 }}>
+                <span style={{ color: '#ffffff' }}>ORION </span>
+                <span style={{ color: '#06b6d4' }}>Recruitment</span>
+              </p>
+              <p className="text-slate-500 text-lg mt-4">Seu sucesso é o nosso sucesso.</p>
             </div>
 
             {/* Slide 2 — Compromisso */}
             <div className="proposal-slide">
-              <h2 className="text-3xl font-bold text-white mb-10">Nosso Compromisso</h2>
+              <h2 style={{ fontSize: '36px', fontWeight: 800, marginBottom: '40px' }}>
+                <span style={{ color: '#ffffff' }}>Nosso </span>
+                <span style={{ color: '#06b6d4' }}>Compromisso</span>
+              </h2>
               <div className="flex-1 flex items-center">
                 <div className="grid grid-cols-2 gap-8 w-full">
                   <div className="bg-slate-800/50 p-8 rounded-xl border border-slate-700/50">
-                    <p className="text-xl font-bold text-cyan-400 mb-3">◆ Atenção Exclusiva</p>
-                    <p className="text-slate-300 leading-relaxed">Nós trabalhamos <strong className="text-cyan-300">{exclusividade}</strong>. Isso garante que nossos consultores especialistas dediquem 100% de seu foco, rede de contatos e inteligência artificial para mapear os melhores talentos.</p>
+                    <p className="text-xl font-bold text-cyan-400 mb-3">💎 Atenção Exclusiva</p>
+                    <p className="text-slate-300 leading-relaxed">Nós trabalhamos <strong className="text-cyan-300">{exclusividade}</strong>. Isso garante que nossos consultores especialistas dediquem 100% de seu foco, rede de contatos e inteligência artificial para mapear os melhores talentos do mercado para o seu desafio específico.</p>
                   </div>
                   <div className="bg-slate-800/50 p-8 rounded-xl border border-slate-700/50">
                     <p className="text-xl font-bold text-cyan-400 mb-3">⏱ Velocidade (SLA)</p>
-                    <p className="text-slate-300 leading-relaxed">O mercado não espera. Nosso Acordo de Nível de Serviço (SLA) garante a entrega e apresentação dos primeiros candidatos hiper-qualificados em um prazo de <strong className="text-cyan-300">{sla}</strong>.</p>
+                    <p className="text-slate-300 leading-relaxed">O mercado não espera. Nosso Acordo de Nível de Serviço (SLA) garante a entrega e apresentação dos primeiros candidatos hiper-qualificados, já validados tanto tecnicamente quanto culturalmente, em um prazo de <strong className="text-cyan-300">{sla}</strong>.</p>
                   </div>
                 </div>
               </div>
@@ -294,7 +362,7 @@ export default function ProposalGenerator() {
 
             {/* Slide 3 — Especialidades */}
             <div className="proposal-slide">
-              <h2 className="text-3xl font-bold text-white mb-8">Especialistas, não Generalistas.</h2>
+              <h2 style={{ fontSize: '36px', fontWeight: 800, color: '#ffffff', marginBottom: '32px' }}>Especialistas, não Generalistas.</h2>
               <div className="flex-1 flex items-center">
                 <div className="grid grid-cols-5 gap-4 w-full">
                   {[
@@ -308,7 +376,7 @@ export default function ProposalGenerator() {
                       <div className="w-12 h-12 rounded-full bg-cyan-500/10 flex items-center justify-center mb-3">
                         <span className="text-xl">{item.icon}</span>
                       </div>
-                      <p className="font-bold text-white text-sm mb-2">{item.title}</p>
+                      <p className="font-bold text-cyan-400 text-sm mb-2">{item.title}</p>
                       <p className="text-slate-400 text-xs leading-relaxed">{item.desc}</p>
                     </div>
                   ))}
@@ -318,7 +386,10 @@ export default function ProposalGenerator() {
 
             {/* Slide 4 — Investimento */}
             <div className="proposal-slide">
-              <h2 className="text-3xl font-bold text-white mb-8">Modelo de Investimento</h2>
+              <h2 style={{ fontSize: '36px', fontWeight: 800, marginBottom: '32px' }}>
+                <span style={{ color: '#ffffff' }}>Modelo de </span>
+                <span style={{ color: '#06b6d4' }}>Investimento</span>
+              </h2>
               <div className="flex-1 flex items-center">
                 {paymentModel === 'sucesso' ? (
                   <div className="flex gap-10 w-full items-center highlight-numbers-layout">
@@ -328,10 +399,10 @@ export default function ProposalGenerator() {
                     </div>
                     <div className="flex-1 space-y-4">
                       <h3 className="text-2xl font-bold text-white">Sem Custos Antecipados</h3>
-                      <p className="text-slate-300 leading-relaxed">Nossa parceria é pautada estritamente no resultado. O investimento ocorre apenas em caso de sucesso na contratação.</p>
-                      <p className="text-slate-300 leading-relaxed">O valor do honorário é equivalente a <strong className="text-cyan-300">{fee}</strong> da remuneração mensal bruta acordada com o profissional escolhido.</p>
-                      <div className="bg-cyan-900/20 border border-cyan-800/30 rounded-lg p-4 mt-4">
-                        <p className="text-cyan-300 text-sm">* Garantia de Reposição de <strong>{garantia}</strong>: O processo não termina na assinatura. Refazemos todo o trabalho sem custo adicional caso haja saída do profissional neste período inicial.</p>
+                      <p className="text-slate-300 leading-relaxed">Nossa parceria é pautada estritamente no resultado. O investimento ocorre <strong className="text-white">apenas em caso de sucesso</strong> na contratação.</p>
+                      <p className="text-slate-300 leading-relaxed">O valor do honorário é equivalente a <strong className="text-white">{fee} da remuneração mensal bruta</strong> acordada com o profissional escolhido.</p>
+                      <div className="border-t border-slate-700/50 pt-4 mt-4">
+                        <p className="text-slate-400 text-sm">* <strong className="text-slate-300">Garantia de Reposição de {garantia}:</strong> O processo não termina na assinatura. Refazemos todo o trabalho de hunting sem nenhum custo adicional caso haja saída ou desligamento do profissional neste período inicial.</p>
                       </div>
                     </div>
                   </div>
@@ -368,8 +439,12 @@ export default function ProposalGenerator() {
             {/* Slide 5 — CTA */}
             <div className="proposal-slide" style={{ justifyContent: 'center', alignItems: 'center', textAlign: 'center' as const }}>
               <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 500, height: 500, background: 'radial-gradient(circle, rgba(6,182,212,0.08) 0%, transparent 70%)', borderRadius: '50%' }} />
-              <h2 className="text-4xl font-bold text-white mb-4">Vamos transformar seu time?</h2>
-              <p className="text-slate-400 text-lg mb-8 max-w-xl">Estamos prontos para assumir seus desafios mais complexos de contratação.</p>
+              <h2 style={{ fontSize: '56px', fontWeight: 800, lineHeight: 1.2 }}>
+                <span style={{ color: '#ffffff' }}>Vamos </span>
+                <span style={{ color: '#06b6d4' }}>transformar</span>
+                <span style={{ color: '#ffffff' }}> seu time?</span>
+              </h2>
+              <p className="text-slate-400 text-lg mb-8 mt-4 max-w-xl">Estamos prontos para assumir seus desafios mais complexos de contratação.</p>
               <div className="bg-slate-800/50 border border-cyan-800/30 rounded-full px-8 py-3">
                 <span className="text-cyan-400 font-semibold">orionrecruitment.com.br</span>
               </div>
