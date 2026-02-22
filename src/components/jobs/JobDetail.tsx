@@ -6,7 +6,7 @@ import { Separator } from '@/components/ui/separator';
 import { 
   Building2, MapPin, Calendar, DollarSign, User, Clock, 
   Edit, UserPlus, Play, Pause, CheckCircle, XCircle,
-  Globe, GlobeLock, Copy, ExternalLink
+  Globe, GlobeLock, Copy, ExternalLink, Image
 } from 'lucide-react';
 import { JobRow, useUpdateJobStatus, useJobStages, usePublishJob } from '@/hooks/useJobs';
 import { useApplicationsWithParties, useUpdateApplicationStage } from '@/hooks/useApplications';
@@ -14,6 +14,7 @@ import { useCompanies } from '@/hooks/useCompanies';
 import { useProfiles } from '@/hooks/useProfiles';
 import { CandidateKanban } from './CandidateKanban';
 import { AddCandidateDialog } from './AddCandidateDialog';
+import { LinkedInPostDialog } from './LinkedInPostDialog';
 import { CandidateDetailDialog } from './CandidateDetailDialog';
 import { ApplicationWithRelations } from '@/types/ats';
 import { 
@@ -31,6 +32,7 @@ interface JobDetailProps {
 export function JobDetail({ job, onEdit }: JobDetailProps) {
   const [showAddCandidate, setShowAddCandidate] = useState(false);
   const [selectedApplication, setSelectedApplication] = useState<ApplicationWithRelations | null>(null);
+  const [showLinkedInPost, setShowLinkedInPost] = useState(false);
 
   const { data: companies = [] } = useCompanies();
   const { data: profiles = [] } = useProfiles();
@@ -157,6 +159,10 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
         </div>
 
         <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={() => setShowLinkedInPost(true)}>
+            <Image className="h-4 w-4 mr-1" />
+            Gerar Post
+          </Button>
           <Button variant="outline" size="sm" onClick={onEdit}>
             <Edit className="h-4 w-4 mr-1" />
             Editar
@@ -374,6 +380,12 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
         application={selectedApplication}
         stages={stages}
         jobId={job.id}
+      />
+      {/* LinkedIn Post Generator */}
+      <LinkedInPostDialog
+        open={showLinkedInPost}
+        onOpenChange={setShowLinkedInPost}
+        job={job}
       />
     </div>
   );
