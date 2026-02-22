@@ -391,7 +391,31 @@ export default function ProposalGenerator() {
               <div style={{ position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(to right, rgba(6,182,212,0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(6,182,212,0.05) 1px, transparent 1px)', backgroundSize: '40px 40px', zIndex: 0, pointerEvents: 'none' as const }} />
               
               
-               <img src={orionLogo} alt="Orion Logo" style={{ width: 90, height: 90, objectFit: 'contain' }} />
+               <svg width="90" height="90" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                 {/* Outer circle */}
+                 <circle cx="50" cy="50" r="46" stroke="#22d3ee" strokeWidth="1.5" />
+                 {/* Inner oval */}
+                 <ellipse cx="50" cy="50" rx="22" ry="36" stroke="#22d3ee" strokeWidth="1.5" />
+                 {/* Diagonal lines - top-left to bottom-right */}
+                 <line x1="12" y1="18" x2="88" y2="82" stroke="#22d3ee" strokeWidth="1.2" />
+                 <line x1="18" y1="8" x2="82" y2="92" stroke="#22d3ee" strokeWidth="1.2" />
+                 {/* Diagonal lines - top-right to bottom-left */}
+                 <line x1="88" y1="18" x2="12" y2="82" stroke="#22d3ee" strokeWidth="1.2" />
+                 <line x1="82" y1="8" x2="18" y2="92" stroke="#22d3ee" strokeWidth="1.2" />
+                 {/* Dots at intersections */}
+                 <circle cx="50" cy="4" r="2.5" fill="#22d3ee" />
+                 <circle cx="50" cy="96" r="2.5" fill="#22d3ee" />
+                 <circle cx="4" cy="50" r="2.5" fill="#22d3ee" />
+                 <circle cx="96" cy="50" r="2.5" fill="#22d3ee" />
+                 <circle cx="20" cy="20" r="2" fill="#22d3ee" />
+                 <circle cx="80" cy="20" r="2" fill="#22d3ee" />
+                 <circle cx="20" cy="80" r="2" fill="#22d3ee" />
+                 <circle cx="80" cy="80" r="2" fill="#22d3ee" />
+                 <circle cx="50" cy="14" r="2" fill="#22d3ee" />
+                 <circle cx="50" cy="86" r="2" fill="#22d3ee" />
+                 <circle cx="28" cy="50" r="2" fill="#22d3ee" />
+                 <circle cx="72" cy="50" r="2" fill="#22d3ee" />
+               </svg>
               <p style={{ fontSize: '48px', fontWeight: 800, marginTop: '24px', lineHeight: 1.2 }}>
                 <span style={{ color: '#ffffff' }}>ORION </span>
                 <span style={{ color: '#06b6d4' }}>Recruitment</span>
