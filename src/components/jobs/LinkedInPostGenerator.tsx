@@ -135,14 +135,20 @@ export function LinkedInPostGenerator({ job }: LinkedInPostGeneratorProps) {
     setDownloading(true);
 
     try {
-      // Clone off-screen for exact 1080x1080 capture
+      // Clone off-screen — remove any transform so it renders at full 1080x1080
       const clone = captureRef.current.cloneNode(true) as HTMLElement;
+      clone.style.transform = 'none';
+      clone.style.position = 'static';
+      clone.style.borderRadius = '0';
+      clone.style.boxShadow = 'none';
+
       const container = document.createElement('div');
       container.style.position = 'absolute';
       container.style.top = '-9999px';
       container.style.left = '-9999px';
       container.style.width = '1080px';
       container.style.height = '1080px';
+      container.style.overflow = 'hidden';
       container.appendChild(clone);
       document.body.appendChild(container);
 
