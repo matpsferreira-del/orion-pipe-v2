@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Printer, ArrowLeft, Loader2, Save, Download } from 'lucide-react';
+import { ArrowLeft, Loader2, Save, Download, FileDown } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useCompanies } from '@/hooks/useCompanies';
 import { toast } from 'sonner';
 import { toPng } from 'html-to-image';
 import { jsPDF } from 'jspdf';
+import pptxgen from 'pptxgenjs';
 
 export default function ProposalGenerator() {
   const { id } = useParams<{ id: string }>();
@@ -174,6 +175,63 @@ export default function ProposalGenerator() {
     }
   };
 
+  const handleExportPPT = async () => {
+    const slides = document.querySelectorAll('.proposal-slide') as NodeListOf<HTMLElement>;
+    if (slides.length === 0) return;
+
+    setIsExporting(true);
+    toast.info('Gerando PPT...');
+
+    try {
+      const pres = new pptxgen();
+      pres.layout = 'LAYOUT_WIDE'; // 13.33 x 7.5 inches
+
+      for (let i = 0; i < slides.length; i++) {
+        const slide = slides[i];
+
+        const origBorderRadius = slide.style.borderRadius;
+        const origBoxShadow = slide.style.boxShadow;
+        const origBorder = slide.style.border;
+
+        slide.style.borderRadius = '0';
+        slide.style.boxShadow = 'none';
+        slide.style.border = 'none';
+
+        const dataUrl = await toPng(slide, {
+          width: 1280,
+          height: 720,
+          pixelRatio: 2,
+          backgroundColor: '#0f172a',
+        });
+
+        slide.style.borderRadius = origBorderRadius;
+        slide.style.boxShadow = origBoxShadow;
+        slide.style.border = origBorder;
+
+        const pptSlide = pres.addSlide();
+        pptSlide.background = { color: '0f172a' };
+        pptSlide.addImage({
+          data: dataUrl,
+          x: 0,
+          y: 0,
+          w: '100%',
+          h: '100%',
+        });
+      }
+
+      const filename = empresa
+        ? `Orion_Recruitment_-_Proposta_${empresa.replace(/\s+/g, '_')}`
+        : 'Orion_Recruitment_-_Proposta_Comercial';
+      await pres.writeFile({ fileName: `${filename}.pptx` });
+      toast.success('PPT exportado com sucesso!');
+    } catch (err) {
+      console.error('PPT export error:', err);
+      toast.error('Erro ao gerar PPT. Tente novamente.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#020617]">
@@ -300,12 +358,23 @@ export default function ProposalGenerator() {
           <button
             onClick={handleExportPDF}
             disabled={isExporting}
-            className="w-full bg-cyan-500 hover:bg-cyan-400 text-slate-900 font-bold py-4 rounded-lg transition-all shadow-lg flex justify-center items-center gap-2 text-lg disabled:opacity-50"
+            className="w-full bg-cyan-500 hover:bg-cyan-400 text-slate-900 font-bold py-3 rounded-lg transition-all shadow-lg flex justify-center items-center gap-2 text-sm disabled:opacity-50"
           >
             {isExporting ? (
-              <><Loader2 className="h-5 w-5 animate-spin" /> Gerando PDF...</>
+              <><Loader2 className="h-4 w-4 animate-spin" /> Gerando...</>
             ) : (
-              <><Download className="h-5 w-5" /> Exportar Proposta (PDF)</>
+              <><Download className="h-4 w-4" /> Exportar PDF</>
+            )}
+          </button>
+          <button
+            onClick={handleExportPPT}
+            disabled={isExporting}
+            className="w-full bg-orange-500 hover:bg-orange-400 text-white font-bold py-3 rounded-lg transition-all shadow-lg flex justify-center items-center gap-2 text-sm disabled:opacity-50"
+          >
+            {isExporting ? (
+              <><Loader2 className="h-4 w-4 animate-spin" /> Gerando...</>
+            ) : (
+              <><FileDown className="h-4 w-4" /> Exportar PPT</>
             )}
           </button>
         </div>
@@ -321,13 +390,28 @@ export default function ProposalGenerator() {
               <div style={{ position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(to right, rgba(6,182,212,0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(6,182,212,0.05) 1px, transparent 1px)', backgroundSize: '40px 40px', zIndex: 0, pointerEvents: 'none' as const }} />
               <div style={{ position: 'absolute', top: 80, right: 80, width: 200, height: 200, background: 'radial-gradient(circle, rgba(6,182,212,0.15) 0%, transparent 70%)', borderRadius: '50%' }} />
               <div style={{ position: 'absolute', bottom: 60, left: 60, width: 300, height: 300, background: 'radial-gradient(circle, rgba(99,102,241,0.1) 0%, transparent 70%)', borderRadius: '50%' }} />
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" style={{ width: 80, height: 80, color: '#06b6d4' }}>
-                <circle cx="50" cy="50" r="46" fill="none" stroke="currentColor" strokeWidth="2.5" />
-                <ellipse cx="50" cy="50" rx="22" ry="34" fill="none" stroke="currentColor" strokeWidth="2.5" />
-                <circle cx="50" cy="4" r="3" fill="currentColor" /><circle cx="82" cy="17" r="3" fill="currentColor" />
-                <circle cx="96" cy="50" r="3" fill="currentColor" /><circle cx="82" cy="83" r="3" fill="currentColor" />
-                <circle cx="50" cy="96" r="3" fill="currentColor" /><circle cx="18" cy="83" r="3" fill="currentColor" />
-                <circle cx="4" cy="50" r="3" fill="currentColor" /><circle cx="18" cy="17" r="3" fill="currentColor" />
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" style={{ width: 80, height: 80 }}>
+                {/* Outer oval gem shape */}
+                <ellipse cx="60" cy="60" rx="38" ry="44" fill="none" stroke="#06b6d4" strokeWidth="2" />
+                {/* Top facet lines */}
+                <line x1="22" y1="60" x2="60" y2="16" stroke="#06b6d4" strokeWidth="1.5" />
+                <line x1="98" y1="60" x2="60" y2="16" stroke="#06b6d4" strokeWidth="1.5" />
+                {/* Bottom facet lines */}
+                <line x1="22" y1="60" x2="60" y2="104" stroke="#06b6d4" strokeWidth="1.5" />
+                <line x1="98" y1="60" x2="60" y2="104" stroke="#06b6d4" strokeWidth="1.5" />
+                {/* Horizontal middle line */}
+                <line x1="22" y1="60" x2="98" y2="60" stroke="#06b6d4" strokeWidth="1.5" />
+                {/* Inner diamond facets */}
+                <line x1="40" y1="30" x2="80" y2="30" stroke="#06b6d4" strokeWidth="1.2" />
+                <line x1="40" y1="30" x2="22" y2="60" stroke="#06b6d4" strokeWidth="1.2" />
+                <line x1="80" y1="30" x2="98" y2="60" stroke="#06b6d4" strokeWidth="1.2" />
+                <line x1="40" y1="30" x2="60" y2="60" stroke="#06b6d4" strokeWidth="1" opacity="0.6" />
+                <line x1="80" y1="30" x2="60" y2="60" stroke="#06b6d4" strokeWidth="1" opacity="0.6" />
+                <line x1="60" y1="60" x2="60" y2="104" stroke="#06b6d4" strokeWidth="1" opacity="0.6" />
+                {/* Top crown points */}
+                <circle cx="60" cy="16" r="2.5" fill="#06b6d4" />
+                <circle cx="40" cy="30" r="2" fill="#06b6d4" />
+                <circle cx="80" cy="30" r="2" fill="#06b6d4" />
               </svg>
               <p style={{ fontSize: '48px', fontWeight: 800, marginTop: '24px', lineHeight: 1.2 }}>
                 <span style={{ color: '#ffffff' }}>ORION </span>
