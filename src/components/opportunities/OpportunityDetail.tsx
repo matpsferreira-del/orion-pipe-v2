@@ -1,11 +1,12 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Building2, User, Calendar, DollarSign, Target, Phone, Mail, Plus, MessageSquare } from 'lucide-react';
+import { Building2, User, Calendar, DollarSign, Target, Phone, Mail, Plus, MessageSquare, FileText } from 'lucide-react';
 import { OpportunityRow } from '@/hooks/useOpportunities';
 import { useCompanies } from '@/hooks/useCompanies';
 import { useContacts } from '@/hooks/useContacts';
@@ -48,6 +49,7 @@ const activityTypeLabels: Record<string, string> = {
 
 export function OpportunityDetail({ opportunity }: OpportunityDetailProps) {
   const [showActivityDialog, setShowActivityDialog] = useState(false);
+  const navigate = useNavigate();
   
   const { data: companies = [] } = useCompanies();
   const { data: contacts = [] } = useContacts();
@@ -83,9 +85,19 @@ export function OpportunityDetail({ opportunity }: OpportunityDetailProps) {
           <h3 className="text-xl font-semibold text-foreground">{company?.nome_fantasia || 'N/A'}</h3>
           <p className="text-sm text-muted-foreground">{company?.razao_social}</p>
         </div>
-        <Badge variant="outline" className="text-sm">
-          {stage?.label || opportunity.stage}
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate(`/oportunidades/${opportunity.id}/proposta`)}
+          >
+            <FileText className="h-4 w-4 mr-1" />
+            Gerar Proposta
+          </Button>
+          <Badge variant="outline" className="text-sm">
+            {stage?.label || opportunity.stage}
+          </Badge>
+        </div>
       </div>
 
       {/* Key Metrics */}
