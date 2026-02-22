@@ -1,26 +1,17 @@
 
 
-## Tornar o nome da empresa editavel diretamente na capa do slide
+## Remover aba "Cadastrar" da pagina de login
 
-### Situacao atual
-A capa da proposta ja esta fiel ao PDF: logo SVG, "ORION Recruitment", "Seu sucesso e o nosso sucesso.", e a secao "Proposta Comercial Exclusiva para: {empresa}". O nome da empresa vem do estado `empresa` (preenchido automaticamente pelo nome fantasia da empresa vinculada a oportunidade).
-
-Porem, o nome da empresa e exibido como texto estatico no slide. O usuario quer poder editar o nome diretamente no slide.
+### Problema
+A pagina de login (`/auth`) exibe duas abas: "Entrar" e "Cadastrar". Isso da a impressao de que qualquer pessoa pode criar uma conta e acessar o CRM. A criacao de contas deve ser feita exclusivamente por administradores pela pagina de Equipe.
 
 ### Solucao
-Substituir o `<p>` que exibe `{empresa}` (linha 453) por um `<input>` estilizado para parecer texto normal do slide (sem borda visivel, fundo transparente), mas que permite edicao direta clicando no texto. O input tera:
-
-- Fundo transparente
-- Sem borda (so aparece ao focar/hover com um leve outline cyan)
-- Mesma cor, tamanho e peso de fonte do texto atual (`#06b6d4`, `28px`, `fontWeight: 700`)
-- Texto centralizado
-- `value={empresa}` e `onChange` ligado ao `setEmpresa`
-
-Tambem remover a condicao `{empresa &&` para que a secao sempre apareca (mesmo sem empresa preenchida), permitindo que o usuario digite o nome manualmente.
+Simplificar a pagina de login removendo o componente de abas (Tabs) e toda a secao de cadastro. A pagina mostrara apenas o formulario de login com email e senha.
 
 ### Detalhes tecnicos
-- **Arquivo**: `src/pages/ProposalGenerator.tsx`
-- **Linhas 450-455**: Remover condicional `{empresa &&`, manter o `div` sempre visivel
-- **Linha 453**: Trocar `<p>` por `<input>` com estilos inline para transparencia e consistencia visual
-- Placeholder: "Nome da Empresa"
-- Nenhuma outra alteracao no componente
+- **Arquivo**: `src/pages/Auth.tsx`
+- Remover imports de `Tabs`, `TabsContent`, `TabsList`, `TabsTrigger`
+- Remover o estado `name` e a funcao `handleSignUp` (e o import de `signUp`)
+- Remover toda a estrutura de Tabs, mantendo apenas o formulario de login diretamente no `CardContent`
+- Manter o botao "Entrar" e os campos de email/senha como estao
+
