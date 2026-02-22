@@ -1,46 +1,24 @@
 
+## Botao para expandir o painel da vaga
 
-## Adicionar politicas RLS para acesso anonimo
+Atualmente, ao clicar em uma vaga, abre um `Sheet` (painel lateral) com largura `sm:max-w-3xl`. O objetivo e adicionar um botao de expandir/recolher para que o painel ocupe a tela inteira.
 
-### O que sera feito
-Adicionar 4 novas politicas RLS para permitir integracao com o outro projeto:
+### Mudancas
 
-1. **Allow anon insert on `companies`** - INSERT sem restricao
-2. **Allow anon insert on `contacts`** - INSERT sem restricao
-3. **Allow anon insert on `opportunities`** - INSERT sem restricao
-4. **Allow anon read on `profiles`** - SELECT sem restricao
+**Arquivo: `src/pages/Vagas.tsx`**
 
-### Observacao importante sobre nomes das tabelas
-As tabelas no banco de dados usam nomes em ingles (`companies`, `contacts`, `opportunities`, `profiles`), nao em portugues. Os comandos SQL serao ajustados para os nomes corretos.
-
-### Alerta de seguranca
-Essas politicas permitem que **qualquer pessoa** (sem autenticacao) insira dados nessas tabelas e leia todos os perfis. Isso e aceitavel para integracao entre projetos, mas e importante estar ciente do risco. Se no futuro quiser restringir, podemos adicionar validacao por token ou API key.
+1. Adicionar um estado `isExpanded` (boolean, default `false`)
+2. No `SheetContent`, alternar a classe de largura:
+   - Recolhido: `w-full sm:max-w-3xl`
+   - Expandido: `w-full sm:max-w-full`
+3. Dentro do `SheetHeader`, ao lado do titulo, adicionar um botao com icone:
+   - Quando recolhido: icone `Maximize2` (expandir)
+   - Quando expandido: icone `Minimize2` (recolher)
+   - Ao clicar, alterna o estado `isExpanded`
+4. Resetar `isExpanded` para `false` quando o sheet fechar (no `onOpenChange`)
 
 ### Detalhes tecnicos
 
-Migration SQL a ser executada:
-
-```sql
--- Allow anonymous inserts on companies
-CREATE POLICY "Allow anon insert companies"
-  ON public.companies FOR INSERT
-  WITH CHECK (true);
-
--- Allow anonymous inserts on contacts
-CREATE POLICY "Allow anon insert contacts"
-  ON public.contacts FOR INSERT
-  WITH CHECK (true);
-
--- Allow anonymous inserts on opportunities
-CREATE POLICY "Allow anon insert opportunities"
-  ON public.opportunities FOR INSERT
-  WITH CHECK (true);
-
--- Allow anonymous read on profiles
-CREATE POLICY "Allow anon read profiles"
-  ON public.profiles FOR SELECT
-  USING (true);
-```
-
-Nenhuma alteracao de codigo frontend sera necessaria.
-
+- Importar `Maximize2` e `Minimize2` de `lucide-react`
+- O botao tera estilo `variant="ghost" size="icon"` para ficar discreto
+- A transicao de largura usara `transition-all duration-300` para animar suavemente
