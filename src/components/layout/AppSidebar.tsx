@@ -74,6 +74,7 @@ const tabNavItems = {
     { to: '/relatorios', icon: BarChart3, label: 'Relatórios' },
   ],
   recrutamento: [
+    { to: '/recrutamento', icon: LayoutDashboard, label: 'Dashboard' },
     { to: '/pessoas', icon: UserCircle, label: 'Banco de Talentos' },
     { to: '/vagas', icon: Briefcase, label: 'Vagas' },
   ],

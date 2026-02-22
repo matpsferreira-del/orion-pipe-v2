@@ -12,7 +12,7 @@ export const tabConfig = {
   },
   recrutamento: {
     label: 'Recrutamento',
-    defaultRoute: '/pessoas',
+    defaultRoute: '/recrutamento',
   },
   configuracoes: {
     label: 'Configurações',
@@ -29,6 +29,7 @@ export const routeToTab: Record<string, TabType> = {
   '/tarefas': 'comercial',
   '/faturamento': 'comercial',
   '/relatorios': 'comercial',
+  '/recrutamento': 'recrutamento',
   '/pessoas': 'recrutamento',
   '/vagas': 'recrutamento',
   '/equipe': 'configuracoes',
