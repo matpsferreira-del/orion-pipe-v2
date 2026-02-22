@@ -555,7 +555,7 @@ export default function ProposalGenerator() {
             {/* Slide 5 — CTA */}
             <div className="proposal-slide" style={{ justifyContent: 'center', alignItems: 'center', textAlign: 'center' as const }}>
               <div style={{ position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(to right, rgba(6,182,212,0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(6,182,212,0.05) 1px, transparent 1px)', backgroundSize: '40px 40px', zIndex: 0, pointerEvents: 'none' as const }} />
-              <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 500, height: 500, background: 'radial-gradient(circle, rgba(6,182,212,0.08) 0%, transparent 70%)', borderRadius: '50%' }} />
+              
               <h2 style={{ fontSize: '56px', fontWeight: 800, lineHeight: 1.2 }}>
                 <span style={{ color: '#ffffff' }}>Vamos </span>
                 <span style={{ color: '#06b6d4' }}>transformar</span>
