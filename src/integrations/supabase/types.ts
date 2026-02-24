@@ -443,6 +443,39 @@ export type Database = {
           },
         ]
       }
+      job_postings: {
+        Row: {
+          company: string
+          created_at: string
+          id: string
+          location: string
+          search_term: string
+          source: string
+          title: string
+          url: string
+        }
+        Insert: {
+          company: string
+          created_at?: string
+          id?: string
+          location: string
+          search_term: string
+          source: string
+          title: string
+          url: string
+        }
+        Update: {
+          company?: string
+          created_at?: string
+          id?: string
+          location?: string
+          search_term?: string
+          source?: string
+          title?: string
+          url?: string
+        }
+        Relationships: []
+      }
       jobs: {
         Row: {
           area: string | null
