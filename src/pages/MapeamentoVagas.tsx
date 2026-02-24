@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -8,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { PageHeader } from '@/components/ui/page-header';
-import { Search, ExternalLink, MapPin, Building2, X, Loader2 } from 'lucide-react';
+import { Search, ExternalLink, MapPin, Building2, X, Loader2, Zap, Filter } from 'lucide-react';
 import { BRAZIL_STATES } from '@/data/brazilLocations';
 
 interface JobPosting {
@@ -82,6 +83,22 @@ export default function MapeamentoVagas() {
     setFilterState(ALL);
     setFilterCity(ALL);
   };
+
+  const triggerMutation = useMutation({
+    mutationFn: async () => {
+      const location = [filterCity !== ALL ? filterCity : null, filterState !== ALL ? filterState : null]
+        .filter(Boolean)
+        .join(', ') || null;
+      const { error } = await supabase.from('automation_triggers').insert({
+        search_term: filterSearchTerm !== ALL ? filterSearchTerm : (search || null),
+        location,
+        status: 'pending',
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => toast.success('Automação iniciada com sucesso!'),
+    onError: () => toast.error('Erro ao iniciar automação'),
+  });
 
   const formatDate = (date: string) =>
     new Date(date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' });
@@ -200,6 +217,25 @@ export default function MapeamentoVagas() {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="space-y-2 pt-2 border-t border-border">
+              <Button
+                className="w-full gap-2"
+                onClick={() => triggerMutation.mutate()}
+                disabled={triggerMutation.isPending}
+              >
+                {triggerMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
+                Acionar Automação
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full gap-2"
+                onClick={clearFilters}
+              >
+                <Filter className="h-4 w-4" />
+                Limpar Filtros
+              </Button>
             </div>
           </aside>
 

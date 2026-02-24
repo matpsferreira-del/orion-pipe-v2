@@ -215,6 +215,30 @@ export type Database = {
           },
         ]
       }
+      automation_triggers: {
+        Row: {
+          created_at: string
+          id: string
+          location: string | null
+          search_term: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          location?: string | null
+          search_term?: string | null
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          location?: string | null
+          search_term?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       companies: {
         Row: {
           cidade: string
