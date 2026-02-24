@@ -4,10 +4,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { PageHeader } from '@/components/ui/page-header';
-import { Search, ExternalLink, MapPin, Building2, Globe, Filter, X, Loader2 } from 'lucide-react';
+import { Search, ExternalLink, MapPin, Building2, Globe, Filter, X, Loader2, SlidersHorizontal } from 'lucide-react';
+import { BRAZIL_STATES } from '@/data/brazilLocations';
 
 interface JobPosting {
   id: string;
@@ -26,6 +29,9 @@ export default function MapeamentoVagas() {
   const [search, setSearch] = useState('');
   const [filterSource, setFilterSource] = useState(ALL);
   const [filterSearchTerm, setFilterSearchTerm] = useState(ALL);
+  const [filterCompany, setFilterCompany] = useState(ALL);
+  const [filterState, setFilterState] = useState(ALL);
+  const [filterCity, setFilterCity] = useState(ALL);
 
   const { data: postings = [], isLoading } = useQuery({
     queryKey: ['job-postings'],
@@ -49,6 +55,72 @@ export default function MapeamentoVagas() {
     return Array.from(set).sort();
   }, [postings]);
 
+  const companies = useMemo(() => {
+    const set = new Set(postings.map(p => p.company).filter(Boolean));
+    return Array.from(set).sort();
+  }, [postings]);
+
+  // Extract states from location field (try to match UF patterns)
+  const extractedStates = useMemo(() => {
+    const stateSet = new Set<string>();
+    const ufList = BRAZIL_STATES.map(s => s.uf);
+    postings.forEach(p => {
+      if (!p.location) return;
+      // Try matching " - UF", ", UF", "(UF)" patterns
+      for (const uf of ufList) {
+        const patterns = [
+          new RegExp(`[\\s,\\-/]${uf}$`, 'i'),
+          new RegExp(`[\\s,\\-/]${uf}[\\s,\\-/]`, 'i'),
+          new RegExp(`\\(${uf}\\)`, 'i'),
+        ];
+        if (patterns.some(pat => pat.test(p.location))) {
+          stateSet.add(uf);
+          break;
+        }
+      }
+    });
+    return Array.from(stateSet).sort();
+  }, [postings]);
+
+  // Extract cities from location
+  const extractedCities = useMemo(() => {
+    const citySet = new Set<string>();
+    postings.forEach(p => {
+      if (!p.location) return;
+      // Take first part before common separators as city
+      const city = p.location.split(/[\-,\/]/)[0]?.trim();
+      if (city) citySet.add(city);
+    });
+    // If state filter active, only show cities from that state
+    if (filterState !== ALL) {
+      const citiesInState = new Set<string>();
+      postings.forEach(p => {
+        if (!p.location) return;
+        const matchesState = new RegExp(`[\\s,\\-/\\(]${filterState}[\\s,\\-/\\)]?`, 'i').test(p.location) ||
+          p.location.toUpperCase().endsWith(filterState);
+        if (matchesState) {
+          const city = p.location.split(/[\-,\/]/)[0]?.trim();
+          if (city) citiesInState.add(city);
+        }
+      });
+      return Array.from(citiesInState).sort();
+    }
+    return Array.from(citySet).sort();
+  }, [postings, filterState]);
+
+  const locationMatchesState = (location: string, state: string) => {
+    const patterns = [
+      new RegExp(`[\\s,\\-/]${state}$`, 'i'),
+      new RegExp(`[\\s,\\-/]${state}[\\s,\\-/]`, 'i'),
+      new RegExp(`\\(${state}\\)`, 'i'),
+    ];
+    return patterns.some(pat => pat.test(location)) || location.toUpperCase().endsWith(state);
+  };
+
+  const locationMatchesCity = (location: string, city: string) => {
+    return location.toLowerCase().includes(city.toLowerCase());
+  };
+
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
     return postings.filter(p => {
@@ -58,16 +130,24 @@ export default function MapeamentoVagas() {
         p.location.toLowerCase().includes(q);
       const matchesSource = filterSource === ALL || p.source === filterSource;
       const matchesTerm = filterSearchTerm === ALL || p.search_term === filterSearchTerm;
-      return matchesSearch && matchesSource && matchesTerm;
+      const matchesCompany = filterCompany === ALL || p.company === filterCompany;
+      const matchesState = filterState === ALL || locationMatchesState(p.location, filterState);
+      const matchesCity = filterCity === ALL || locationMatchesCity(p.location, filterCity);
+      return matchesSearch && matchesSource && matchesTerm && matchesCompany && matchesState && matchesCity;
     });
-  }, [postings, search, filterSource, filterSearchTerm]);
+  }, [postings, search, filterSource, filterSearchTerm, filterCompany, filterState, filterCity]);
 
-  const hasFilters = search || filterSource !== ALL || filterSearchTerm !== ALL;
+  const hasFilters = search || filterSource !== ALL || filterSearchTerm !== ALL || filterCompany !== ALL || filterState !== ALL || filterCity !== ALL;
+
+  const activeFilterCount = [filterSource, filterSearchTerm, filterCompany, filterState, filterCity].filter(f => f !== ALL).length;
 
   const clearFilters = () => {
     setSearch('');
     setFilterSource(ALL);
     setFilterSearchTerm(ALL);
+    setFilterCompany(ALL);
+    setFilterState(ALL);
+    setFilterCity(ALL);
   };
 
   const formatDate = (date: string) =>
@@ -93,35 +173,103 @@ export default function MapeamentoVagas() {
             />
           </div>
 
-          <Select value={filterSource} onValueChange={setFilterSource}>
-            <SelectTrigger className="w-[180px]">
-              <div className="flex items-center gap-2">
-                <Globe className="h-4 w-4 text-muted-foreground" />
-                <SelectValue placeholder="Fonte" />
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-2">
+                <SlidersHorizontal className="h-4 w-4" />
+                Filtros
+                {activeFilterCount > 0 && (
+                  <Badge variant="secondary" className="ml-1 h-5 w-5 p-0 flex items-center justify-center text-xs rounded-full">
+                    {activeFilterCount}
+                  </Badge>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80 space-y-4 bg-popover z-50" align="start">
+              <div className="space-y-2">
+                <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Estado</Label>
+                <Select value={filterState} onValueChange={(v) => { setFilterState(v); setFilterCity(ALL); }}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Todos os estados" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover z-50">
+                    <SelectItem value={ALL}>Todos os estados</SelectItem>
+                    {extractedStates.map(uf => {
+                      const stateName = BRAZIL_STATES.find(s => s.uf === uf)?.name;
+                      return <SelectItem key={uf} value={uf}>{stateName ? `${stateName} (${uf})` : uf}</SelectItem>;
+                    })}
+                  </SelectContent>
+                </Select>
               </div>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL}>Todas as fontes</SelectItem>
-              {sources.map(s => (
-                <SelectItem key={s} value={s}>{s}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
 
-          <Select value={filterSearchTerm} onValueChange={setFilterSearchTerm}>
-            <SelectTrigger className="w-[200px]">
-              <div className="flex items-center gap-2">
-                <Filter className="h-4 w-4 text-muted-foreground" />
-                <SelectValue placeholder="Termo de busca" />
+              <div className="space-y-2">
+                <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Cidade</Label>
+                <Select value={filterCity} onValueChange={setFilterCity}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Todas as cidades" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover z-50">
+                    <SelectItem value={ALL}>Todas as cidades</SelectItem>
+                    {extractedCities.map(c => (
+                      <SelectItem key={c} value={c}>{c}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL}>Todos os termos</SelectItem>
-              {searchTerms.map(t => (
-                <SelectItem key={t} value={t}>{t}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+
+              <div className="space-y-2">
+                <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Empresa</Label>
+                <Select value={filterCompany} onValueChange={setFilterCompany}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Todas as empresas" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover z-50">
+                    <SelectItem value={ALL}>Todas as empresas</SelectItem>
+                    {companies.map(c => (
+                      <SelectItem key={c} value={c}>{c}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Fonte</Label>
+                <Select value={filterSource} onValueChange={setFilterSource}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Todas as fontes" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover z-50">
+                    <SelectItem value={ALL}>Todas as fontes</SelectItem>
+                    {sources.map(s => (
+                      <SelectItem key={s} value={s}>{s}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Termo de busca</Label>
+                <Select value={filterSearchTerm} onValueChange={setFilterSearchTerm}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Todos os termos" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover z-50">
+                    <SelectItem value={ALL}>Todos os termos</SelectItem>
+                    {searchTerms.map(t => (
+                      <SelectItem key={t} value={t}>{t}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {hasFilters && (
+                <Button variant="ghost" size="sm" onClick={clearFilters} className="w-full gap-1.5">
+                  <X className="h-4 w-4" />
+                  Limpar todos os filtros
+                </Button>
+              )}
+            </PopoverContent>
+          </Popover>
 
           {hasFilters && (
             <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1.5">
@@ -134,6 +282,24 @@ export default function MapeamentoVagas() {
         {/* Active filter badges */}
         {hasFilters && (
           <div className="flex flex-wrap gap-2">
+            {filterState !== ALL && (
+              <Badge variant="secondary" className="gap-1">
+                Estado: {BRAZIL_STATES.find(s => s.uf === filterState)?.name || filterState}
+                <X className="h-3 w-3 cursor-pointer" onClick={() => { setFilterState(ALL); setFilterCity(ALL); }} />
+              </Badge>
+            )}
+            {filterCity !== ALL && (
+              <Badge variant="secondary" className="gap-1">
+                Cidade: {filterCity}
+                <X className="h-3 w-3 cursor-pointer" onClick={() => setFilterCity(ALL)} />
+              </Badge>
+            )}
+            {filterCompany !== ALL && (
+              <Badge variant="secondary" className="gap-1">
+                Empresa: {filterCompany}
+                <X className="h-3 w-3 cursor-pointer" onClick={() => setFilterCompany(ALL)} />
+              </Badge>
+            )}
             {filterSource !== ALL && (
               <Badge variant="secondary" className="gap-1">
                 Fonte: {filterSource}
