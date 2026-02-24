@@ -445,30 +445,33 @@ export type Database = {
       }
       job_postings: {
         Row: {
+          cidade: string | null
           company: string
           created_at: string
+          estado: string | null
           id: string
-          location: string
           search_term: string
           source: string
           title: string
           url: string
         }
         Insert: {
+          cidade?: string | null
           company: string
           created_at?: string
+          estado?: string | null
           id?: string
-          location: string
           search_term: string
           source: string
           title: string
           url: string
         }
         Update: {
+          cidade?: string | null
           company?: string
           created_at?: string
+          estado?: string | null
           id?: string
-          location?: string
           search_term?: string
           source?: string
           title?: string

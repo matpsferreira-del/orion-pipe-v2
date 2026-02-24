@@ -16,7 +16,8 @@ interface JobPosting {
   created_at: string;
   title: string;
   company: string;
-  location: string;
+  cidade: string | null;
+  estado: string | null;
   url: string;
   source: string;
   search_term: string;
@@ -48,55 +49,25 @@ export default function MapeamentoVagas() {
   const searchTerms = useMemo(() => Array.from(new Set(postings.map(p => p.search_term))).sort(), [postings]);
   const companies = useMemo(() => Array.from(new Set(postings.map(p => p.company).filter(Boolean))).sort(), [postings]);
 
-  const extractedStates = useMemo(() => {
-    const stateSet = new Set<string>();
-    const ufList = BRAZIL_STATES.map(s => s.uf);
-    postings.forEach(p => {
-      if (!p.location) return;
-      for (const uf of ufList) {
-        if ([
-          new RegExp(`[\\s,\\-/]${uf}$`, 'i'),
-          new RegExp(`[\\s,\\-/]${uf}[\\s,\\-/]`, 'i'),
-          new RegExp(`\\(${uf}\\)`, 'i'),
-        ].some(pat => pat.test(p.location))) {
-          stateSet.add(uf);
-          break;
-        }
-      }
-    });
-    return Array.from(stateSet).sort();
-  }, [postings]);
+  const states = useMemo(() => Array.from(new Set(postings.map(p => p.estado).filter(Boolean) as string[])).sort(), [postings]);
 
-  const extractedCities = useMemo(() => {
-    const citySet = new Set<string>();
+  const cities = useMemo(() => {
     const relevant = filterState !== ALL
-      ? postings.filter(p => p.location && locationMatchesState(p.location, filterState))
+      ? postings.filter(p => p.estado === filterState)
       : postings;
-    relevant.forEach(p => {
-      if (!p.location) return;
-      const city = p.location.split(/[\-,\/]/)[0]?.trim();
-      if (city) citySet.add(city);
-    });
-    return Array.from(citySet).sort();
+    return Array.from(new Set(relevant.map(p => p.cidade).filter(Boolean) as string[])).sort();
   }, [postings, filterState]);
-
-  function locationMatchesState(location: string, state: string) {
-    return [
-      new RegExp(`[\\s,\\-/]${state}$`, 'i'),
-      new RegExp(`[\\s,\\-/]${state}[\\s,\\-/]`, 'i'),
-      new RegExp(`\\(${state}\\)`, 'i'),
-    ].some(pat => pat.test(location)) || location.toUpperCase().endsWith(state);
-  }
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
     return postings.filter(p => {
-      const matchesSearch = !q || p.title.toLowerCase().includes(q) || p.company.toLowerCase().includes(q) || p.location.toLowerCase().includes(q);
+      const loc = [p.cidade, p.estado].filter(Boolean).join(' ').toLowerCase();
+      const matchesSearch = !q || p.title.toLowerCase().includes(q) || p.company.toLowerCase().includes(q) || loc.includes(q);
       const matchesSource = filterSource === ALL || p.source === filterSource;
       const matchesTerm = filterSearchTerm === ALL || p.search_term === filterSearchTerm;
       const matchesCompany = filterCompany === ALL || p.company === filterCompany;
-      const matchesState = filterState === ALL || locationMatchesState(p.location, filterState);
-      const matchesCity = filterCity === ALL || p.location.toLowerCase().includes(filterCity.toLowerCase());
+      const matchesState = filterState === ALL || p.estado === filterState;
+      const matchesCity = filterCity === ALL || p.cidade === filterCity;
       return matchesSearch && matchesSource && matchesTerm && matchesCompany && matchesState && matchesCity;
     });
   }, [postings, search, filterSource, filterSearchTerm, filterCompany, filterState, filterCity]);
@@ -114,6 +85,16 @@ export default function MapeamentoVagas() {
 
   const formatDate = (date: string) =>
     new Date(date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' });
+
+  const formatLocation = (cidade: string | null, estado: string | null) => {
+    if (cidade && estado) return `${cidade}, ${estado}`;
+    return cidade || estado || '—';
+  };
+
+  const getStateName = (uf: string) => {
+    const state = BRAZIL_STATES.find(s => s.uf === uf);
+    return state ? `${state.name} (${uf})` : uf;
+  };
 
   return (
     <div className="flex-1 overflow-auto">
@@ -154,10 +135,9 @@ export default function MapeamentoVagas() {
                 </SelectTrigger>
                 <SelectContent className="bg-popover z-50">
                   <SelectItem value={ALL}>Todos os estados</SelectItem>
-                  {extractedStates.map(uf => {
-                    const name = BRAZIL_STATES.find(s => s.uf === uf)?.name;
-                    return <SelectItem key={uf} value={uf}>{name ? `${name} (${uf})` : uf}</SelectItem>;
-                  })}
+                  {states.map(uf => (
+                    <SelectItem key={uf} value={uf}>{getStateName(uf)}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -170,7 +150,7 @@ export default function MapeamentoVagas() {
                 </SelectTrigger>
                 <SelectContent className="bg-popover z-50">
                   <SelectItem value={ALL}>Todas as cidades</SelectItem>
-                  {extractedCities.map(c => (
+                  {cities.map(c => (
                     <SelectItem key={c} value={c}>{c}</SelectItem>
                   ))}
                 </SelectContent>
@@ -230,7 +210,7 @@ export default function MapeamentoVagas() {
               <div className="flex flex-wrap gap-2">
                 {filterState !== ALL && (
                   <Badge variant="secondary" className="gap-1">
-                    Estado: {BRAZIL_STATES.find(s => s.uf === filterState)?.name || filterState}
+                    Estado: {getStateName(filterState)}
                     <X className="h-3 w-3 cursor-pointer" onClick={() => { setFilterState(ALL); setFilterCity(ALL); }} />
                   </Badge>
                 )}
@@ -306,7 +286,7 @@ export default function MapeamentoVagas() {
                         <TableCell>
                           <span className="flex items-center gap-1.5">
                             <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
-                            {posting.location}
+                            {formatLocation(posting.cidade, posting.estado)}
                           </span>
                         </TableCell>
                         <TableCell>
