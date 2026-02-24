@@ -23,6 +23,7 @@ const schema = z.object({
   linkedin_url: z.string().trim().url('URL inválida').max(255).optional().or(z.literal('')),
   city: z.string().trim().max(80).optional().or(z.literal('')),
   state: z.string().trim().max(2).optional().or(z.literal('')),
+  salary_expectation: z.string().trim().optional().or(z.literal('')),
   notes: z.string().trim().max(2000).optional().or(z.literal('')),
 });
 
@@ -101,6 +102,7 @@ export default function PublicJobDetail() {
           linkedin_url: values.linkedin_url || null,
           city: values.city || null,
           state: values.state || null,
+          salary_expectation: values.salary_expectation ? parseFloat(values.salary_expectation) : null,
           notes: values.notes || null,
         }),
       });
@@ -325,6 +327,16 @@ export default function PublicJobDetail() {
                     <Label htmlFor="state">Estado</Label>
                     <Input id="state" placeholder="SP" maxLength={2} {...register('state')} />
                   </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="salary_expectation">Pretensão Salarial (R$)</Label>
+                  <Input
+                    id="salary_expectation"
+                    type="number"
+                    placeholder="Ex: 8000"
+                    {...register('salary_expectation')}
+                  />
                 </div>
 
                 <div className="space-y-1.5">

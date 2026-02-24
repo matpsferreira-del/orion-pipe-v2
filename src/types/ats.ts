@@ -45,6 +45,7 @@ export interface Application {
   source: ApplicationSource;
   rating: number | null;
   notes: string | null;
+  salary_expectation: number | null;
   applied_at: string;
   updated_at: string;
 }

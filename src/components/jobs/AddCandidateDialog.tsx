@@ -26,6 +26,7 @@ export function AddCandidateDialog({ open, onOpenChange, jobId }: AddCandidateDi
   const [stageId, setStageId] = useState<string>('');
   const [source, setSource] = useState<ApplicationSource>('manual');
   const [notes, setNotes] = useState('');
+  const [salaryExpectation, setSalaryExpectation] = useState('');
 
   const { data: parties = [], isLoading: loadingParties } = useParties();
   const { data: existingApplications = [] } = useApplications(jobId);
@@ -65,6 +66,7 @@ export function AddCandidateDialog({ open, onOpenChange, jobId }: AddCandidateDi
         status: 'new',
         notes: notes || null,
         rating: null,
+        salary_expectation: salaryExpectation ? parseFloat(salaryExpectation) : null,
       });
       toast.success('Candidato adicionado com sucesso!');
       onOpenChange(false);
@@ -81,6 +83,7 @@ export function AddCandidateDialog({ open, onOpenChange, jobId }: AddCandidateDi
     setStageId('');
     setSource('manual');
     setNotes('');
+    setSalaryExpectation('');
   };
 
   return (
@@ -203,6 +206,18 @@ export function AddCandidateDialog({ open, onOpenChange, jobId }: AddCandidateDi
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          {/* Salary Expectation */}
+          <div>
+            <Label>Pretensão Salarial (R$)</Label>
+            <Input
+              type="number"
+              value={salaryExpectation}
+              onChange={(e) => setSalaryExpectation(e.target.value)}
+              placeholder="Ex: 8000"
+              className="mt-1.5"
+            />
           </div>
 
           {/* Notes */}

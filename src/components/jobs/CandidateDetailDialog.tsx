@@ -9,7 +9,7 @@ import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { 
   Mail, Phone, Linkedin, Star, ExternalLink, 
-  CheckCircle, XCircle, UserMinus 
+  CheckCircle, XCircle, UserMinus, DollarSign
 } from 'lucide-react';
 import { 
   ApplicationWithRelations, JobPipelineStage, 
@@ -145,6 +145,19 @@ export function CandidateDetailDialog({
               </div>
             </div>
           </div>
+
+          {/* Salary Expectation */}
+          {(application as any).salary_expectation && (
+            <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
+              <DollarSign className="h-5 w-5 text-primary" />
+              <div>
+                <p className="text-xs text-muted-foreground">Pretensão Salarial</p>
+                <p className="font-semibold text-foreground">
+                  {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format((application as any).salary_expectation)}
+                </p>
+              </div>
+            </div>
+          )}
 
           <Separator />
 

@@ -11,7 +11,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { job_slug, full_name, email, phone, linkedin_url, city, state, notes } = await req.json();
+    const { job_slug, full_name, email, phone, linkedin_url, city, state, salary_expectation, notes } = await req.json();
 
     // Validação básica
     if (!job_slug || !full_name || !email) {
@@ -112,6 +112,7 @@ Deno.serve(async (req) => {
         party_id: partyId,
         source: 'website',
         status: 'new',
+        salary_expectation: salary_expectation || null,
         notes: notes || null,
       })
       .select('id')

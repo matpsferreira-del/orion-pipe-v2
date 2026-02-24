@@ -6,13 +6,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Building2, User, Calendar, DollarSign, Target, Phone, Mail, Plus, MessageSquare, FileText } from 'lucide-react';
+import { Building2, User, Calendar, DollarSign, Target, Phone, Mail, Plus, MessageSquare, FileText, Briefcase } from 'lucide-react';
 import { OpportunityRow } from '@/hooks/useOpportunities';
 import { useCompanies } from '@/hooks/useCompanies';
 import { useContacts } from '@/hooks/useContacts';
 import { useProfiles } from '@/hooks/useProfiles';
 import { useActivitiesByOpportunity } from '@/hooks/useActivities';
 import { ActivityDialog } from '@/components/activities/ActivityDialog';
+import { JobDialog } from '@/components/jobs/JobDialog';
 import { pipelineStages } from '@/data/mockData';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -49,6 +50,7 @@ const activityTypeLabels: Record<string, string> = {
 
 export function OpportunityDetail({ opportunity }: OpportunityDetailProps) {
   const [showActivityDialog, setShowActivityDialog] = useState(false);
+  const [showJobDialog, setShowJobDialog] = useState(false);
   const navigate = useNavigate();
   
   const { data: companies = [] } = useCompanies();
@@ -86,6 +88,14 @@ export function OpportunityDetail({ opportunity }: OpportunityDetailProps) {
           <p className="text-sm text-muted-foreground">{company?.razao_social}</p>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowJobDialog(true)}
+          >
+            <Briefcase className="h-4 w-4 mr-1" />
+            Criar Vaga
+          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -339,6 +349,16 @@ export function OpportunityDetail({ opportunity }: OpportunityDetailProps) {
         open={showActivityDialog} 
         onOpenChange={setShowActivityDialog}
         preSelectedCompanyId={opportunity.company_id}
+        preSelectedOpportunityId={opportunity.id}
+      />
+
+      {/* Job Dialog */}
+      <JobDialog
+        open={showJobDialog}
+        onOpenChange={setShowJobDialog}
+        preSelectedCompanyId={opportunity.company_id}
+        preSelectedContactId={opportunity.contact_id}
+        preSelectedResponsavelId={opportunity.responsavel_id}
         preSelectedOpportunityId={opportunity.id}
       />
     </div>
