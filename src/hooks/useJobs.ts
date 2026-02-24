@@ -8,6 +8,7 @@ export type JobInsert = {
   company_id: string;
   contact_id?: string | null;
   responsavel_id?: string | null;
+  opportunity_id?: string | null;
   title: string;
   description?: string | null;
   requirements?: string | null;

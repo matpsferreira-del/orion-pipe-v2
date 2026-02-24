@@ -159,6 +159,7 @@ export type Database = {
           notes: string | null
           party_id: string
           rating: number | null
+          salary_expectation: number | null
           source: string
           stage_id: string | null
           status: Database["public"]["Enums"]["application_status"]
@@ -171,6 +172,7 @@ export type Database = {
           notes?: string | null
           party_id: string
           rating?: number | null
+          salary_expectation?: number | null
           source?: string
           stage_id?: string | null
           status?: Database["public"]["Enums"]["application_status"]
@@ -183,6 +185,7 @@ export type Database = {
           notes?: string | null
           party_id?: string
           rating?: number | null
+          salary_expectation?: number | null
           source?: string
           stage_id?: string | null
           status?: Database["public"]["Enums"]["application_status"]
@@ -452,6 +455,7 @@ export type Database = {
           filled_at: string | null
           id: string
           location: string | null
+          opportunity_id: string | null
           priority: string
           published: boolean
           published_at: string | null
@@ -475,6 +479,7 @@ export type Database = {
           filled_at?: string | null
           id?: string
           location?: string | null
+          opportunity_id?: string | null
           priority?: string
           published?: boolean
           published_at?: string | null
@@ -498,6 +503,7 @@ export type Database = {
           filled_at?: string | null
           id?: string
           location?: string | null
+          opportunity_id?: string | null
           priority?: string
           published?: boolean
           published_at?: string | null
@@ -537,6 +543,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
             referencedColumns: ["id"]
           },
           {

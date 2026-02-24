@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils';
 import { JobPipelineStage, ApplicationWithRelations, applicationStatusLabels } from '@/types/ats';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Star, Mail, Phone, Linkedin } from 'lucide-react';
+import { Star, Mail, Phone, Linkedin, DollarSign } from 'lucide-react';
 
 interface CandidateKanbanProps {
   stages: JobPipelineStage[];
@@ -183,6 +183,13 @@ function CandidateCard({ application, onClick }: CandidateCardProps) {
           </div>
         )}
       </div>
+
+      {(application as any).salary_expectation && (
+        <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
+          <DollarSign className="h-3 w-3" />
+          <span>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format((application as any).salary_expectation)}</span>
+        </div>
+      )}
 
       <div className="flex items-center gap-2 mt-2">
         {party?.email_raw && (

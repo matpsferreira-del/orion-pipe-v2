@@ -19,6 +19,10 @@ interface JobDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   job?: JobRow | null;
+  preSelectedCompanyId?: string;
+  preSelectedContactId?: string;
+  preSelectedResponsavelId?: string;
+  preSelectedOpportunityId?: string;
 }
 
 // Parse a stored location string back into its parts
@@ -64,7 +68,7 @@ const WORK_MODELS = [
   { value: 'Remoto', label: 'Remoto' },
 ];
 
-export function JobDialog({ open, onOpenChange, job }: JobDialogProps) {
+export function JobDialog({ open, onOpenChange, job, preSelectedCompanyId, preSelectedContactId, preSelectedResponsavelId, preSelectedOpportunityId }: JobDialogProps) {
   const [formData, setFormData] = useState({
     company_id: '',
     contact_id: '',
@@ -126,9 +130,9 @@ export function JobDialog({ open, onOpenChange, job }: JobDialogProps) {
       setWorkModel(loc.workModel);
     } else {
       setFormData({
-        company_id: '',
-        contact_id: '',
-        responsavel_id: '',
+        company_id: preSelectedCompanyId || '',
+        contact_id: preSelectedContactId || '',
+        responsavel_id: preSelectedResponsavelId || '',
         title: '',
         description: '',
         requirements: '',
@@ -196,6 +200,7 @@ export function JobDialog({ open, onOpenChange, job }: JobDialogProps) {
         priority: formData.priority,
         area: (formData.area as JobArea) || null,
         deadline: formData.deadline || null,
+        ...(preSelectedOpportunityId && !isEditing ? { opportunity_id: preSelectedOpportunityId } : {}),
       } as any;
 
       if (isEditing && job) {
