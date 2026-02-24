@@ -18,6 +18,7 @@ import {
   Contact,
   UserCircle,
   Briefcase,
+  Radar,
 } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -72,6 +73,7 @@ const tabNavItems = {
     { to: '/tarefas', icon: CheckSquare, label: 'Tarefas' },
     { to: '/faturamento', icon: Receipt, label: 'Faturamento' },
     { to: '/relatorios', icon: BarChart3, label: 'Relatórios' },
+    { to: '/mapeamento-vagas', icon: Radar, label: 'Mapeamento de Vagas' },
   ],
   recrutamento: [
     { to: '/recrutamento', icon: LayoutDashboard, label: 'Dashboard' },
