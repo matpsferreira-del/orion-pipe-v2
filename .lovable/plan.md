@@ -1,92 +1,42 @@
 
 
-## Duas melhorias: Criar Vaga a partir da Oportunidade + Pretensao Salarial nos Candidatos
+## Alteracao da tabela job_postings: `location` -> `cidade` + `estado`
 
-### 1. Criar Vaga a partir da Oportunidade
+### Objetivo
+Substituir a coluna unica `location` por duas colunas separadas (`cidade` e `estado`) para receber os dados ja estruturados da API do Manus, eliminando a necessidade de parsing com regex.
 
-**Problema:** Hoje nao existe vinculo entre oportunidades (CRM) e vagas (ATS). O usuario precisa criar a vaga manualmente, sem rastreabilidade de onde ela surgiu.
+### Etapas
 
-**Solucao:**
+#### 1. Migracao do banco de dados
+- Adicionar colunas `cidade` (text, nullable) e `estado` (text, nullable) na tabela `job_postings`
+- Migrar dados existentes: tentar extrair cidade e estado do campo `location` atual para popular as novas colunas
+- Remover a coluna `location`
 
-**1a. Migracao no banco de dados**
-- Adicionar coluna `opportunity_id` (uuid, nullable, FK para `opportunities.id`) na tabela `jobs`
-- Atualizar a policy de SELECT para que vagas vinculadas a oportunidades acessiveis sejam visiveis
-
-**1b. Botao "Criar Vaga" no detalhe da Oportunidade**
-- No componente `OpportunityDetail.tsx`, adicionar um botao "Criar Vaga" ao lado do botao "Gerar Proposta"
-- Ao clicar, abre o `JobDialog` ja pre-preenchido com:
-  - `company_id` da oportunidade
-  - `contact_id` da oportunidade  
-  - `responsavel_id` da oportunidade
-  - `opportunity_id` para o vinculo
-
-**1c. Atualizar JobDialog para aceitar `opportunity_id`**
-- Adicionar prop opcional `preSelectedOpportunityId` no `JobDialog`
-- Adicionar prop opcional para pre-preencher `company_id`, `contact_id`, `responsavel_id`
-- Incluir `opportunity_id` no payload de criacao
-
-**1d. Atualizar hooks e tipos**
-- Atualizar `JobInsert` em `useJobs.ts` para incluir `opportunity_id`
-- O tipo sera atualizado automaticamente pelo Supabase types
-
-**1e. Exibir vinculo na vaga**
-- No `JobDetail.tsx`, mostrar badge/link indicando a oportunidade de origem quando `opportunity_id` existir
-
----
-
-### 2. Pretensao Salarial dos Candidatos
-
-**Problema:** Nao existe campo para registrar a pretensao salarial do candidato. Essa informacao nao aparece no Kanban nem no detalhe do candidato.
-
-**Solucao:**
-
-**2a. Migracao no banco de dados**
-- Adicionar coluna `salary_expectation` (numeric, nullable) na tabela `applications`
-
-**2b. Formulario publico de candidatura**
-- Adicionar campo "Pretensao Salarial" no formulario publico (`PublicJobDetail.tsx`)
-- Atualizar o schema zod para incluir `salary_expectation`
-- Passar o valor na insercao via edge function `public-apply`
-
-**2c. Adicionar candidato manualmente**
-- No `AddCandidateDialog.tsx`, adicionar campo de pretensao salarial
-- Enviar o valor ao criar a application
-
-**2d. Exibir no Kanban**
-- No card do candidato (`CandidateKanban.tsx`), mostrar a pretensao salarial formatada em BRL quando preenchida
-
-**2e. Exibir no detalhe do candidato**
-- No `CandidateDetailDialog.tsx`, exibir a pretensao salarial na secao de informacoes
-
-**2f. Atualizar tipos e hooks**
-- Atualizar `ApplicationWithRelations` e queries para incluir `salary_expectation`
-
----
-
-### Detalhes tecnicos
-
-**Migracao SQL (uma unica migracao):**
-
-```sql
--- 1. Vinculo oportunidade -> vaga
-ALTER TABLE public.jobs
-  ADD COLUMN opportunity_id uuid REFERENCES public.opportunities(id) ON DELETE SET NULL;
-
--- 2. Pretensao salarial na candidatura
-ALTER TABLE public.applications
-  ADD COLUMN salary_expectation numeric;
+```text
+ALTER TABLE public.job_postings ADD COLUMN cidade text;
+ALTER TABLE public.job_postings ADD COLUMN estado text;
+-- Migrar dados existentes (best effort)
+ALTER TABLE public.job_postings DROP COLUMN location;
 ```
 
-**Arquivos modificados:**
-- `src/components/opportunities/OpportunityDetail.tsx` - botao "Criar Vaga" + estado para abrir JobDialog
-- `src/components/jobs/JobDialog.tsx` - props para pre-preenchimento e opportunity_id
-- `src/hooks/useJobs.ts` - adicionar `opportunity_id` ao tipo `JobInsert`
-- `src/components/jobs/JobDetail.tsx` - exibir badge de oportunidade vinculada
-- `src/pages/public/PublicJobDetail.tsx` - campo pretensao salarial no form
-- `src/components/jobs/AddCandidateDialog.tsx` - campo pretensao salarial
-- `src/components/jobs/CandidateKanban.tsx` - exibir pretensao no card
-- `src/components/jobs/CandidateDetailDialog.tsx` - exibir pretensao no detalhe
-- `src/hooks/useApplications.ts` - incluir salary_expectation nas queries
-- `src/types/ats.ts` - atualizar interface Application
-- `supabase/functions/public-apply/index.ts` - aceitar salary_expectation
+#### 2. Atualizar a pagina MapeamentoVagas.tsx
+- Alterar a interface `JobPosting`: remover `location`, adicionar `cidade` e `estado`
+- Simplificar drasticamente os filtros:
+  - **Estado**: listar valores unicos diretamente de `posting.estado` (sem regex)
+  - **Cidade**: listar valores unicos de `posting.cidade`, filtrados pelo estado selecionado
+- Simplificar a logica de filtragem: comparacao direta em vez de regex
+- Atualizar a tabela: coluna "Local" exibira `cidade, estado` concatenados
+- Atualizar a busca textual para pesquisar em `cidade` e `estado`
+- Remover o import de `BRAZIL_STATES` (ou manter apenas para exibir nome completo do estado no filtro)
+
+### Secao tecnica
+
+**Banco de dados:**
+- A migracao adiciona as colunas nullable para nao quebrar insercoes existentes
+- Dados antigos terao cidade/estado como null caso nao consigam ser parseados
+
+**Frontend (MapeamentoVagas.tsx):**
+- Remove toda a logica de `locationMatchesState` e regex de extracao
+- Os `useMemo` de `extractedStates` e `extractedCities` passam a ser simples `Array.from(new Set(...))`
+- Na tabela, a coluna "Local" mostra `[cidade], [estado]` com fallback para quando um dos dois estiver vazio
 
