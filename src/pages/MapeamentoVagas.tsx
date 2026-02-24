@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { PageHeader } from '@/components/ui/page-header';
 import { Search, ExternalLink, MapPin, Building2, X, Loader2, Zap, Filter } from 'lucide-react';
-import { BRAZIL_STATES } from '@/data/brazilLocations';
+import { BRAZIL_STATES, BRAZIL_CITIES } from '@/data/brazilLocations';
 
 interface JobPosting {
   id: string;
@@ -50,14 +50,12 @@ export default function MapeamentoVagas() {
   const searchTerms = useMemo(() => Array.from(new Set(postings.map(p => p.search_term))).sort(), [postings]);
   const companies = useMemo(() => Array.from(new Set(postings.map(p => p.company).filter(Boolean))).sort(), [postings]);
 
-  const states = useMemo(() => Array.from(new Set(postings.map(p => p.estado).filter(Boolean) as string[])).sort(), [postings]);
-
   const cities = useMemo(() => {
-    const relevant = filterState !== ALL
-      ? postings.filter(p => p.estado === filterState)
-      : postings;
-    return Array.from(new Set(relevant.map(p => p.cidade).filter(Boolean) as string[])).sort();
-  }, [postings, filterState]);
+    if (filterState !== ALL) {
+      return BRAZIL_CITIES[filterState] || [];
+    }
+    return [];
+  }, [filterState]);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
@@ -150,10 +148,10 @@ export default function MapeamentoVagas() {
                 <SelectTrigger className="w-full h-9 text-sm">
                   <SelectValue placeholder="Todos" />
                 </SelectTrigger>
-                <SelectContent className="bg-popover z-50">
+                <SelectContent className="bg-popover z-50 max-h-[300px]">
                   <SelectItem value={ALL}>Todos os estados</SelectItem>
-                  {states.map(uf => (
-                    <SelectItem key={uf} value={uf}>{getStateName(uf)}</SelectItem>
+                  {BRAZIL_STATES.map(s => (
+                    <SelectItem key={s.uf} value={s.uf}>{s.name} ({s.uf})</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
