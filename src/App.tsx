@@ -19,6 +19,7 @@ import Pessoas from "./pages/Pessoas";
 import Vagas from "./pages/Vagas";
 import ProposalGenerator from "./pages/ProposalGenerator";
 import RecrutamentoDashboard from "./pages/RecrutamentoDashboard";
+import MapeamentoVagas from "./pages/MapeamentoVagas";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import { Loader2 } from "lucide-react";
@@ -93,6 +94,7 @@ const App = () => (
               <Route path="/tarefas" element={<Tarefas />} />
               <Route path="/faturamento" element={<Faturamento />} />
               <Route path="/relatorios" element={<Relatorios />} />
+              <Route path="/mapeamento-vagas" element={<MapeamentoVagas />} />
               <Route path="/equipe" element={<Equipe />} />
               <Route path="/configuracoes" element={<Configuracoes />} />
             </Route>
