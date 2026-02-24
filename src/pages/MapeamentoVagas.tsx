@@ -30,7 +30,7 @@ export default function MapeamentoVagas() {
   const [search, setSearch] = useState('');
   const [filterSource, setFilterSource] = useState(ALL);
   const [filterSearchTerm, setFilterSearchTerm] = useState(ALL);
-  const [filterCompany, setFilterCompany] = useState(ALL);
+  const [filterCompany, setFilterCompany] = useState('');
   const [filterState, setFilterState] = useState(ALL);
   const [filterCity, setFilterCity] = useState(ALL);
 
@@ -64,20 +64,20 @@ export default function MapeamentoVagas() {
       const matchesSearch = !q || p.title.toLowerCase().includes(q) || p.company.toLowerCase().includes(q) || loc.includes(q);
       const matchesSource = filterSource === ALL || p.source === filterSource;
       const matchesTerm = filterSearchTerm === ALL || p.search_term === filterSearchTerm;
-      const matchesCompany = filterCompany === ALL || p.company === filterCompany;
+      const matchesCompany = !filterCompany || p.company.toLowerCase().includes(filterCompany.toLowerCase());
       const matchesState = filterState === ALL || p.estado === filterState;
       const matchesCity = filterCity === ALL || p.cidade === filterCity;
       return matchesSearch && matchesSource && matchesTerm && matchesCompany && matchesState && matchesCity;
     });
   }, [postings, search, filterSource, filterSearchTerm, filterCompany, filterState, filterCity]);
 
-  const hasFilters = search || filterSource !== ALL || filterSearchTerm !== ALL || filterCompany !== ALL || filterState !== ALL || filterCity !== ALL;
+  const hasFilters = search || filterSource !== ALL || filterSearchTerm !== ALL || filterCompany || filterState !== ALL || filterCity !== ALL;
 
   const clearFilters = () => {
     setSearch('');
     setFilterSource(ALL);
     setFilterSearchTerm(ALL);
-    setFilterCompany(ALL);
+    setFilterCompany('');
     setFilterState(ALL);
     setFilterCity(ALL);
   };
@@ -174,17 +174,12 @@ export default function MapeamentoVagas() {
 
             <div className="space-y-1.5">
               <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Empresa</Label>
-              <Select value={filterCompany} onValueChange={setFilterCompany}>
-                <SelectTrigger className="w-full h-9 text-sm">
-                  <SelectValue placeholder="Todas" />
-                </SelectTrigger>
-                <SelectContent className="bg-popover z-50">
-                  <SelectItem value={ALL}>Todas as empresas</SelectItem>
-                  {companies.map(c => (
-                    <SelectItem key={c} value={c}>{c}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Input
+                className="h-9 text-sm"
+                placeholder="Filtrar por empresa..."
+                value={filterCompany}
+                onChange={e => setFilterCompany(e.target.value)}
+              />
             </div>
 
             <div className="space-y-1.5">
@@ -254,10 +249,10 @@ export default function MapeamentoVagas() {
                     <X className="h-3 w-3 cursor-pointer" onClick={() => setFilterCity(ALL)} />
                   </Badge>
                 )}
-                {filterCompany !== ALL && (
+                {filterCompany && (
                   <Badge variant="secondary" className="gap-1">
                     Empresa: {filterCompany}
-                    <X className="h-3 w-3 cursor-pointer" onClick={() => setFilterCompany(ALL)} />
+                    <X className="h-3 w-3 cursor-pointer" onClick={() => setFilterCompany('')} />
                   </Badge>
                 )}
                 {filterSource !== ALL && (
