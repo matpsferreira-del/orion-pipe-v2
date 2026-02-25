@@ -5,3 +5,5 @@ project_id = "ocrsfcjiutvojzdfotou"
     verify_jwt = false
   [functions.public-apply]
     verify_jwt = false
+  [functions.generate-shortlist]
+    verify_jwt = false

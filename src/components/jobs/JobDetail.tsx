@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -6,7 +7,7 @@ import { Separator } from '@/components/ui/separator';
 import { 
   Building2, MapPin, Calendar, DollarSign, User, Clock, 
   Edit, UserPlus, Play, Pause, CheckCircle, XCircle,
-  Globe, GlobeLock, Copy, ExternalLink, Image
+  Globe, GlobeLock, Copy, ExternalLink, Image, FileText, Loader2
 } from 'lucide-react';
 import { JobRow, useUpdateJobStatus, useJobStages, usePublishJob } from '@/hooks/useJobs';
 import { useApplicationsWithParties, useUpdateApplicationStage } from '@/hooks/useApplications';
@@ -23,6 +24,7 @@ import {
 } from '@/types/ats';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 interface JobDetailProps {
   job: JobRow;
@@ -33,6 +35,8 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
   const [showAddCandidate, setShowAddCandidate] = useState(false);
   const [selectedApplication, setSelectedApplication] = useState<ApplicationWithRelations | null>(null);
   const [showLinkedInPost, setShowLinkedInPost] = useState(false);
+  const [generatingShortlist, setGeneratingShortlist] = useState(false);
+  const navigate = useNavigate();
 
   const { data: companies = [] } = useCompanies();
   const { data: profiles = [] } = useProfiles();
@@ -111,6 +115,90 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
     }
   };
 
+  const handleGenerateShortlist = async () => {
+    // Find the "Shortlist" or "Entrevista Final" or "Finalistas" stage
+    const shortlistStage = stages.find(s => 
+      s.name.toLowerCase().includes('shortlist') || 
+      s.name.toLowerCase().includes('finalista') || 
+      s.name.toLowerCase().includes('entrevista final')
+    );
+
+    if (!shortlistStage) {
+      toast.error('Nenhuma etapa de Shortlist/Finalistas encontrada. Renomeie uma etapa para "Shortlist" ou "Finalistas".');
+      return;
+    }
+
+    const shortlistApps = applications.filter(app => app.stage_id === shortlistStage.id);
+
+    if (shortlistApps.length === 0) {
+      toast.error(`Nenhum candidato na etapa "${shortlistStage.name}".`);
+      return;
+    }
+
+    setGeneratingShortlist(true);
+
+    try {
+      const candidatesPayload = shortlistApps.map(app => ({
+        name: app._party?.full_name || 'Candidato',
+        current_role: app._party?.headline || null,
+        notes: app.notes || '',
+        salary_expectation: app.salary_expectation,
+      }));
+
+      const { data, error } = await supabase.functions.invoke('generate-shortlist', {
+        body: { candidates: candidatesPayload },
+      });
+
+      if (error) throw error;
+
+      const processedCandidates = (data?.candidates || candidatesPayload).map((c: any) => ({
+        name: c.name,
+        current_role: c.current_role,
+        ai_summary: c.ai_summary || null,
+        ai_deliveries: c.ai_deliveries || null,
+        ai_background: c.ai_background || null,
+        salary_expectation: c.salary_expectation
+          ? (typeof c.salary_expectation === 'number'
+              ? `R$ ${Number(c.salary_expectation).toLocaleString('pt-BR')}`
+              : c.salary_expectation)
+          : 'A Combinar',
+      }));
+
+      navigate(`/jobs/${job.id}/shortlist-presentation`, {
+        state: {
+          candidates: processedCandidates,
+          jobTitle: job.title,
+          companyName: company?.nome_fantasia || 'Cliente',
+        },
+      });
+    } catch (err) {
+      console.error('Shortlist generation error:', err);
+      toast.error('Erro ao gerar shortlist. Tentando sem IA...');
+
+      // Fallback without AI
+      const fallbackCandidates = shortlistApps.map(app => ({
+        name: app._party?.full_name || 'Candidato',
+        current_role: app._party?.headline || null,
+        ai_summary: app.notes || null,
+        ai_deliveries: null,
+        ai_background: null,
+        salary_expectation: app.salary_expectation
+          ? `R$ ${Number(app.salary_expectation).toLocaleString('pt-BR')}`
+          : 'A Combinar',
+      }));
+
+      navigate(`/jobs/${job.id}/shortlist-presentation`, {
+        state: {
+          candidates: fallbackCandidates,
+          jobTitle: job.title,
+          companyName: company?.nome_fantasia || 'Cliente',
+        },
+      });
+    } finally {
+      setGeneratingShortlist(false);
+    }
+  };
+
   return (
     <div className="mt-4 space-y-6">
       {/* Header Info */}
@@ -158,7 +246,20 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
           )}
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleGenerateShortlist}
+            disabled={generatingShortlist}
+          >
+            {generatingShortlist ? (
+              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+            ) : (
+              <FileText className="h-4 w-4 mr-1" />
+            )}
+            {generatingShortlist ? 'Processando...' : 'Gerar Shortlist'}
+          </Button>
           <Button variant="outline" size="sm" onClick={() => setShowLinkedInPost(true)}>
             <Image className="h-4 w-4 mr-1" />
             Gerar Post
