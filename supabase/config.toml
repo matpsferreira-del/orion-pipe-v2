@@ -1,4 +1,7 @@
 project_id = "ocrsfcjiutvojzdfotou"
 
-[functions.public-apply]
-verify_jwt = false
+[functions]
+  [functions.auth-email-hook]
+    verify_jwt = false
+  [functions.public-apply]
+    verify_jwt = false
