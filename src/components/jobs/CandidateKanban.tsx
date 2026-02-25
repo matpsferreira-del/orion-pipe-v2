@@ -184,10 +184,10 @@ function CandidateCard({ application, onClick }: CandidateCardProps) {
         )}
       </div>
 
-      {(application as any).salary_expectation && (
+      {application.salary_expectation != null && (
         <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
           <DollarSign className="h-3 w-3" />
-          <span>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format((application as any).salary_expectation)}</span>
+          <span>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(application.salary_expectation))}</span>
         </div>
       )}
 
