@@ -116,15 +116,13 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
   };
 
   const handleGenerateShortlist = async () => {
-    // Find the "Shortlist" or "Entrevista Final" or "Finalistas" stage
+    // Find the "Shortlist" stage
     const shortlistStage = stages.find(s => 
-      s.name.toLowerCase().includes('shortlist') || 
-      s.name.toLowerCase().includes('finalista') || 
-      s.name.toLowerCase().includes('entrevista final')
+      s.name.toLowerCase() === 'shortlist'
     );
 
     if (!shortlistStage) {
-      toast.error('Nenhuma etapa de Shortlist/Finalistas encontrada. Renomeie uma etapa para "Shortlist" ou "Finalistas".');
+      toast.error('Nenhuma etapa "Shortlist" encontrada no pipeline desta vaga.');
       return;
     }
 

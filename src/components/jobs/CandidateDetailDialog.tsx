@@ -147,13 +147,13 @@ export function CandidateDetailDialog({
           </div>
 
           {/* Salary Expectation */}
-          {(application as any).salary_expectation && (
+          {application.salary_expectation != null && (
             <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
               <DollarSign className="h-5 w-5 text-primary" />
               <div>
                 <p className="text-xs text-muted-foreground">Pretensão Salarial</p>
                 <p className="font-semibold text-foreground">
-                  {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format((application as any).salary_expectation)}
+                  {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(application.salary_expectation))}
                 </p>
               </div>
             </div>
