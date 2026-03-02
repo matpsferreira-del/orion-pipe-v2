@@ -3,6 +3,7 @@ import { cn } from '@/lib/utils';
 import { JobPipelineStage, ApplicationWithRelations, applicationStatusLabels } from '@/types/ats';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Star, Mail, Phone, Linkedin, DollarSign } from 'lucide-react';
 
 interface CandidateKanbanProps {
@@ -10,21 +11,23 @@ interface CandidateKanbanProps {
   applications: ApplicationWithRelations[];
   onMoveCandidate: (applicationId: string, newStageId: string) => void;
   onCandidateClick: (application: ApplicationWithRelations) => void;
+  selectedIds?: Set<string>;
+  onToggleSelect?: (id: string) => void;
 }
 
 export function CandidateKanban({ 
   stages, 
   applications, 
   onMoveCandidate, 
-  onCandidateClick 
+  onCandidateClick,
+  selectedIds,
+  onToggleSelect,
 }: CandidateKanbanProps) {
-  // Group applications by stage
   const applicationsByStage = useMemo(() => {
     const grouped: Record<string, ApplicationWithRelations[]> = {};
     stages.forEach(stage => {
       grouped[stage.id] = [];
     });
-    // Add unassigned group
     grouped['unassigned'] = [];
     
     applications.forEach(app => {
@@ -40,17 +43,17 @@ export function CandidateKanban({
 
   return (
     <div className="flex gap-4 h-full overflow-x-auto pb-4">
-      {/* Unassigned column */}
       {applicationsByStage['unassigned']?.length > 0 && (
         <KanbanColumn
           stage={{ id: 'unassigned', name: 'Sem Etapa', color: '#6b7280', position: -1, job_id: '', created_at: '' }}
           applications={applicationsByStage['unassigned']}
-          onDrop={(appId) => {}} // Can't drop to unassigned
+          onDrop={(appId) => {}}
           onCardClick={onCandidateClick}
+          selectedIds={selectedIds}
+          onToggleSelect={onToggleSelect}
         />
       )}
       
-      {/* Stage columns */}
       {stages.map((stage) => (
         <KanbanColumn
           key={stage.id}
@@ -58,6 +61,8 @@ export function CandidateKanban({
           applications={applicationsByStage[stage.id] || []}
           onDrop={(appId) => onMoveCandidate(appId, stage.id)}
           onCardClick={onCandidateClick}
+          selectedIds={selectedIds}
+          onToggleSelect={onToggleSelect}
         />
       ))}
     </div>
@@ -69,9 +74,11 @@ interface KanbanColumnProps {
   applications: ApplicationWithRelations[];
   onDrop: (applicationId: string) => void;
   onCardClick: (application: ApplicationWithRelations) => void;
+  selectedIds?: Set<string>;
+  onToggleSelect?: (id: string) => void;
 }
 
-function KanbanColumn({ stage, applications, onDrop, onCardClick }: KanbanColumnProps) {
+function KanbanColumn({ stage, applications, onDrop, onCardClick, selectedIds, onToggleSelect }: KanbanColumnProps) {
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     e.currentTarget.classList.add('bg-primary/5');
@@ -90,6 +97,18 @@ function KanbanColumn({ stage, applications, onDrop, onCardClick }: KanbanColumn
     }
   };
 
+  const allSelected = applications.length > 0 && selectedIds && applications.every(a => selectedIds.has(a.id));
+  const someSelected = selectedIds && applications.some(a => selectedIds.has(a.id));
+
+  const handleSelectAll = () => {
+    if (!onToggleSelect) return;
+    if (allSelected) {
+      applications.forEach(a => onToggleSelect(a.id));
+    } else {
+      applications.filter(a => !selectedIds?.has(a.id)).forEach(a => onToggleSelect(a.id));
+    }
+  };
+
   return (
     <div
       className="w-72 flex-shrink-0 bg-muted/30 rounded-lg p-3 flex flex-col transition-colors"
@@ -100,7 +119,17 @@ function KanbanColumn({ stage, applications, onDrop, onCardClick }: KanbanColumn
     >
       <div className="mb-3">
         <div className="flex items-center justify-between">
-          <h3 className="font-semibold text-sm text-foreground">{stage.name}</h3>
+          <div className="flex items-center gap-2">
+            {onToggleSelect && applications.length > 0 && (
+              <Checkbox
+                checked={allSelected ? true : someSelected ? 'indeterminate' : false}
+                onCheckedChange={handleSelectAll}
+                className="h-3.5 w-3.5"
+                aria-label={`Selecionar todos de ${stage.name}`}
+              />
+            )}
+            <h3 className="font-semibold text-sm text-foreground">{stage.name}</h3>
+          </div>
           <span 
             className="px-2 py-0.5 rounded-full text-xs font-medium"
             style={{ backgroundColor: `${stage.color}20`, color: stage.color }}
@@ -116,6 +145,8 @@ function KanbanColumn({ stage, applications, onDrop, onCardClick }: KanbanColumn
             key={app.id}
             application={app}
             onClick={() => onCardClick(app)}
+            selected={selectedIds?.has(app.id) ?? false}
+            onToggleSelect={onToggleSelect ? () => onToggleSelect(app.id) : undefined}
           />
         ))}
       </div>
@@ -126,9 +157,11 @@ function KanbanColumn({ stage, applications, onDrop, onCardClick }: KanbanColumn
 interface CandidateCardProps {
   application: ApplicationWithRelations;
   onClick: () => void;
+  selected: boolean;
+  onToggleSelect?: () => void;
 }
 
-function CandidateCard({ application, onClick }: CandidateCardProps) {
+function CandidateCard({ application, onClick, selected, onToggleSelect }: CandidateCardProps) {
   const party = application._party;
 
   const handleDragStart = (e: React.DragEvent) => {
@@ -149,9 +182,10 @@ function CandidateCard({ application, onClick }: CandidateCardProps) {
   return (
     <div
       className={cn(
-        "bg-background rounded-lg p-3 shadow-sm border border-border cursor-pointer",
+        "bg-background rounded-lg p-3 shadow-sm border cursor-pointer",
         "hover:shadow-md transition-all",
-        isFinalStatus && "opacity-60"
+        isFinalStatus && "opacity-60",
+        selected ? "border-primary ring-1 ring-primary/30" : "border-border"
       )}
       draggable={!isFinalStatus}
       onDragStart={handleDragStart}
@@ -159,6 +193,16 @@ function CandidateCard({ application, onClick }: CandidateCardProps) {
       onClick={onClick}
     >
       <div className="flex items-start gap-3">
+        {onToggleSelect && (
+          <div className="pt-0.5" onClick={(e) => e.stopPropagation()}>
+            <Checkbox
+              checked={selected}
+              onCheckedChange={onToggleSelect}
+              className="h-3.5 w-3.5"
+              aria-label={`Selecionar ${party?.full_name}`}
+            />
+          </div>
+        )}
         <Avatar className="h-9 w-9">
           <AvatarFallback className="text-xs bg-primary/10 text-primary">
             {party ? getInitials(party.full_name) : '??'}

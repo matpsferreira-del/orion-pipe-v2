@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -17,6 +17,7 @@ import { CandidateKanban } from './CandidateKanban';
 import { AddCandidateDialog } from './AddCandidateDialog';
 import { LinkedInPostDialog } from './LinkedInPostDialog';
 import { CandidateDetailDialog } from './CandidateDetailDialog';
+import { BulkActionBar } from './BulkActionBar';
 import { ApplicationWithRelations } from '@/types/ats';
 import { 
   jobStatusLabels, jobStatusColors, priorityLabels, priorityColors, 
@@ -36,7 +37,19 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
   const [selectedApplication, setSelectedApplication] = useState<ApplicationWithRelations | null>(null);
   const [showLinkedInPost, setShowLinkedInPost] = useState(false);
   const [generatingShortlist, setGeneratingShortlist] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const navigate = useNavigate();
+
+  const handleToggleSelect = useCallback((id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const handleClearSelection = useCallback(() => setSelectedIds(new Set()), []);
 
   const { data: companies = [] } = useCompanies();
   const { data: profiles = [] } = useProfiles();
@@ -409,7 +422,16 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
           )}
         </div>
 
-        <TabsContent value="candidates" className="mt-4">
+        <TabsContent value="candidates" className="mt-4 space-y-4">
+          {selectedIds.size > 0 && (
+            <BulkActionBar
+              selectedIds={selectedIds}
+              applications={applications}
+              stages={stages}
+              jobId={job.id}
+              onClearSelection={handleClearSelection}
+            />
+          )}
           {loadingApps ? (
             <div className="text-center py-8 text-muted-foreground">
               Carregando candidatos...
@@ -433,6 +455,8 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
                 applications={applications}
                 onMoveCandidate={handleMoveCandidate}
                 onCandidateClick={setSelectedApplication}
+                selectedIds={selectedIds}
+                onToggleSelect={handleToggleSelect}
               />
             </div>
           )}
