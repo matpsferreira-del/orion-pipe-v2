@@ -1,42 +1,49 @@
 
+# Seleção em Massa de Candidatos no Kanban
 
-## Alteracao da tabela job_postings: `location` -> `cidade` + `estado`
+## Objetivo
+Adicionar checkboxes nos cards do Kanban de candidatos dentro das vagas, permitindo selecionar multiplos candidatos para executar ações em massa: **enviar email**, **reprovar** ou **aprovar para a próxima etapa**.
 
-### Objetivo
-Substituir a coluna unica `location` por duas colunas separadas (`cidade` e `estado`) para receber os dados ja estruturados da API do Manus, eliminando a necessidade de parsing com regex.
+## Mudanças Planejadas
 
-### Etapas
+### 1. Estado de seleção no JobDetail
+- Adicionar estado `selectedApplicationIds: Set<string>` no `JobDetail.tsx`
+- Passar esse estado e funções de toggle para o `CandidateKanban`
+- Renderizar a **barra de ações em massa** quando houver candidatos selecionados
 
-#### 1. Migracao do banco de dados
-- Adicionar colunas `cidade` (text, nullable) e `estado` (text, nullable) na tabela `job_postings`
-- Migrar dados existentes: tentar extrair cidade e estado do campo `location` atual para popular as novas colunas
-- Remover a coluna `location`
+### 2. Checkbox nos cards do Kanban (`CandidateKanban.tsx`)
+- Adicionar uma prop `selectedIds` e `onToggleSelect` ao `CandidateKanban` e ao `CandidateCard`
+- Inserir um `Checkbox` no canto superior esquerdo de cada card (antes do Avatar)
+- O clique no checkbox nao deve abrir o detalhe do candidato (`stopPropagation`)
+- Adicionar um checkbox "selecionar todos" no header de cada coluna do Kanban
 
-```text
-ALTER TABLE public.job_postings ADD COLUMN cidade text;
-ALTER TABLE public.job_postings ADD COLUMN estado text;
--- Migrar dados existentes (best effort)
-ALTER TABLE public.job_postings DROP COLUMN location;
-```
+### 3. Barra de ações em massa (no `JobDetail.tsx`)
+- Quando `selectedIds.size > 0`, exibir uma barra fixa na parte superior da aba "Candidatos" com:
+  - Contagem: "X candidatos selecionados"
+  - Botao **"Enviar Email"** -- abre `mailto:` com todos os emails dos selecionados
+  - Botao **"Reprovar"** -- altera status para `rejected` em todos os selecionados
+  - Botao **"Aprovar para Próxima Etapa"** -- move cada candidato para a etapa seguinte no pipeline (baseado na posição atual + 1)
+  - Botao **"Limpar Seleção"**
+- Usar `AlertDialog` para confirmar ações destrutivas (reprovar)
 
-#### 2. Atualizar a pagina MapeamentoVagas.tsx
-- Alterar a interface `JobPosting`: remover `location`, adicionar `cidade` e `estado`
-- Simplificar drasticamente os filtros:
-  - **Estado**: listar valores unicos diretamente de `posting.estado` (sem regex)
-  - **Cidade**: listar valores unicos de `posting.cidade`, filtrados pelo estado selecionado
-- Simplificar a logica de filtragem: comparacao direta em vez de regex
-- Atualizar a tabela: coluna "Local" exibira `cidade, estado` concatenados
-- Atualizar a busca textual para pesquisar em `cidade` e `estado`
-- Remover o import de `BRAZIL_STATES` (ou manter apenas para exibir nome completo do estado no filtro)
+### 4. Lógica de ações em massa
+- **Email**: coletar `email_raw` dos parties selecionados e abrir `mailto:` com BCC
+- **Reprovar**: loop chamando `useUpdateApplicationStatus` para cada ID selecionado
+- **Aprovar próxima etapa**: para cada candidato, encontrar o stage atual, buscar o próximo stage (position + 1), e chamar `useUpdateApplicationStage`
+- Após cada ação, limpar a seleção
 
-### Secao tecnica
+## Detalhes Técnicos
 
-**Banco de dados:**
-- A migracao adiciona as colunas nullable para nao quebrar insercoes existentes
-- Dados antigos terao cidade/estado como null caso nao consigam ser parseados
+### Arquivos modificados:
+1. **`src/components/jobs/CandidateKanban.tsx`** -- Adicionar props de seleção, checkbox nos cards e "selecionar todos" nas colunas
+2. **`src/components/jobs/JobDetail.tsx`** -- Estado de seleção, barra de ações em massa, handlers de ações bulk
 
-**Frontend (MapeamentoVagas.tsx):**
-- Remove toda a logica de `locationMatchesState` e regex de extracao
-- Os `useMemo` de `extractedStates` e `extractedCities` passam a ser simples `Array.from(new Set(...))`
-- Na tabela, a coluna "Local" mostra `[cidade], [estado]` com fallback para quando um dos dois estiver vazio
+### Nenhuma mudança de banco de dados necessaria
+As ações usam os hooks existentes (`useUpdateApplicationStatus`, `useUpdateApplicationStage`). O email usa `mailto:` nativo.
 
+### Fluxo do usuario:
+1. Marca checkboxes nos candidatos desejados (ou "selecionar todos" da coluna)
+2. Barra de ações aparece no topo
+3. Clica na ação desejada
+4. Confirmação para ações destrutivas
+5. Execução e limpeza da seleção
