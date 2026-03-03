@@ -1,30 +1,29 @@
 
 
-# Botão "Acionar Automação" — Já implementado
+# Adicionar Cargo e Empresa Atual na extensão Chrome e aba Mapeados
 
-O botão "Acionar Automação" **já faz exatamente o que foi solicitado**. No arquivo `src/pages/MapeamentoVagas.tsx` (linhas 78-85), o `triggerMutation` executa:
+## Contexto
+A tabela `party` já tem um campo `headline` que é exibido na lista de candidatos. Não existe campo separado para "cargo atual" e "empresa atual". Precisamos adicionar esses dois campos.
 
-```typescript
-const { error } = await supabase.from('automation_triggers').insert({
-  search_term: filterSearchTerm !== ALL ? filterSearchTerm : (search || null),
-  location: [cidade, estado].filter(Boolean).join(', ') || null,
-  status: 'pending',
-});
-```
+## Plano
 
-Isso já insere um registro na tabela `automation_triggers` com `search_term`, `location` e `status: 'pending'`.
+### 1. Migração: adicionar colunas `current_title` e `current_company` na tabela `party`
+- `current_title TEXT` (nullable) -- cargo atual
+- `current_company TEXT` (nullable) -- empresa atual
 
-## O que pode estar falhando
+### 2. Atualizar a RPC `resolve_party` para aceitar os novos parâmetros
+- Adicionar `p_current_title TEXT DEFAULT NULL` e `p_current_company TEXT DEFAULT NULL`
+- Na criação, gravar os valores; na atualização de party existente, preencher apenas se os campos estiverem vazios (mesmo padrão COALESCE atual)
 
-O problema reportado anteriormente ("a integração não funciona daqui para lá") não é no INSERT — ele funciona. O problema é que **nenhum serviço externo (Manus) está consumindo esses registros**. Não existe webhook ou chamada de API que notifique o Manus quando um trigger é criado.
+### 3. Atualizar `ChromeExtension.tsx`
+- Adicionar campos `cargo` e `empresaAtual` no estado, pré-preenchidos via URL params (`?nome=...&url=...&cargo=...&empresa=...`)
+- Dois novos inputs no formulário (entre LinkedIn e Vaga)
+- Passar `p_current_title` e `p_current_company` na chamada `resolve_party`
 
-## Plano — Nenhuma mudança necessária no INSERT
+### 4. Atualizar a listagem na aba Mapeados (`CandidateListView.tsx`)
+- O `_party` retornado pelo hook `useApplicationsWithParties` já faz `select('id, full_name, email_raw, phone_raw, headline, linkedin_url')` — adicionar `current_title, current_company` nessa query
+- Exibir cargo e empresa abaixo do nome do candidato (no mesmo espaço onde hoje mostra `headline`), no formato "Cargo · Empresa" ou só um deles se o outro estiver vazio
 
-O código atual já atende ao requisito descrito. Se o objetivo é garantir que o Manus receba a notificação, seria necessário:
-
-1. Obter a URL da API do Manus
-2. Criar uma edge function que faça POST para essa URL após o INSERT
-3. Chamar essa edge function no `onSuccess` da mutation
-
-Mas o INSERT em si já está correto e funcional.
+### 5. Atualizar o tipo `ApplicationWithRelations` em `types/ats.ts`
+- Adicionar `current_title` e `current_company` ao tipo `_party`
 
