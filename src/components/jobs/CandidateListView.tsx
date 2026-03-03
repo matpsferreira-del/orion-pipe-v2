@@ -68,6 +68,8 @@ export function CandidateListView({
               />
             </TableHead>
             <TableHead>Candidato</TableHead>
+            <TableHead className="hidden lg:table-cell">Cargo Atual</TableHead>
+            <TableHead className="hidden lg:table-cell">Empresa Atual</TableHead>
             <TableHead className="w-28 hidden sm:table-cell">Etapa</TableHead>
             <TableHead className="w-28 hidden sm:table-cell">Situação</TableHead>
             <TableHead className="w-28 hidden md:table-cell">Pretensão</TableHead>
@@ -78,7 +80,7 @@ export function CandidateListView({
         <TableBody>
           {applications.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+              <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                 Nenhum candidato inscrito nesta vaga.
               </TableCell>
             </TableRow>
@@ -163,6 +165,18 @@ export function CandidateListView({
                         )}
                       </div>
                     </div>
+                  </TableCell>
+
+                  <TableCell className="hidden lg:table-cell">
+                    <span className="text-xs text-muted-foreground truncate block max-w-[160px]">
+                      {party?.current_title || '—'}
+                    </span>
+                  </TableCell>
+
+                  <TableCell className="hidden lg:table-cell">
+                    <span className="text-xs text-muted-foreground truncate block max-w-[160px]">
+                      {party?.current_company || '—'}
+                    </span>
                   </TableCell>
 
                   <TableCell className="hidden sm:table-cell">
