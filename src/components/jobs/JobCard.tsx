@@ -44,6 +44,8 @@ export function JobCard({ job, companyName, responsavelName, applicationsCount =
         : `Até ${formatCurrency(job.salary_max!)}`
     : null;
 
+  const jobCode = (job as any).job_code ? `#${(job as any).job_code}` : null;
+
   if (listMode) {
     return (
       <Card
@@ -53,7 +55,10 @@ export function JobCard({ job, companyName, responsavelName, applicationsCount =
         <CardContent className="py-3 px-4">
           <div className="flex items-center gap-4">
             <div className="flex-1 min-w-0">
-              <span className="text-sm font-semibold truncate block">{job.title}</span>
+              <span className="text-sm font-semibold truncate block">
+                {jobCode && <span className="text-muted-foreground font-mono mr-1.5">{jobCode}</span>}
+                {job.title}
+              </span>
               <div className="flex items-center gap-3 mt-0.5 flex-wrap">
                 {companyName && (
                   <span className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -114,6 +119,7 @@ export function JobCard({ job, companyName, responsavelName, applicationsCount =
     >
       <CardHeader className="pb-2">
         <CardTitle className="text-base font-semibold line-clamp-2">
+          {jobCode && <span className="text-muted-foreground font-mono text-sm mr-1.5">{jobCode}</span>}
           {job.title}
         </CardTitle>
         <div className="flex gap-1.5 flex-wrap mt-1.5">

@@ -23,6 +23,7 @@ export interface Job {
   area: JobArea | null;
   deadline: string | null;
   filled_at: string | null;
+  job_code: number | null;
   created_at: string;
   updated_at: string;
 }
