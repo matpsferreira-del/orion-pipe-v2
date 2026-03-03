@@ -10,7 +10,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Mail, XCircle, ChevronRight, X, Loader2 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Mail, XCircle, ChevronRight, X, Loader2, ArrowRight } from 'lucide-react';
 import { ApplicationWithRelations, JobPipelineStage } from '@/types/ats';
 import { useUpdateApplicationStatus, useUpdateApplicationStage } from '@/hooks/useApplications';
 import { toast } from 'sonner';
@@ -37,6 +43,24 @@ export function BulkActionBar({
 
   const selectedApps = applications.filter(a => selectedIds.has(a.id));
   const sortedStages = [...stages].sort((a, b) => a.position - b.position);
+
+  const handleMoveToStage = async (stageId: string) => {
+    setProcessing(true);
+    try {
+      await Promise.all(
+        selectedApps.map(a =>
+          updateStage.mutateAsync({ id: a.id, stage_id: stageId, job_id: jobId })
+        )
+      );
+      const stageName = sortedStages.find(s => s.id === stageId)?.name || '';
+      toast.success(`${selectedApps.length} candidato(s) movido(s) para ${stageName}.`);
+      onClearSelection();
+    } catch {
+      toast.error('Erro ao mover candidatos.');
+    } finally {
+      setProcessing(false);
+    }
+  };
 
   const handleEmail = () => {
     const emails = selectedApps
@@ -107,6 +131,22 @@ export function BulkActionBar({
           {processing ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <ChevronRight className="h-4 w-4 mr-1" />}
           Próxima Etapa
         </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button size="sm" variant="outline" disabled={processing}>
+              <ArrowRight className="h-4 w-4 mr-1" />
+              Mover para Etapa
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            {sortedStages.map((stage) => (
+              <DropdownMenuItem key={stage.id} onClick={() => handleMoveToStage(stage.id)}>
+                <span className="h-2 w-2 rounded-full mr-2 flex-shrink-0" style={{ backgroundColor: stage.color }} />
+                {stage.name}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
         <Button
           size="sm"
           variant="outline"
