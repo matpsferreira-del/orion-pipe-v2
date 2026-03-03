@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { Target } from 'lucide-react';
+import { Target, Menu } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 export type TabType = 'comercial' | 'recrutamento' | 'configuracoes';
 
@@ -29,6 +30,7 @@ export const routeToTab: Record<string, TabType> = {
   '/tarefas': 'comercial',
   '/faturamento': 'comercial',
   '/relatorios': 'comercial',
+  '/mapeamento-vagas': 'comercial',
   '/recrutamento': 'recrutamento',
   '/pessoas': 'recrutamento',
   '/vagas': 'recrutamento',
@@ -43,10 +45,12 @@ export const getActiveTab = (pathname: string): TabType => {
 interface TopNavProps {
   activeTab: TabType;
   onTabChange: (tab: TabType) => void;
+  onMenuToggle?: () => void;
 }
 
-export function TopNav({ activeTab, onTabChange }: TopNavProps) {
+export function TopNav({ activeTab, onTabChange, onMenuToggle }: TopNavProps) {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
 
   const handleTabClick = (tab: TabType) => {
     onTabChange(tab);
@@ -54,25 +58,32 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
   };
 
   return (
-    <header className="h-14 border-b border-border bg-card flex items-center px-6">
+    <header className="h-14 border-b border-border bg-card flex items-center px-3 md:px-6">
+      {/* Mobile hamburger */}
+      {isMobile && (
+        <Button variant="ghost" size="icon" className="mr-2 h-9 w-9" onClick={onMenuToggle}>
+          <Menu className="h-5 w-5" />
+        </Button>
+      )}
+
       {/* Logo */}
-      <div className="flex items-center gap-3 mr-8">
-        <div className="h-8 w-8 rounded-lg gradient-primary flex items-center justify-center">
+      <div className="flex items-center gap-2 mr-4 md:mr-8">
+        <div className="h-8 w-8 rounded-lg gradient-primary flex items-center justify-center flex-shrink-0">
           <Target className="h-5 w-5 text-primary-foreground" />
         </div>
-        <div className="flex flex-col">
+        {!isMobile && (
           <span className="font-semibold text-foreground text-sm">RecruitCRM</span>
-        </div>
+        )}
       </div>
 
       {/* Tabs */}
-      <nav className="flex items-center gap-1">
+      <nav className="flex items-center gap-0.5 md:gap-1 overflow-x-auto">
         {(Object.keys(tabConfig) as TabType[]).map((tab) => (
           <button
             key={tab}
             onClick={() => handleTabClick(tab)}
             className={cn(
-              'px-4 py-2 rounded-md text-sm font-medium transition-colors',
+              'px-2.5 md:px-4 py-1.5 md:py-2 rounded-md text-xs md:text-sm font-medium transition-colors whitespace-nowrap',
               activeTab === tab
                 ? 'bg-primary text-primary-foreground'
                 : 'text-muted-foreground hover:text-foreground hover:bg-muted'
