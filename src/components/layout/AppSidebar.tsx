@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
+import { useIsMobile } from '@/hooks/use-mobile';
 import {
   LayoutDashboard,
   Kanban,
@@ -30,15 +31,17 @@ interface NavItemProps {
   icon: React.ElementType;
   label: string;
   collapsed: boolean;
+  onClick?: () => void;
 }
 
-const NavItem = ({ to, icon: Icon, label, collapsed }: NavItemProps) => {
+const NavItem = ({ to, icon: Icon, label, collapsed, onClick }: NavItemProps) => {
   const location = useLocation();
   const isActive = location.pathname === to;
 
   const content = (
     <NavLink
       to={to}
+      onClick={onClick}
       className={cn(
         'nav-item',
         isActive && 'active'
@@ -88,11 +91,14 @@ const tabNavItems = {
 
 interface AppSidebarProps {
   activeTab: TabType;
+  mobileOpen?: boolean;
+  onMobileClose?: () => void;
 }
 
-export function AppSidebar({ activeTab }: AppSidebarProps) {
+export function AppSidebar({ activeTab, mobileOpen, onMobileClose }: AppSidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   const { profile, signOut } = useAuth();
+  const isMobile = useIsMobile();
 
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
@@ -108,8 +114,68 @@ export function AppSidebar({ activeTab }: AppSidebarProps) {
     await signOut();
   };
 
+  const handleNavClick = () => {
+    if (isMobile && onMobileClose) {
+      onMobileClose();
+    }
+  };
+
   const currentItems = tabNavItems[activeTab];
 
+  // On mobile: hidden by default, shown as fixed overlay when mobileOpen
+  // On desktop: normal sidebar behavior
+  if (isMobile) {
+    return (
+      <aside
+        className={cn(
+          'fixed inset-y-0 left-0 z-50 flex flex-col bg-sidebar border-r border-sidebar-border w-64 transition-transform duration-300 top-14',
+          mobileOpen ? 'translate-x-0' : '-translate-x-full'
+        )}
+      >
+        <nav className="flex-1 p-3 space-y-1 overflow-y-auto scrollbar-thin">
+          {currentItems.map((item) => (
+            <NavItem
+              key={item.to}
+              to={item.to}
+              icon={item.icon}
+              label={item.label}
+              collapsed={false}
+              onClick={handleNavClick}
+            />
+          ))}
+        </nav>
+
+        {/* User section */}
+        <div className="p-3 border-t border-sidebar-border">
+          <div className="flex items-center gap-3 p-2 rounded-lg">
+            <Avatar className="h-8 w-8">
+              <AvatarFallback className="bg-sidebar-primary text-sidebar-primary-foreground text-sm">
+                {profile?.name ? getInitials(profile.name) : '?'}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-sidebar-foreground truncate">
+                {profile?.name || 'Usuário'}
+              </p>
+              <p className="text-xs text-sidebar-foreground/60 truncate">
+                {roleLabels[profile?.role || ''] || profile?.role || 'Consultor'}
+              </p>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+              onClick={handleLogout}
+            >
+              <LogOut className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </aside>
+    );
+  }
+
+  // Desktop sidebar
   return (
     <aside
       className={cn(
@@ -117,7 +183,6 @@ export function AppSidebar({ activeTab }: AppSidebarProps) {
         collapsed ? 'w-16' : 'w-56'
       )}
     >
-      {/* Navigation */}
       <nav className="flex-1 p-3 space-y-1 overflow-y-auto scrollbar-thin">
         {currentItems.map((item) => (
           <NavItem
@@ -157,9 +222,9 @@ export function AppSidebar({ activeTab }: AppSidebarProps) {
           {!collapsed && (
             <Tooltip delayDuration={0}>
               <TooltipTrigger asChild>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
+                <Button
+                  variant="ghost"
+                  size="icon"
                   className="h-8 w-8 text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent"
                   onClick={handleLogout}
                 >
@@ -174,9 +239,9 @@ export function AppSidebar({ activeTab }: AppSidebarProps) {
         {collapsed && (
           <Tooltip delayDuration={0}>
             <TooltipTrigger asChild>
-              <Button 
-                variant="ghost" 
-                size="icon" 
+              <Button
+                variant="ghost"
+                size="icon"
                 className="h-8 w-8 text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent"
                 onClick={handleLogout}
               >
