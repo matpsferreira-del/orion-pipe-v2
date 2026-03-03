@@ -14,11 +14,13 @@ import { useApplicationsWithParties, useUpdateApplicationStage } from '@/hooks/u
 import { useCompanies } from '@/hooks/useCompanies';
 import { useProfiles } from '@/hooks/useProfiles';
 import { CandidateKanban } from './CandidateKanban';
+import { CandidateListView } from './CandidateListView';
 import { AddCandidateDialog } from './AddCandidateDialog';
 import { LinkedInPostDialog } from './LinkedInPostDialog';
 import { CandidateDetailDialog } from './CandidateDetailDialog';
 import { BulkActionBar } from './BulkActionBar';
 import { ApplicationWithRelations } from '@/types/ats';
+import { useUpdateApplicationStatus } from '@/hooks/useApplications';
 import { 
   jobStatusLabels, jobStatusColors, priorityLabels, priorityColors, 
   JobPriority, jobAreaLabels, JobArea
@@ -57,6 +59,7 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
   const { data: applications = [], isLoading: loadingApps } = useApplicationsWithParties(job.id);
   const updateStatus = useUpdateJobStatus();
   const updateAppStage = useUpdateApplicationStage();
+  const updateAppStatus = useUpdateApplicationStatus();
   const publishJob = usePublishJob();
 
   const company = companies.find(c => c.id === job.company_id);
@@ -125,6 +128,15 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
       toast.success('Candidato movido com sucesso');
     } catch (error) {
       toast.error('Erro ao mover candidato');
+    }
+  };
+
+  const handleRejectSingle = async (applicationId: string) => {
+    try {
+      await updateAppStatus.mutateAsync({ id: applicationId, status: 'rejected' });
+      toast.success('Candidato reprovado');
+    } catch {
+      toast.error('Erro ao reprovar candidato');
     }
   };
 
@@ -449,16 +461,37 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
               </Button>
             </div>
           ) : (
-            <div className="overflow-x-auto -mx-6 px-6">
-              <CandidateKanban
-                stages={stages}
-                applications={applications}
-                onMoveCandidate={handleMoveCandidate}
-                onCandidateClick={setSelectedApplication}
-                selectedIds={selectedIds}
-                onToggleSelect={handleToggleSelect}
-              />
-            </div>
+            <Tabs defaultValue="triagem">
+              <TabsList className="mb-4">
+                <TabsTrigger value="triagem">Triagem ({applications.length})</TabsTrigger>
+                <TabsTrigger value="etapas">Etapas</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="triagem">
+                <CandidateListView
+                  applications={applications}
+                  stages={stages}
+                  selectedIds={selectedIds}
+                  onToggleSelect={handleToggleSelect}
+                  onCandidateClick={setSelectedApplication}
+                  onMoveToStage={handleMoveCandidate}
+                  onReject={handleRejectSingle}
+                />
+              </TabsContent>
+
+              <TabsContent value="etapas">
+                <div className="overflow-x-auto -mx-6 px-6">
+                  <CandidateKanban
+                    stages={stages}
+                    applications={applications}
+                    onMoveCandidate={handleMoveCandidate}
+                    onCandidateClick={setSelectedApplication}
+                    selectedIds={selectedIds}
+                    onToggleSelect={handleToggleSelect}
+                  />
+                </div>
+              </TabsContent>
+            </Tabs>
           )}
         </TabsContent>
 
