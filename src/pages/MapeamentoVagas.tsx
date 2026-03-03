@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { fetchAllRows } from '@/lib/fetchAllRows';
 import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -37,14 +38,7 @@ export default function MapeamentoVagas() {
 
   const { data: postings = [], isLoading } = useQuery({
     queryKey: ['job-postings'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('job_postings')
-        .select('*')
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return data as JobPosting[];
-    },
+    queryFn: () => fetchAllRows<JobPosting>('job_postings', { orderBy: 'created_at', ascending: false }),
   });
 
   const sources = useMemo(() => Array.from(new Set(postings.map(p => p.source))).sort(), [postings]);
@@ -277,7 +271,8 @@ export default function MapeamentoVagas() {
                     <TableRow>
                       <TableHead>Título</TableHead>
                       <TableHead>Empresa</TableHead>
-                      <TableHead className="hidden sm:table-cell">Local</TableHead>
+                      <TableHead className="hidden sm:table-cell">Cidade</TableHead>
+                      <TableHead className="hidden md:table-cell">Estado</TableHead>
                       <TableHead className="hidden md:table-cell">Fonte</TableHead>
                       <TableHead className="hidden lg:table-cell">Termo</TableHead>
                       <TableHead className="hidden sm:table-cell w-[80px]">Data</TableHead>
@@ -297,10 +292,10 @@ export default function MapeamentoVagas() {
                           </span>
                         </TableCell>
                         <TableCell className="hidden sm:table-cell">
-                          <span className="flex items-center gap-1.5">
-                            <MapPin className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                            {formatLocation(posting.cidade, posting.estado)}
-                          </span>
+                          {posting.cidade || '—'}
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell">
+                          {posting.estado || '—'}
                         </TableCell>
                         <TableCell className="hidden md:table-cell">
                           <Badge variant="outline" className="text-xs">{posting.source}</Badge>
