@@ -70,6 +70,7 @@ export function CandidateListView({
             <TableHead>Candidato</TableHead>
             <TableHead className="w-28 hidden sm:table-cell">Etapa</TableHead>
             <TableHead className="w-28 hidden sm:table-cell">Situação</TableHead>
+            <TableHead className="w-28 hidden md:table-cell">Pretensão</TableHead>
             <TableHead className="w-28 hidden md:table-cell">Inscrição</TableHead>
             <TableHead className="w-20 text-right">Ações</TableHead>
           </TableRow>
@@ -77,7 +78,7 @@ export function CandidateListView({
         <TableBody>
           {applications.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+              <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                 Nenhum candidato inscrito nesta vaga.
               </TableCell>
             </TableRow>
@@ -174,6 +175,12 @@ export function CandidateListView({
                     <Badge variant="outline" className={cn('text-[10px]', statusColors[app.status])}>
                       {applicationStatusLabels[app.status]}
                     </Badge>
+                  </TableCell>
+
+                  <TableCell className="text-xs hidden md:table-cell">
+                    {app.salary_expectation != null
+                      ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(app.salary_expectation))
+                      : <span className="text-muted-foreground">—</span>}
                   </TableCell>
 
                   <TableCell className="text-xs text-muted-foreground hidden md:table-cell">
