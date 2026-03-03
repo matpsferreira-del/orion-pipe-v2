@@ -1,49 +1,37 @@
 
-# Seleção em Massa de Candidatos no Kanban
+
+# Reestruturação da UI de Candidatos na Vaga: Triagem (Lista) + Etapas (Kanban)
 
 ## Objetivo
-Adicionar checkboxes nos cards do Kanban de candidatos dentro das vagas, permitindo selecionar multiplos candidatos para executar ações em massa: **enviar email**, **reprovar** ou **aprovar para a próxima etapa**.
+Reorganizar a aba "Candidatos" dentro do detalhe da vaga em **duas sub-abas**:
+1. **Triagem** — Lista tabular de todos os candidatos (como na imagem de referência), com checkboxes para seleção em massa e ações (triar para etapa, reprovar, email)
+2. **Etapas** — O Kanban existente com as colunas do pipeline
 
 ## Mudanças Planejadas
 
-### 1. Estado de seleção no JobDetail
-- Adicionar estado `selectedApplicationIds: Set<string>` no `JobDetail.tsx`
-- Passar esse estado e funções de toggle para o `CandidateKanban`
-- Renderizar a **barra de ações em massa** quando houver candidatos selecionados
+### 1. Reestruturar tabs no `JobDetail.tsx`
+- Substituir a tab "Candidatos" por duas sub-tabs aninhadas: **"Triagem"** e **"Etapas"**
+- A tab "Triagem" mostra a lista tabular; a tab "Etapas" mostra o `CandidateKanban` existente
+- Manter a tab "Detalhes" como está
+- A barra de ações em massa (`BulkActionBar`) funciona em ambas as sub-tabs
 
-### 2. Checkbox nos cards do Kanban (`CandidateKanban.tsx`)
-- Adicionar uma prop `selectedIds` e `onToggleSelect` ao `CandidateKanban` e ao `CandidateCard`
-- Inserir um `Checkbox` no canto superior esquerdo de cada card (antes do Avatar)
-- O clique no checkbox nao deve abrir o detalhe do candidato (`stopPropagation`)
-- Adicionar um checkbox "selecionar todos" no header de cada coluna do Kanban
+### 2. Criar componente `CandidateListView.tsx` (novo arquivo)
+Componente de lista tabular inspirado na imagem de referência:
+- **Tabela** com colunas: Checkbox, Candidato (nome + idade + localização + ícones de contato), Situação (status da application), Data inscrição, Ações
+- **Checkbox** em cada linha + checkbox "selecionar todos" no header
+- **Coluna "Ações"**: dropdown com opções para triar o candidato para uma etapa específica do Kanban (lista as etapas do pipeline), reprovar, ou abrir detalhes
+- Ao clicar no nome do candidato, abre o `CandidateDetailDialog` existente
+- Reutiliza os mesmos `selectedIds` e `onToggleSelect` do `JobDetail`
 
-### 3. Barra de ações em massa (no `JobDetail.tsx`)
-- Quando `selectedIds.size > 0`, exibir uma barra fixa na parte superior da aba "Candidatos" com:
-  - Contagem: "X candidatos selecionados"
-  - Botao **"Enviar Email"** -- abre `mailto:` com todos os emails dos selecionados
-  - Botao **"Reprovar"** -- altera status para `rejected` em todos os selecionados
-  - Botao **"Aprovar para Próxima Etapa"** -- move cada candidato para a etapa seguinte no pipeline (baseado na posição atual + 1)
-  - Botao **"Limpar Seleção"**
-- Usar `AlertDialog` para confirmar ações destrutivas (reprovar)
-
-### 4. Lógica de ações em massa
-- **Email**: coletar `email_raw` dos parties selecionados e abrir `mailto:` com BCC
-- **Reprovar**: loop chamando `useUpdateApplicationStatus` para cada ID selecionado
-- **Aprovar próxima etapa**: para cada candidato, encontrar o stage atual, buscar o próximo stage (position + 1), e chamar `useUpdateApplicationStage`
-- Após cada ação, limpar a seleção
-
-## Detalhes Técnicos
+### 3. Adicionar ação "Triar para Etapa" no `BulkActionBar`
+- Além de "Próxima Etapa" e "Reprovar", adicionar um dropdown **"Mover para Etapa"** que lista todas as etapas do pipeline
+- Permite mover os candidatos selecionados diretamente para qualquer etapa (não apenas a próxima)
 
 ### Arquivos modificados:
-1. **`src/components/jobs/CandidateKanban.tsx`** -- Adicionar props de seleção, checkbox nos cards e "selecionar todos" nas colunas
-2. **`src/components/jobs/JobDetail.tsx`** -- Estado de seleção, barra de ações em massa, handlers de ações bulk
+1. **`src/components/jobs/CandidateListView.tsx`** — Novo componente com tabela de triagem
+2. **`src/components/jobs/JobDetail.tsx`** — Reestruturar tabs com sub-tabs Triagem/Etapas
+3. **`src/components/jobs/BulkActionBar.tsx`** — Adicionar dropdown "Mover para Etapa"
 
-### Nenhuma mudança de banco de dados necessaria
-As ações usam os hooks existentes (`useUpdateApplicationStatus`, `useUpdateApplicationStage`). O email usa `mailto:` nativo.
+### Nenhuma mudança de banco necessária
+Toda a lógica usa os hooks existentes (`useUpdateApplicationStage`, `useUpdateApplicationStatus`).
 
-### Fluxo do usuario:
-1. Marca checkboxes nos candidatos desejados (ou "selecionar todos" da coluna)
-2. Barra de ações aparece no topo
-3. Clica na ação desejada
-4. Confirmação para ações destrutivas
-5. Execução e limpeza da seleção
