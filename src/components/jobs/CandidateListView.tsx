@@ -4,24 +4,13 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
-  DropdownMenuTrigger,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator,
+  DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Mail, Phone, Linkedin, MoreHorizontal, ArrowRight, XCircle, Eye, MapPin } from 'lucide-react';
+import { Mail, Phone, Linkedin, MoreHorizontal, ArrowRight, XCircle, Eye } from 'lucide-react';
 import { ApplicationWithRelations, JobPipelineStage, applicationStatusLabels } from '@/types/ats';
 import { cn } from '@/lib/utils';
 
@@ -36,13 +25,7 @@ interface CandidateListViewProps {
 }
 
 export function CandidateListView({
-  applications,
-  stages,
-  selectedIds,
-  onToggleSelect,
-  onCandidateClick,
-  onMoveToStage,
-  onReject,
+  applications, stages, selectedIds, onToggleSelect, onCandidateClick, onMoveToStage, onReject,
 }: CandidateListViewProps) {
   const sortedStages = useMemo(() => [...stages].sort((a, b) => a.position - b.position), [stages]);
 
@@ -73,7 +56,7 @@ export function CandidateListView({
   };
 
   return (
-    <div className="border rounded-lg overflow-hidden">
+    <div className="border rounded-lg overflow-hidden overflow-x-auto">
       <Table>
         <TableHeader>
           <TableRow className="bg-muted/50">
@@ -85,9 +68,9 @@ export function CandidateListView({
               />
             </TableHead>
             <TableHead>Candidato</TableHead>
-            <TableHead className="w-28">Etapa</TableHead>
-            <TableHead className="w-28">Situação</TableHead>
-            <TableHead className="w-28">Inscrição</TableHead>
+            <TableHead className="w-28 hidden sm:table-cell">Etapa</TableHead>
+            <TableHead className="w-28 hidden sm:table-cell">Situação</TableHead>
+            <TableHead className="w-28 hidden md:table-cell">Inscrição</TableHead>
             <TableHead className="w-20 text-right">Ações</TableHead>
           </TableRow>
         </TableHeader>
@@ -123,10 +106,10 @@ export function CandidateListView({
 
                   <TableCell>
                     <div
-                      className="flex items-center gap-3 cursor-pointer"
+                      className="flex items-center gap-2 sm:gap-3 cursor-pointer"
                       onClick={() => onCandidateClick(app)}
                     >
-                      <Avatar className="h-9 w-9 flex-shrink-0">
+                      <Avatar className="h-8 w-8 sm:h-9 sm:w-9 flex-shrink-0">
                         <AvatarFallback className="text-xs bg-primary/10 text-primary">
                           {party ? getInitials(party.full_name) : '??'}
                         </AvatarFallback>
@@ -135,41 +118,40 @@ export function CandidateListView({
                         <p className="font-medium text-sm truncate hover:underline">
                           {party?.full_name || 'Candidato desconhecido'}
                         </p>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          {party?.headline && (
-                            <span className="truncate max-w-[200px]">{party.headline}</span>
+                        {party?.headline && (
+                          <p className="text-xs text-muted-foreground truncate max-w-[150px] sm:max-w-[200px]">{party.headline}</p>
+                        )}
+                        {/* Mobile: show stage + status inline */}
+                        <div className="flex items-center gap-2 mt-1 sm:hidden">
+                          {currentStage && (
+                            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full"
+                              style={{ backgroundColor: `${currentStage.color}20`, color: currentStage.color }}>
+                              {currentStage.name}
+                            </span>
                           )}
+                          <Badge variant="outline" className={cn('text-[10px]', statusColors[app.status])}>
+                            {applicationStatusLabels[app.status]}
+                          </Badge>
                         </div>
                       </div>
-                      <div className="flex items-center gap-1.5 ml-auto">
+                      <div className="flex items-center gap-1.5 ml-auto shrink-0">
                         {party?.email_raw && (
-                          <a
-                            href={`mailto:${party.email_raw}`}
-                            onClick={(e) => e.stopPropagation()}
-                            className="text-muted-foreground hover:text-primary transition-colors"
-                          >
+                          <a href={`mailto:${party.email_raw}`} onClick={(e) => e.stopPropagation()}
+                            className="text-muted-foreground hover:text-primary transition-colors">
                             <Mail className="h-3.5 w-3.5" />
                           </a>
                         )}
                         {party?.phone_raw && (
-                          <a
-                            href={`https://wa.me/${(party.phone_raw || '').replace(/\D/g, '')}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={(e) => e.stopPropagation()}
-                            className="text-muted-foreground hover:text-green-500 transition-colors"
-                          >
+                          <a href={`https://wa.me/${(party.phone_raw || '').replace(/\D/g, '')}`}
+                            target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}
+                            className="text-muted-foreground hover:text-green-500 transition-colors hidden sm:inline">
                             <Phone className="h-3.5 w-3.5" />
                           </a>
                         )}
                         {party?.linkedin_url && (
-                          <a
-                            href={party.linkedin_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
+                          <a href={party.linkedin_url} target="_blank" rel="noopener noreferrer"
                             onClick={(e) => e.stopPropagation()}
-                            className="text-muted-foreground hover:text-blue-500 transition-colors"
-                          >
+                            className="text-muted-foreground hover:text-blue-500 transition-colors hidden sm:inline">
                             <Linkedin className="h-3.5 w-3.5" />
                           </a>
                         )}
@@ -177,15 +159,10 @@ export function CandidateListView({
                     </div>
                   </TableCell>
 
-                  <TableCell>
+                  <TableCell className="hidden sm:table-cell">
                     {currentStage ? (
-                      <span
-                        className="text-xs font-medium px-2 py-0.5 rounded-full"
-                        style={{
-                          backgroundColor: `${currentStage.color}20`,
-                          color: currentStage.color,
-                        }}
-                      >
+                      <span className="text-xs font-medium px-2 py-0.5 rounded-full"
+                        style={{ backgroundColor: `${currentStage.color}20`, color: currentStage.color }}>
                         {currentStage.name}
                       </span>
                     ) : (
@@ -193,13 +170,13 @@ export function CandidateListView({
                     )}
                   </TableCell>
 
-                  <TableCell>
+                  <TableCell className="hidden sm:table-cell">
                     <Badge variant="outline" className={cn('text-[10px]', statusColors[app.status])}>
                       {applicationStatusLabels[app.status]}
                     </Badge>
                   </TableCell>
 
-                  <TableCell className="text-xs text-muted-foreground">
+                  <TableCell className="text-xs text-muted-foreground hidden md:table-cell">
                     {formatDate(app.applied_at)}
                   </TableCell>
 
@@ -212,39 +189,27 @@ export function CandidateListView({
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => onCandidateClick(app)}>
-                          <Eye className="h-4 w-4 mr-2" />
-                          Ver detalhes
+                          <Eye className="h-4 w-4 mr-2" />Ver detalhes
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuSub>
                           <DropdownMenuSubTrigger>
-                            <ArrowRight className="h-4 w-4 mr-2" />
-                            Mover para etapa
+                            <ArrowRight className="h-4 w-4 mr-2" />Mover para etapa
                           </DropdownMenuSubTrigger>
                           <DropdownMenuSubContent>
                             {sortedStages.map((stage) => (
-                              <DropdownMenuItem
-                                key={stage.id}
-                                disabled={stage.id === app.stage_id}
-                                onClick={() => onMoveToStage(app.id, stage.id)}
-                              >
-                                <span
-                                  className="h-2 w-2 rounded-full mr-2 flex-shrink-0"
-                                  style={{ backgroundColor: stage.color }}
-                                />
+                              <DropdownMenuItem key={stage.id} disabled={stage.id === app.stage_id}
+                                onClick={() => onMoveToStage(app.id, stage.id)}>
+                                <span className="h-2 w-2 rounded-full mr-2 flex-shrink-0" style={{ backgroundColor: stage.color }} />
                                 {stage.name}
                               </DropdownMenuItem>
                             ))}
                           </DropdownMenuSubContent>
                         </DropdownMenuSub>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          className="text-destructive focus:text-destructive"
-                          onClick={() => onReject(app.id)}
-                          disabled={isFinal}
-                        >
-                          <XCircle className="h-4 w-4 mr-2" />
-                          Reprovar
+                        <DropdownMenuItem className="text-destructive focus:text-destructive"
+                          onClick={() => onReject(app.id)} disabled={isFinal}>
+                          <XCircle className="h-4 w-4 mr-2" />Reprovar
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>

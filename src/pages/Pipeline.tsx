@@ -53,11 +53,6 @@ export default function Pipeline() {
     );
   };
 
-  const handleCardClick = (opp: OpportunityRow) => {
-    setSelectedOpportunity(opp);
-  };
-
-  // Convert for KanbanColumn which expects the legacy format
   const adaptedOpportunities = useMemo(() => {
     return filteredOpportunities.map(opp => {
       const company = companies.find(c => c.id === opp.company_id);
@@ -77,7 +72,6 @@ export default function Pipeline() {
         origemLead: opp.origem_lead as any,
         tipoServico: opp.tipo_servico as any,
         observacoes: opp.observacoes || undefined,
-        // Extra data for display
         _company: company,
         _contact: contact,
         _responsavel: responsavel,
@@ -85,35 +79,35 @@ export default function Pipeline() {
     });
   }, [filteredOpportunities, companies, contacts, profiles]);
 
-  // Only show active pipeline stages (not closed or post-sale in main kanban view)
   const activeStages = pipelineStages.filter(s => 
     !['fechado_perdeu', 'pos_venda'].includes(s.key)
   );
 
   if (loadingOpps) {
     return (
-      <div className="p-6 h-full flex items-center justify-center">
+      <div className="p-4 md:p-6 h-full flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <div className="p-6 h-full flex flex-col">
+    <div className="p-4 md:p-6 h-full flex flex-col">
       <PageHeader
         title="Funil Comercial"
         description="Gerencie suas oportunidades de vendas"
         actions={
           <Button onClick={() => setShowNewDialog(true)}>
             <Plus className="h-4 w-4 mr-2" />
-            Nova Oportunidade
+            <span className="hidden sm:inline">Nova Oportunidade</span>
+            <span className="sm:hidden">Nova</span>
           </Button>
         }
       />
 
       {/* Filters */}
-      <div className="flex flex-wrap items-center gap-3 mt-6 mb-4">
-        <div className="relative flex-1 max-w-sm">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-4 sm:mt-6 mb-4">
+        <div className="relative flex-1 min-w-0 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Buscar oportunidades..."
@@ -123,7 +117,7 @@ export default function Pipeline() {
           />
         </div>
         <Select value={filterResponsavel} onValueChange={setFilterResponsavel}>
-          <SelectTrigger className="w-[200px]">
+          <SelectTrigger className="w-full sm:w-[200px]">
             <Filter className="h-4 w-4 mr-2" />
             <SelectValue placeholder="Responsável" />
           </SelectTrigger>
@@ -138,9 +132,9 @@ export default function Pipeline() {
 
       {/* Kanban Board */}
       <div className="flex-1 overflow-x-auto">
-        <div className="flex gap-4 h-full min-w-max pb-4">
+        <div className="flex gap-3 sm:gap-4 h-full min-w-max pb-4">
           {activeStages.map((stage) => (
-            <div key={stage.key} className="w-72 flex-shrink-0">
+            <div key={stage.key} className="w-[80vw] sm:w-72 flex-shrink-0">
               <KanbanColumn
                 stage={stage}
                 opportunities={adaptedOpportunities.filter(o => o.stage === stage.key)}
@@ -155,7 +149,6 @@ export default function Pipeline() {
         </div>
       </div>
 
-      {/* Opportunity Detail Sheet */}
       <Sheet open={!!selectedOpportunity} onOpenChange={() => setSelectedOpportunity(null)}>
         <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
           <SheetHeader>
@@ -167,7 +160,6 @@ export default function Pipeline() {
         </SheetContent>
       </Sheet>
 
-      {/* New Opportunity Dialog */}
       <OpportunityDialog open={showNewDialog} onOpenChange={setShowNewDialog} />
     </div>
   );

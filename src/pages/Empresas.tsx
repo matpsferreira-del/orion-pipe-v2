@@ -294,38 +294,61 @@ export default function Empresas() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-4 md:space-y-6">
       <PageHeader
         title="Empresas"
         description="Gerencie empresas e prospects"
         actions={
           <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => setDuplicatesDialogOpen(true)}>
-              <Merge className="h-4 w-4 mr-2" />
-              Revisar Duplicatas
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild className="sm:hidden">
+                <Button variant="outline" size="icon">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setDuplicatesDialogOpen(true)}>
+                  <Merge className="h-4 w-4 mr-2" />Duplicatas
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleDownloadTemplate}>
+                  <FileSpreadsheet className="h-4 w-4 mr-2" />Modelo Excel
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setImportDialogOpen(true)}>
+                  <Upload className="h-4 w-4 mr-2" />Importar
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setImportCnpjDialogOpen(true)}>
+                  <FileSpreadsheet className="h-4 w-4 mr-2" />Importar CNPJs
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExport}>
+                  <Download className="h-4 w-4 mr-2" />Exportar
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setContactDialogOpen(true)}>
+                  <UserPlus className="h-4 w-4 mr-2" />Novo Contato
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Button variant="outline" onClick={() => setDuplicatesDialogOpen(true)} className="hidden sm:flex">
+              <Merge className="h-4 w-4 mr-2" />Duplicatas
             </Button>
-            <Button variant="ghost" size="icon" onClick={handleDownloadTemplate} title="Baixar modelo Excel">
+            <Button variant="ghost" size="icon" onClick={handleDownloadTemplate} title="Baixar modelo Excel" className="hidden sm:flex">
               <FileSpreadsheet className="h-4 w-4" />
             </Button>
-            <Button variant="outline" onClick={() => setImportDialogOpen(true)}>
-              <Upload className="h-4 w-4 mr-2" />
-              Importar
+            <Button variant="outline" onClick={() => setImportDialogOpen(true)} className="hidden sm:flex">
+              <Upload className="h-4 w-4 mr-2" />Importar
             </Button>
-            <Button variant="outline" onClick={() => setImportCnpjDialogOpen(true)}>
-              <FileSpreadsheet className="h-4 w-4 mr-2" />
-              Importar CNPJs
+            <Button variant="outline" onClick={() => setImportCnpjDialogOpen(true)} className="hidden lg:flex">
+              <FileSpreadsheet className="h-4 w-4 mr-2" />CNPJs
             </Button>
-            <Button variant="outline" onClick={handleExport}>
-              <Download className="h-4 w-4 mr-2" />
-              Exportar
+            <Button variant="outline" onClick={handleExport} className="hidden lg:flex">
+              <Download className="h-4 w-4 mr-2" />Exportar
             </Button>
-            <Button variant="outline" onClick={() => setContactDialogOpen(true)}>
-              <UserPlus className="h-4 w-4 mr-2" />
-              Novo Contato
+            <Button variant="outline" onClick={() => setContactDialogOpen(true)} className="hidden lg:flex">
+              <UserPlus className="h-4 w-4 mr-2" />Contato
             </Button>
             <Button onClick={() => setDialogOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
-              Nova Empresa
+              <span className="hidden sm:inline">Nova Empresa</span>
+              <span className="sm:hidden">Nova</span>
             </Button>
           </div>
         }
@@ -463,7 +486,7 @@ export default function Empresas() {
       </div>
 
       {/* Table */}
-      <div className="border rounded-lg bg-card">
+      <div className="border rounded-lg bg-card overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>

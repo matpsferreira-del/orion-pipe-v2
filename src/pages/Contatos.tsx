@@ -37,7 +37,6 @@ export default function Contatos() {
   const { data: companies = [] } = useCompanies();
   const deleteContact = useDeleteContact();
 
-  // O(1) lookup map for company names
   const companyMap = useMemo(() => {
     const map = new Map<string, string>();
     companies.forEach(c => map.set(c.id, c.nome_fantasia));
@@ -91,7 +90,6 @@ export default function Contatos() {
       result = [...result].sort((a, b) => {
         let aValue: string;
         let bValue: string;
-
         if (sortField === 'company') {
           aValue = getCompanyName(a.company_id);
           bValue = getCompanyName(b.company_id);
@@ -99,7 +97,6 @@ export default function Contatos() {
           aValue = a[sortField] || '';
           bValue = b[sortField] || '';
         }
-
         const comparison = String(aValue).localeCompare(String(bValue), 'pt-BR', { sensitivity: 'base' });
         return sortDirection === 'asc' ? comparison : -comparison;
       });
@@ -108,7 +105,6 @@ export default function Contatos() {
     return result;
   }, [contacts, companyMap, searchTerm, filterCompany, filterCargo, filterPrimary, sortField, sortDirection, getCompanyName]);
 
-  // Pagination
   const totalPages = Math.ceil(filteredAndSortedContacts.length / PAGE_SIZE);
   const paginatedContacts = useMemo(() => {
     return filteredAndSortedContacts.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
@@ -136,7 +132,6 @@ export default function Contatos() {
       <ArrowDown className="h-4 w-4 ml-1" />;
   };
 
-
   const handleDeleteClick = (contact: ContactRow, e: React.MouseEvent) => {
     e.stopPropagation();
     setContactToDelete(contact);
@@ -156,41 +151,58 @@ export default function Contatos() {
 
   if (isLoading) {
     return (
-      <div className="p-6 flex items-center justify-center min-h-[400px]">
+      <div className="p-4 md:p-6 flex items-center justify-center min-h-[400px]">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-4 md:space-y-6">
       <PageHeader
         title="Contatos"
         description="Gerencie os contatos das empresas"
         actions={
           <div className="flex items-center gap-2">
-            <Button variant="outline">
+            <Button variant="outline" className="hidden sm:flex">
               <Download className="h-4 w-4 mr-2" />
               Exportar
             </Button>
-            <Button variant="outline" onClick={() => setImportDialogOpen(true)}>
+            <Button variant="outline" onClick={() => setImportDialogOpen(true)} className="hidden sm:flex">
               <Upload className="h-4 w-4 mr-2" />
               Importar
             </Button>
+            {/* Mobile: grouped actions */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild className="sm:hidden">
+                <Button variant="outline" size="icon">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem>
+                  <Download className="h-4 w-4 mr-2" />Exportar
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setImportDialogOpen(true)}>
+                  <Upload className="h-4 w-4 mr-2" />Importar
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button onClick={() => setDialogOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
-              Novo Contato
+              <span className="hidden sm:inline">Novo Contato</span>
+              <span className="sm:hidden">Novo</span>
             </Button>
           </div>
         }
       />
 
       {/* Filters */}
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="relative flex-1 max-w-sm">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+        <div className="relative flex-1 min-w-0 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar por nome, email, empresa, telefone..."
+            placeholder="Buscar por nome, email, empresa..."
             value={searchTerm}
             onChange={(e) => { setSearchTerm(e.target.value); setPage(0); }}
             className="pl-9"
@@ -201,7 +213,7 @@ export default function Contatos() {
           <PopoverTrigger asChild>
             <Button variant="outline" className="gap-2">
               <Filter className="h-4 w-4" />
-              Filtros
+              <span className="hidden sm:inline">Filtros</span>
               {activeFiltersCount > 0 && (
                 <Badge variant="secondary" className="ml-1 h-5 w-5 p-0 flex items-center justify-center text-xs">
                   {activeFiltersCount}
@@ -220,13 +232,10 @@ export default function Contatos() {
                   </Button>
                 )}
               </div>
-              
               <div className="space-y-2">
                 <label className="text-sm font-medium">Empresa</label>
                 <Select value={filterCompany} onValueChange={setFilterCompany}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Todas as empresas" />
-                  </SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="Todas as empresas" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todas as empresas</SelectItem>
                     {companies.map(company => (
@@ -235,13 +244,10 @@ export default function Contatos() {
                   </SelectContent>
                 </Select>
               </div>
-
               <div className="space-y-2">
                 <label className="text-sm font-medium">Cargo</label>
                 <Select value={filterCargo} onValueChange={setFilterCargo}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Todos os cargos" />
-                  </SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="Todos os cargos" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todos os cargos</SelectItem>
                     {cargos.map(cargo => (
@@ -250,13 +256,10 @@ export default function Contatos() {
                   </SelectContent>
                 </Select>
               </div>
-
               <div className="space-y-2">
                 <label className="text-sm font-medium">Tipo</label>
                 <Select value={filterPrimary} onValueChange={setFilterPrimary}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Todos" />
-                  </SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todos</SelectItem>
                     <SelectItem value="primary">Contato Principal</SelectItem>
@@ -269,7 +272,7 @@ export default function Contatos() {
         </Popover>
 
         {activeFiltersCount > 0 && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             {filterCompany !== 'all' && (
               <Badge variant="secondary" className="gap-1">
                 {companies.find(c => c.id === filterCompany)?.nome_fantasia || filterCompany}
@@ -293,7 +296,7 @@ export default function Contatos() {
       </div>
 
       {/* Table */}
-      <div className="border rounded-lg bg-card">
+      <div className="border rounded-lg bg-card overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -316,7 +319,7 @@ export default function Contatos() {
                 </div>
               </TableHead>
               <TableHead 
-                className="cursor-pointer hover:bg-muted/50 select-none"
+                className="cursor-pointer hover:bg-muted/50 select-none hidden md:table-cell"
                 onClick={() => handleSort('cargo')}
               >
                 <div className="flex items-center">
@@ -325,7 +328,7 @@ export default function Contatos() {
                 </div>
               </TableHead>
               <TableHead 
-                className="cursor-pointer hover:bg-muted/50 select-none"
+                className="cursor-pointer hover:bg-muted/50 select-none hidden sm:table-cell"
                 onClick={() => handleSort('email')}
               >
                 <div className="flex items-center">
@@ -334,7 +337,7 @@ export default function Contatos() {
                 </div>
               </TableHead>
               <TableHead 
-                className="cursor-pointer hover:bg-muted/50 select-none"
+                className="cursor-pointer hover:bg-muted/50 select-none hidden lg:table-cell"
                 onClick={() => handleSort('telefone')}
               >
                 <div className="flex items-center">
@@ -342,8 +345,8 @@ export default function Contatos() {
                   <SortIcon field="telefone" />
                 </div>
               </TableHead>
-              <TableHead>WhatsApp</TableHead>
-              <TableHead>LinkedIn</TableHead>
+              <TableHead className="hidden xl:table-cell">WhatsApp</TableHead>
+              <TableHead className="hidden xl:table-cell">LinkedIn</TableHead>
               <TableHead className="w-[50px]"></TableHead>
             </TableRow>
           </TableHeader>
@@ -359,25 +362,29 @@ export default function Contatos() {
                 <TableRow key={contact.id} className="hover:bg-muted/50">
                   <TableCell>
                     <div className="flex items-center gap-3">
-                      <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center">
+                      <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                         <User className="h-4 w-4 text-primary" />
                       </div>
-                      <div className="flex items-center gap-2">
-                        <p className="font-medium text-foreground">{contact.nome}</p>
-                        {contact.is_primary && (
-                          <Badge variant="secondary" className="text-xs">Principal</Badge>
-                        )}
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium text-foreground truncate">{contact.nome}</p>
+                          {contact.is_primary && (
+                            <Badge variant="secondary" className="text-xs shrink-0">Principal</Badge>
+                          )}
+                        </div>
+                        {/* Show email on mobile inline */}
+                        <p className="text-xs text-muted-foreground truncate sm:hidden">{contact.email}</p>
                       </div>
                     </div>
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2 text-muted-foreground">
-                      <Building2 className="h-4 w-4" />
-                      {getCompanyName(contact.company_id)}
+                      <Building2 className="h-4 w-4 shrink-0" />
+                      <span className="truncate">{getCompanyName(contact.company_id)}</span>
                     </div>
                   </TableCell>
-                  <TableCell>{contact.cargo || '-'}</TableCell>
-                  <TableCell>
+                  <TableCell className="hidden md:table-cell">{contact.cargo || '-'}</TableCell>
+                  <TableCell className="hidden sm:table-cell">
                     {contact.email ? (
                       <a 
                         href={`mailto:${contact.email}`} 
@@ -385,11 +392,11 @@ export default function Contatos() {
                         onClick={(e) => e.stopPropagation()}
                       >
                         <Mail className="h-3 w-3" />
-                        {contact.email}
+                        <span className="truncate max-w-[180px]">{contact.email}</span>
                       </a>
                     ) : '-'}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="hidden lg:table-cell">
                     {contact.telefone ? (
                       <a 
                         href={`tel:${contact.telefone}`} 
@@ -401,7 +408,7 @@ export default function Contatos() {
                       </a>
                     ) : '-'}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="hidden xl:table-cell">
                     {contact.whatsapp ? (
                       <a 
                         href={`https://wa.me/${contact.whatsapp.replace(/\D/g, '')}`}
@@ -414,7 +421,7 @@ export default function Contatos() {
                       </a>
                     ) : '-'}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="hidden xl:table-cell">
                     {contact.linkedin ? (
                       <a 
                         href={contact.linkedin.startsWith('http') ? contact.linkedin : `https://${contact.linkedin}`}
@@ -464,33 +471,24 @@ export default function Contatos() {
       {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between text-sm text-muted-foreground">
-          <span>
+          <span className="hidden sm:inline">
             {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, filteredAndSortedContacts.length)} de {filteredAndSortedContacts.length} contatos
           </span>
+          <span className="sm:hidden text-xs">
+            Pág. {page + 1}/{totalPages}
+          </span>
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPage(p => Math.max(0, p - 1))}
-              disabled={page === 0}
-            >
+            <Button variant="outline" size="sm" onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0}>
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <span>Página {page + 1} de {totalPages}</span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
-              disabled={page >= totalPages - 1}
-            >
+            <span className="hidden sm:inline">Página {page + 1} de {totalPages}</span>
+            <Button variant="outline" size="sm" onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1}>
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
         </div>
       )}
 
-
-      {/* Contact Dialog */}
       <ContactDialog 
         open={dialogOpen} 
         onOpenChange={(open) => {
@@ -499,11 +497,7 @@ export default function Contatos() {
         }}
         contact={contactToEdit}
       />
-
-      {/* Import Dialog */}
       <ImportContactsDialog open={importDialogOpen} onOpenChange={setImportDialogOpen} />
-
-      {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>

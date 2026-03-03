@@ -89,44 +89,45 @@ export default function Oportunidades() {
 
   if (isLoading) {
     return (
-      <div className="p-6 flex items-center justify-center min-h-[400px]">
+      <div className="p-4 md:p-6 flex items-center justify-center min-h-[400px]">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-4 md:space-y-6">
       <PageHeader
         title="Oportunidades"
         description="Lista completa de oportunidades de negócio"
         actions={
           <div className="flex items-center gap-2">
-            <Button variant="outline">
+            <Button variant="outline" className="hidden sm:flex">
               <Download className="h-4 w-4 mr-2" />
               Exportar
             </Button>
             <Button onClick={() => setShowNewDialog(true)}>
               <Plus className="h-4 w-4 mr-2" />
-              Nova Oportunidade
+              <span className="hidden sm:inline">Nova Oportunidade</span>
+              <span className="sm:hidden">Nova</span>
             </Button>
           </div>
         }
       />
 
       {/* Filters */}
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="relative flex-1 max-w-sm">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+        <div className="relative flex-1 min-w-0 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar por empresa, contato, responsável..."
+            placeholder="Buscar por empresa, contato..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-9"
           />
         </div>
         <Select value={filterStage} onValueChange={setFilterStage}>
-          <SelectTrigger className="w-[200px]">
+          <SelectTrigger className="w-full sm:w-[200px]">
             <Filter className="h-4 w-4 mr-2" />
             <SelectValue placeholder="Etapa" />
           </SelectTrigger>
@@ -138,7 +139,7 @@ export default function Oportunidades() {
           </SelectContent>
         </Select>
         <Select value={filterResponsavel} onValueChange={setFilterResponsavel}>
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-full sm:w-[180px]">
             <SelectValue placeholder="Responsável" />
           </SelectTrigger>
           <SelectContent>
@@ -151,19 +152,19 @@ export default function Oportunidades() {
       </div>
 
       {/* Table */}
-      <div className="border rounded-lg bg-card">
+      <div className="border rounded-lg bg-card overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Empresa</TableHead>
-              <TableHead>Contato</TableHead>
+              <TableHead className="hidden lg:table-cell">Contato</TableHead>
               <TableHead>Etapa</TableHead>
               <TableHead>Valor</TableHead>
-              <TableHead>Probabilidade</TableHead>
-              <TableHead>Tipo</TableHead>
-              <TableHead>Origem</TableHead>
-              <TableHead>Previsão</TableHead>
-              <TableHead>Responsável</TableHead>
+              <TableHead className="hidden md:table-cell">Probabilidade</TableHead>
+              <TableHead className="hidden lg:table-cell">Tipo</TableHead>
+              <TableHead className="hidden xl:table-cell">Origem</TableHead>
+              <TableHead className="hidden xl:table-cell">Previsão</TableHead>
+              <TableHead className="hidden lg:table-cell">Responsável</TableHead>
               <TableHead className="w-[50px]"></TableHead>
             </TableRow>
           </TableHeader>
@@ -188,14 +189,14 @@ export default function Oportunidades() {
                     onClick={() => setSelectedOpportunity(opp)}
                   >
                     <TableCell>
-                      <div className="flex items-center gap-3">
-                        <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
                           <Target className="h-4 w-4 text-primary" />
                         </div>
-                        <span className="font-medium">{company?.nome_fantasia || 'N/A'}</span>
+                        <span className="font-medium truncate">{company?.nome_fantasia || 'N/A'}</span>
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden lg:table-cell">
                       <div>
                         <p className="text-sm">{contact?.nome || 'N/A'}</p>
                         <p className="text-xs text-muted-foreground">{contact?.cargo || ''}</p>
@@ -204,19 +205,19 @@ export default function Oportunidades() {
                     <TableCell>
                       <Badge variant="outline">{stage?.label || opp.stage}</Badge>
                     </TableCell>
-                    <TableCell className="font-medium">{formatCurrency(Number(opp.valor_potencial))}</TableCell>
-                    <TableCell>
+                    <TableCell className="font-medium whitespace-nowrap">{formatCurrency(Number(opp.valor_potencial))}</TableCell>
+                    <TableCell className="hidden md:table-cell">
                       <div className="flex items-center gap-2">
                         <Progress value={opp.probabilidade} className="w-16 h-2" />
                         <span className="text-sm text-muted-foreground">{opp.probabilidade}%</span>
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden lg:table-cell">
                       <Badge variant="secondary">{serviceLabels[opp.tipo_servico] || opp.tipo_servico}</Badge>
                     </TableCell>
-                    <TableCell className="text-muted-foreground">{sourceLabels[opp.origem_lead] || opp.origem_lead}</TableCell>
-                    <TableCell className="text-muted-foreground">{formatDate(opp.data_previsao_fechamento)}</TableCell>
-                    <TableCell>
+                    <TableCell className="hidden xl:table-cell text-muted-foreground">{sourceLabels[opp.origem_lead] || opp.origem_lead}</TableCell>
+                    <TableCell className="hidden xl:table-cell text-muted-foreground">{formatDate(opp.data_previsao_fechamento)}</TableCell>
+                    <TableCell className="hidden lg:table-cell">
                       {responsavel && (
                         <div className="flex items-center gap-2">
                           <Avatar className="h-6 w-6">
@@ -262,7 +263,6 @@ export default function Oportunidades() {
         </Table>
       </div>
 
-      {/* Opportunity Detail Sheet */}
       <Sheet open={!!selectedOpportunity} onOpenChange={() => setSelectedOpportunity(null)}>
         <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
           <SheetHeader>
@@ -274,10 +274,7 @@ export default function Oportunidades() {
         </SheetContent>
       </Sheet>
 
-      {/* New Opportunity Dialog */}
       <OpportunityDialog open={showNewDialog} onOpenChange={setShowNewDialog} />
-
-      {/* Edit Opportunity Dialog */}
       <OpportunityDialog
         open={!!editingOpportunity}
         onOpenChange={(open) => { if (!open) setEditingOpportunity(null); }}
