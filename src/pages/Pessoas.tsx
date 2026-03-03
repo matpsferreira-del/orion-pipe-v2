@@ -4,19 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { Plus, Search, Mail, Phone, Linkedin, Users, AlertTriangle, Globe } from 'lucide-react';
 import { useParties, useDuplicateSuggestions } from '@/hooks/useParties';
@@ -53,39 +44,41 @@ export default function Pessoas() {
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-4 md:space-y-6">
       <PageHeader
         title="Banco de Talentos"
-        description="Gestão unificada de pessoas (candidatos, contatos, prospects)"
+        description="Gestão unificada de pessoas"
         actions={
           <div className="flex gap-2">
             {duplicateCount > 0 && (
               <Button variant="outline" onClick={() => setIsDuplicatesOpen(true)}>
-                <AlertTriangle className="h-4 w-4 mr-2 text-destructive" />
-                {duplicateCount} Duplicatas
+                <AlertTriangle className="h-4 w-4 mr-1 sm:mr-2 text-destructive" />
+                <span className="hidden sm:inline">{duplicateCount} Duplicatas</span>
+                <span className="sm:hidden">{duplicateCount}</span>
               </Button>
             )}
             <Button onClick={() => setIsCreateOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
-              Nova Pessoa
+              <span className="hidden sm:inline">Nova Pessoa</span>
+              <span className="sm:hidden">Nova</span>
             </Button>
           </div>
         }
       />
 
       {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
+      <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar por nome, e-mail, telefone, cidade..."
+            placeholder="Buscar por nome, e-mail, telefone..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-10"
           />
         </div>
         <Select value={roleFilter} onValueChange={(v) => setRoleFilter(v as PartyRoleType | 'all')}>
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-full sm:w-[180px]">
             <SelectValue placeholder="Filtrar por papel" />
           </SelectTrigger>
           <SelectContent>
@@ -93,11 +86,11 @@ export default function Pessoas() {
             <SelectItem value="candidate">Candidatos</SelectItem>
             <SelectItem value="client_contact">Contatos Cliente</SelectItem>
             <SelectItem value="prospect">Prospects</SelectItem>
-            <SelectItem value="hiring_manager">Gestores de Contratação</SelectItem>
+            <SelectItem value="hiring_manager">Gestores</SelectItem>
           </SelectContent>
         </Select>
         <Select value={originFilter} onValueChange={(v) => setOriginFilter(v as PartyCreatedFrom | 'all')}>
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-full sm:w-[180px]">
             <SelectValue placeholder="Filtrar por origem" />
           </SelectTrigger>
           <SelectContent>
@@ -111,23 +104,21 @@ export default function Pessoas() {
       </div>
 
       {/* Table */}
-      <div className="border rounded-lg">
+      <div className="border rounded-lg overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Nome</TableHead>
-              <TableHead>Contato</TableHead>
-              <TableHead>Localização</TableHead>
-              <TableHead>Papéis</TableHead>
-              <TableHead>Tags</TableHead>
+              <TableHead className="hidden sm:table-cell">Contato</TableHead>
+              <TableHead className="hidden md:table-cell">Localização</TableHead>
+              <TableHead className="hidden lg:table-cell">Papéis</TableHead>
+              <TableHead className="hidden xl:table-cell">Tags</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8">
-                  Carregando...
-                </TableCell>
+                <TableCell colSpan={5} className="text-center py-8">Carregando...</TableCell>
               </TableRow>
             ) : parties?.length === 0 ? (
               <TableRow>
@@ -148,25 +139,31 @@ export default function Pessoas() {
                   <TableCell>
                     <div>
                       <div className="flex items-center gap-2">
-                        <p className="font-medium">{party.full_name}</p>
+                        <p className="font-medium truncate">{party.full_name}</p>
                         {party.created_from === 'site' && (
-                          <Badge variant="secondary" className="text-xs flex items-center gap-1">
+                          <Badge variant="secondary" className="text-xs flex items-center gap-1 shrink-0">
                             <Globe className="h-3 w-3" />
-                            Via Portal
+                            <span className="hidden sm:inline">Via Portal</span>
                           </Badge>
                         )}
                       </div>
                       {party.headline && (
-                        <p className="text-sm text-muted-foreground">{party.headline}</p>
+                        <p className="text-sm text-muted-foreground truncate max-w-[200px] sm:max-w-none">{party.headline}</p>
                       )}
+                      {/* Mobile: show contact inline */}
+                      <div className="flex items-center gap-2 mt-1 sm:hidden">
+                        {party.email_norm && <Mail className="h-3 w-3 text-muted-foreground" />}
+                        {party.phone_e164 && <Phone className="h-3 w-3 text-muted-foreground" />}
+                        {party.linkedin_url && <Linkedin className="h-3 w-3 text-muted-foreground" />}
+                      </div>
                     </div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="hidden sm:table-cell">
                     <div className="flex flex-col gap-1">
                       {party.email_norm && (
                         <div className="flex items-center gap-1 text-sm">
                           <Mail className="h-3 w-3 text-muted-foreground" />
-                          <span>{party.email_norm}</span>
+                          <span className="truncate max-w-[180px]">{party.email_norm}</span>
                         </div>
                       )}
                       {party.phone_e164 && (
@@ -178,39 +175,28 @@ export default function Pessoas() {
                       {party.linkedin_url && (
                         <div className="flex items-center gap-1 text-sm">
                           <Linkedin className="h-3 w-3 text-muted-foreground" />
-                          <a
-                            href={party.linkedin_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-primary hover:underline"
-                            onClick={(e) => e.stopPropagation()}
-                          >
+                          <a href={party.linkedin_url} target="_blank" rel="noopener noreferrer"
+                            className="text-primary hover:underline" onClick={(e) => e.stopPropagation()}>
                             LinkedIn
                           </a>
                         </div>
                       )}
                     </div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="hidden md:table-cell">
                     {party.city || party.state ? (
-                      <span className="text-sm">
-                        {[party.city, party.state].filter(Boolean).join(', ')}
-                      </span>
+                      <span className="text-sm">{[party.city, party.state].filter(Boolean).join(', ')}</span>
                     ) : (
                       <span className="text-sm text-muted-foreground">-</span>
                     )}
                   </TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1">
-                      {getRoleBadges(party.party_role)}
-                    </div>
+                  <TableCell className="hidden lg:table-cell">
+                    <div className="flex flex-wrap gap-1">{getRoleBadges(party.party_role)}</div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="hidden xl:table-cell">
                     <div className="flex flex-wrap gap-1">
                       {party.tags && Array.isArray(party.tags) && party.tags.map((tag: string, i: number) => (
-                        <Badge key={i} variant="outline" className="text-xs">
-                          {tag}
-                        </Badge>
+                        <Badge key={i} variant="outline" className="text-xs">{tag}</Badge>
                       ))}
                     </div>
                   </TableCell>
@@ -221,22 +207,9 @@ export default function Pessoas() {
         </Table>
       </div>
 
-      {/* Dialogs */}
-      <PartyDialog
-        open={isCreateOpen}
-        onOpenChange={setIsCreateOpen}
-      />
-
-      <PartyDetailDialog
-        partyId={selectedPartyId}
-        open={!!selectedPartyId}
-        onOpenChange={(open) => !open && setSelectedPartyId(null)}
-      />
-
-      <DuplicatesDialog
-        open={isDuplicatesOpen}
-        onOpenChange={setIsDuplicatesOpen}
-      />
+      <PartyDialog open={isCreateOpen} onOpenChange={setIsCreateOpen} />
+      <PartyDetailDialog partyId={selectedPartyId} open={!!selectedPartyId} onOpenChange={(open) => !open && setSelectedPartyId(null)} />
+      <DuplicatesDialog open={isDuplicatesOpen} onOpenChange={setIsDuplicatesOpen} />
     </div>
   );
 }

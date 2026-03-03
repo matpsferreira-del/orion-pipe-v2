@@ -60,7 +60,7 @@ export default function Vagas() {
 
   if (isLoading) {
     return (
-      <div className="p-6 h-full flex items-center justify-center">
+      <div className="p-4 md:p-6 h-full flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
@@ -108,8 +108,8 @@ export default function Vagas() {
       />
 
       {/* Filters */}
-      <div className="flex flex-wrap items-center gap-3 mt-6 mb-4">
-        <div className="relative flex-1 max-w-sm">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-4 sm:mt-6 mb-4">
+        <div className="relative flex-1 min-w-0 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Buscar vagas..."
@@ -119,7 +119,7 @@ export default function Vagas() {
           />
         </div>
         <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-full sm:w-[180px]">
             <Filter className="h-4 w-4 mr-2" />
             <SelectValue placeholder="Status" />
           </SelectTrigger>
@@ -135,7 +135,7 @@ export default function Vagas() {
           type="single"
           value={viewMode}
           onValueChange={(v) => v && setViewMode(v as 'grid' | 'list')}
-          className="border border-input rounded-md"
+          className="border border-input rounded-md hidden sm:flex"
         >
           <ToggleGroupItem value="grid" aria-label="Visualização em grade" className="h-10 px-3">
             <LayoutGrid className="h-4 w-4" />
@@ -148,17 +148,17 @@ export default function Vagas() {
 
       {/* Tabs */}
       <Tabs defaultValue="open" className="flex-1">
-        <TabsList>
-          <TabsTrigger value="open">
+        <TabsList className="w-full sm:w-auto overflow-x-auto">
+          <TabsTrigger value="open" className="text-xs sm:text-sm">
             Abertas ({openJobs.length})
           </TabsTrigger>
-          <TabsTrigger value="draft">
+          <TabsTrigger value="draft" className="text-xs sm:text-sm">
             Rascunhos ({draftJobs.length})
           </TabsTrigger>
-          <TabsTrigger value="paused">
+          <TabsTrigger value="paused" className="text-xs sm:text-sm">
             Pausadas ({pausedJobs.length})
           </TabsTrigger>
-          <TabsTrigger value="closed">
+          <TabsTrigger value="closed" className="text-xs sm:text-sm">
             Encerradas ({closedJobs.length})
           </TabsTrigger>
         </TabsList>
@@ -182,8 +182,8 @@ export default function Vagas() {
         <SheetContent className={`w-full ${isExpanded ? 'sm:max-w-full' : 'sm:max-w-3xl'} overflow-y-auto transition-all duration-300`}>
           <SheetHeader>
             <div className="flex items-center justify-between pr-8">
-              <SheetTitle>{selectedJob?.title}</SheetTitle>
-              <Button variant="ghost" size="icon" onClick={() => setIsExpanded(!isExpanded)}>
+              <SheetTitle className="text-base sm:text-lg">{selectedJob?.title}</SheetTitle>
+              <Button variant="ghost" size="icon" onClick={() => setIsExpanded(!isExpanded)} className="hidden sm:flex">
                 {isExpanded ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
               </Button>
             </div>

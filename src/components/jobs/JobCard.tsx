@@ -53,7 +53,8 @@ export function JobCard({ job, companyName, responsavelName, applicationsCount =
         onClick={onClick}
       >
         <CardContent className="py-3 px-4">
-          <div className="flex items-center gap-4">
+          {/* Mobile: stack vertically. Desktop: single row */}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
             <div className="flex-1 min-w-0">
               <span className="text-sm font-semibold truncate block">
                 {jobCode && <span className="text-muted-foreground font-mono mr-1.5">{jobCode}</span>}
@@ -71,24 +72,24 @@ export function JobCard({ job, companyName, responsavelName, applicationsCount =
                   </span>
                 )}
                 {salaryText && (
-                  <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <span className="hidden sm:flex items-center gap-1 text-xs text-muted-foreground">
                     <DollarSign className="h-3 w-3" />{salaryText}
                   </span>
                 )}
               </div>
             </div>
 
-            <div className="flex items-center gap-3 flex-shrink-0">
+            <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0 flex-wrap">
               <span className="flex items-center gap-1 text-xs text-muted-foreground">
                 <Users className="h-3 w-3" />{applicationsCount}
               </span>
               {job.deadline && (
-                <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                <span className="hidden sm:flex items-center gap-1 text-xs text-muted-foreground">
                   <Calendar className="h-3 w-3" />{formatDate(job.deadline)}
                 </span>
               )}
               {responsavelName && (
-                <Avatar className="h-5 w-5">
+                <Avatar className="h-5 w-5 hidden sm:flex">
                   <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
                     {getInitials(responsavelName)}
                   </AvatarFallback>
@@ -96,7 +97,8 @@ export function JobCard({ job, companyName, responsavelName, applicationsCount =
               )}
               {(job as any).published && (
                 <Badge variant="outline" className="text-xs border-primary/30 text-primary bg-primary/5 gap-1">
-                  <Globe className="h-3 w-3" />Publicada
+                  <Globe className="h-3 w-3" />
+                  <span className="hidden sm:inline">Publicada</span>
                 </Badge>
               )}
               <Badge variant="outline" className={cn('text-xs', priorityColors[job.priority as JobPriority])}>

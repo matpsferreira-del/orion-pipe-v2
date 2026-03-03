@@ -75,11 +75,9 @@ export default function Tarefas() {
     });
   }, [tasks, searchTerm, filterPriority, filterStatus]);
 
-  // Group tasks by time period
   const groupedTasks = useMemo(() => {
     const pending = filteredTasks.filter(t => t.status === 'pendente' || t.status === 'em_andamento');
     const completed = filteredTasks.filter(t => t.status === 'concluida' || t.status === 'cancelada');
-
     const overdue = pending.filter(t => isOverdue(t.due_date, t.status));
     const today = pending.filter(t => isToday(new Date(t.due_date)));
     const tomorrow = pending.filter(t => isTomorrow(new Date(t.due_date)));
@@ -91,7 +89,6 @@ export default function Tarefas() {
       const date = new Date(t.due_date);
       return !isThisWeek(date) && !isPast(date);
     });
-
     return { overdue, today, tomorrow, thisWeek, later, completed };
   }, [filteredTasks]);
 
@@ -113,7 +110,7 @@ export default function Tarefas() {
 
     return (
       <div className={cn(
-        "p-4 rounded-lg border bg-card transition-all hover:shadow-sm",
+        "p-3 sm:p-4 rounded-lg border bg-card transition-all hover:shadow-sm",
         overdue && "border-destructive/50 bg-destructive/5",
         isCompleted && "opacity-60"
       )}>
@@ -126,12 +123,12 @@ export default function Tarefas() {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <span className={cn(
-                "font-medium",
+                "font-medium text-sm sm:text-base",
                 isCompleted && "line-through text-muted-foreground"
               )}>
                 {task.titulo}
               </span>
-              <Badge variant="outline" className={priority.className}>
+              <Badge variant="outline" className={cn("text-xs", priority.className)}>
                 {priority.label}
               </Badge>
               {overdue && (
@@ -145,11 +142,11 @@ export default function Tarefas() {
                 {task.descricao}
               </p>
             )}
-            <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+            <div className="flex items-center gap-3 sm:gap-4 mt-2 text-xs text-muted-foreground flex-wrap">
               {companyName && (
                 <div className="flex items-center gap-1">
                   <Building2 className="h-3 w-3" />
-                  <span>{companyName}</span>
+                  <span className="truncate max-w-[120px]">{companyName}</span>
                 </div>
               )}
               <div className="flex items-center gap-1">
@@ -158,13 +155,13 @@ export default function Tarefas() {
                   {formatDueDate(task.due_date)}
                 </span>
               </div>
-              <span>• {responsavelName}</span>
+              <span className="hidden sm:inline">• {responsavelName}</span>
             </div>
           </div>
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+            className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0"
             onClick={() => handleDelete(task.id)}
           >
             <Trash2 className="h-4 w-4" />
@@ -181,15 +178,12 @@ export default function Tarefas() {
     className?: string;
   }) => {
     if (tasks.length === 0) return null;
-
     return (
       <div className="space-y-3">
         <div className={cn("flex items-center gap-2 text-sm font-medium", className)}>
           <Icon className="h-4 w-4" />
           <span>{title}</span>
-          <Badge variant="secondary" className="ml-auto">
-            {tasks.length}
-          </Badge>
+          <Badge variant="secondary" className="ml-auto">{tasks.length}</Badge>
         </div>
         <div className="space-y-2">
           {tasks.map(task => (
@@ -200,7 +194,6 @@ export default function Tarefas() {
     );
   };
 
-  // Stats
   const stats = {
     total: tasks.filter(t => t.status !== 'concluida' && t.status !== 'cancelada').length,
     overdue: groupedTasks.overdue.length,
@@ -210,74 +203,75 @@ export default function Tarefas() {
 
   if (isLoading) {
     return (
-      <div className="p-6 flex items-center justify-center min-h-[400px]">
+      <div className="p-4 md:p-6 flex items-center justify-center min-h-[400px]">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-4 md:space-y-6">
       <PageHeader
         title="Tarefas"
         description="Gerencie suas atividades e follow-ups"
         actions={
           <Button onClick={() => setDialogOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
-            Nova Tarefa
+            <span className="hidden sm:inline">Nova Tarefa</span>
+            <span className="sm:hidden">Nova</span>
           </Button>
         }
       />
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                <Clock4 className="h-5 w-5 text-primary" />
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                <Clock4 className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{stats.total}</p>
+                <p className="text-xl sm:text-2xl font-bold">{stats.total}</p>
                 <p className="text-xs text-muted-foreground">Pendentes</p>
               </div>
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-destructive/10 flex items-center justify-center">
-                <AlertCircle className="h-5 w-5 text-destructive" />
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg bg-destructive/10 flex items-center justify-center shrink-0">
+                <AlertCircle className="h-4 w-4 sm:h-5 sm:w-5 text-destructive" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-destructive">{stats.overdue}</p>
+                <p className="text-xl sm:text-2xl font-bold text-destructive">{stats.overdue}</p>
                 <p className="text-xs text-muted-foreground">Atrasadas</p>
               </div>
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-warning/10 flex items-center justify-center">
-                <Bell className="h-5 w-5 text-warning" />
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg bg-warning/10 flex items-center justify-center shrink-0">
+                <Bell className="h-4 w-4 sm:h-5 sm:w-5 text-warning" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{stats.today}</p>
+                <p className="text-xl sm:text-2xl font-bold">{stats.today}</p>
                 <p className="text-xs text-muted-foreground">Para Hoje</p>
               </div>
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-success/10 flex items-center justify-center">
-                <CheckCircle2 className="h-5 w-5 text-success" />
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg bg-success/10 flex items-center justify-center shrink-0">
+                <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 text-success" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-success">{stats.completed}</p>
+                <p className="text-xl sm:text-2xl font-bold text-success">{stats.completed}</p>
                 <p className="text-xs text-muted-foreground">Concluídas</p>
               </div>
             </div>
@@ -286,8 +280,8 @@ export default function Tarefas() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="relative flex-1 max-w-sm">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+        <div className="relative flex-1 min-w-0 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Buscar tarefas..."
@@ -297,7 +291,7 @@ export default function Tarefas() {
           />
         </div>
         <Select value={filterPriority} onValueChange={setFilterPriority}>
-          <SelectTrigger className="w-[150px]">
+          <SelectTrigger className="w-full sm:w-[150px]">
             <Filter className="h-4 w-4 mr-2" />
             <SelectValue placeholder="Prioridade" />
           </SelectTrigger>
@@ -309,7 +303,7 @@ export default function Tarefas() {
           </SelectContent>
         </Select>
         <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger className="w-[150px]">
+          <SelectTrigger className="w-full sm:w-[150px]">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
@@ -324,68 +318,41 @@ export default function Tarefas() {
       {/* Tasks List */}
       <Tabs defaultValue="pending" className="w-full">
         <TabsList>
-          <TabsTrigger value="pending">
+          <TabsTrigger value="pending" className="text-xs sm:text-sm">
             Pendentes ({stats.total})
           </TabsTrigger>
-          <TabsTrigger value="completed">
+          <TabsTrigger value="completed" className="text-xs sm:text-sm">
             Concluídas ({stats.completed})
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="pending" className="space-y-6 mt-6">
+        <TabsContent value="pending" className="space-y-4 sm:space-y-6 mt-4 sm:mt-6">
           {stats.total === 0 ? (
             <Card>
               <CardContent className="py-12 text-center">
                 <CheckCircle2 className="h-12 w-12 mx-auto text-success mb-4" />
                 <h3 className="font-medium text-lg">Tudo em dia!</h3>
-                <p className="text-muted-foreground mt-1">
-                  Você não tem tarefas pendentes
-                </p>
+                <p className="text-muted-foreground mt-1">Você não tem tarefas pendentes</p>
               </CardContent>
             </Card>
           ) : (
             <>
-              <TaskSection 
-                title="Atrasadas" 
-                tasks={groupedTasks.overdue} 
-                icon={AlertCircle}
-                className="text-destructive"
-              />
-              <TaskSection 
-                title="Hoje" 
-                tasks={groupedTasks.today} 
-                icon={Bell}
-                className="text-warning"
-              />
-              <TaskSection 
-                title="Amanhã" 
-                tasks={groupedTasks.tomorrow} 
-                icon={Calendar}
-              />
-              <TaskSection 
-                title="Esta Semana" 
-                tasks={groupedTasks.thisWeek} 
-                icon={Clock}
-              />
-              <TaskSection 
-                title="Futuras" 
-                tasks={groupedTasks.later} 
-                icon={Calendar}
-                className="text-muted-foreground"
-              />
+              <TaskSection title="Atrasadas" tasks={groupedTasks.overdue} icon={AlertCircle} className="text-destructive" />
+              <TaskSection title="Hoje" tasks={groupedTasks.today} icon={Bell} className="text-warning" />
+              <TaskSection title="Amanhã" tasks={groupedTasks.tomorrow} icon={Calendar} />
+              <TaskSection title="Esta Semana" tasks={groupedTasks.thisWeek} icon={Clock} />
+              <TaskSection title="Futuras" tasks={groupedTasks.later} icon={Calendar} className="text-muted-foreground" />
             </>
           )}
         </TabsContent>
 
-        <TabsContent value="completed" className="mt-6">
+        <TabsContent value="completed" className="mt-4 sm:mt-6">
           {groupedTasks.completed.length === 0 ? (
             <Card>
               <CardContent className="py-12 text-center">
                 <Clock4 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                 <h3 className="font-medium text-lg">Nenhuma tarefa concluída</h3>
-                <p className="text-muted-foreground mt-1">
-                  Complete algumas tarefas para vê-las aqui
-                </p>
+                <p className="text-muted-foreground mt-1">Complete algumas tarefas para vê-las aqui</p>
               </CardContent>
             </Card>
           ) : (
@@ -398,7 +365,6 @@ export default function Tarefas() {
         </TabsContent>
       </Tabs>
 
-      {/* Task Dialog */}
       <TaskDialog open={dialogOpen} onOpenChange={setDialogOpen} />
     </div>
   );
