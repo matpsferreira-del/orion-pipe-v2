@@ -514,6 +514,7 @@ export type Database = {
           description: string | null
           filled_at: string | null
           id: string
+          job_code: number | null
           location: string | null
           opportunity_id: string | null
           priority: string
@@ -538,6 +539,7 @@ export type Database = {
           description?: string | null
           filled_at?: string | null
           id?: string
+          job_code?: number | null
           location?: string | null
           opportunity_id?: string | null
           priority?: string
@@ -562,6 +564,7 @@ export type Database = {
           description?: string | null
           filled_at?: string | null
           id?: string
+          job_code?: number | null
           location?: string | null
           opportunity_id?: string | null
           priority?: string

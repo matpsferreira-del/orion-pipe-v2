@@ -12,58 +12,81 @@ export function useApplications(jobId?: string) {
   return useQuery({
     queryKey: ['applications', jobId],
     queryFn: async () => {
-      let query = supabase
+      if (jobId) {
+        return await fetchAllApplications(jobId) as ApplicationRow[];
+      }
+      const { data, error } = await supabase
         .from('applications')
         .select('*')
         .order('applied_at', { ascending: false });
-
-      if (jobId) {
-        query = query.eq('job_id', jobId);
-      }
-
-      const { data, error } = await query;
       if (error) throw error;
       return data as ApplicationRow[];
     },
   });
 }
 
+async function fetchAllApplications(jobId: string) {
+  const allData: any[] = [];
+  let offset = 0;
+  const batchSize = 1000;
+  let hasMore = true;
+
+  while (hasMore) {
+    const { data, error } = await supabase
+      .from('applications')
+      .select('*')
+      .eq('job_id', jobId)
+      .order('applied_at', { ascending: false })
+      .range(offset, offset + batchSize - 1);
+
+    if (error) throw error;
+
+    if (data && data.length > 0) {
+      allData.push(...data);
+      offset += batchSize;
+      hasMore = data.length === batchSize;
+    } else {
+      hasMore = false;
+    }
+  }
+  return allData;
+}
+
+async function fetchAllParties(partyIds: string[]) {
+  const allData: any[] = [];
+  // .in() has a practical limit, batch in chunks of 500
+  for (let i = 0; i < partyIds.length; i += 500) {
+    const batch = partyIds.slice(i, i + 500);
+    const { data, error } = await supabase
+      .from('party')
+      .select('id, full_name, email_raw, phone_raw, headline, linkedin_url')
+      .in('id', batch);
+    if (error) throw error;
+    if (data) allData.push(...data);
+  }
+  return allData;
+}
+
 export function useApplicationsWithParties(jobId: string) {
   return useQuery({
     queryKey: ['applications-with-parties', jobId],
     queryFn: async () => {
-      // First get applications
-      const { data: applications, error: appError } = await supabase
-        .from('applications')
-        .select('*')
-        .eq('job_id', jobId)
-        .order('applied_at', { ascending: false });
+      const applications = await fetchAllApplications(jobId);
+      if (!applications.length) return [];
 
-      if (appError) throw appError;
-      if (!applications?.length) return [];
-
-      // Get unique party IDs
-      const partyIds = [...new Set(applications.map(a => a.party_id))];
+      const partyIds = [...new Set(applications.map(a => a.party_id))] as string[];
       
-      // Fetch parties
-      const { data: parties, error: partyError } = await supabase
-        .from('party')
-        .select('id, full_name, email_raw, phone_raw, headline, linkedin_url')
-        .in('id', partyIds);
+      const [parties, stages] = await Promise.all([
+        fetchAllParties(partyIds),
+        supabase
+          .from('job_pipeline_stages')
+          .select('*')
+          .eq('job_id', jobId)
+          .then(({ data, error }) => { if (error) throw error; return data; }),
+      ]);
 
-      if (partyError) throw partyError;
-
-      // Get stages for this job
-      const { data: stages, error: stageError } = await supabase
-        .from('job_pipeline_stages')
-        .select('*')
-        .eq('job_id', jobId);
-
-      if (stageError) throw stageError;
-
-      // Map parties and stages to applications
-      const partyMap = new Map(parties?.map(p => [p.id, p]));
-      const stageMap = new Map(stages?.map(s => [s.id, s]));
+      const partyMap = new Map(parties.map(p => [p.id, p]));
+      const stageMap = new Map((stages || []).map(s => [s.id, s]));
 
       return applications.map(app => ({
         ...app,
