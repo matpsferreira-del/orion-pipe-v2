@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
@@ -36,6 +37,9 @@ export function CandidateDetailDialog({
 }: CandidateDetailDialogProps) {
   const [notes, setNotes] = useState(application?.notes || '');
   const [rating, setRating] = useState(application?.rating || 0);
+  const [salaryExpectation, setSalaryExpectation] = useState(
+    application?.salary_expectation != null ? String(application.salary_expectation) : ''
+  );
 
   const updateApplication = useUpdateApplication();
   const updateStatus = useUpdateApplicationStatus();
@@ -52,10 +56,12 @@ export function CandidateDetailDialog({
 
   const handleSaveNotes = async () => {
     try {
+      const parsedSalary = salaryExpectation ? parseFloat(salaryExpectation.replace(/\D/g, '')) : null;
       await updateApplication.mutateAsync({
         id: application.id,
         notes,
         rating: rating || null,
+        salary_expectation: parsedSalary || null,
       });
       toast.success('Notas salvas');
     } catch (error) {
@@ -147,17 +153,28 @@ export function CandidateDetailDialog({
           </div>
 
           {/* Salary Expectation */}
-          {application.salary_expectation != null && (
-            <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
-              <DollarSign className="h-5 w-5 text-primary" />
-              <div>
-                <p className="text-xs text-muted-foreground">Pretensão Salarial</p>
-                <p className="font-semibold text-foreground">
-                  {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(application.salary_expectation))}
-                </p>
-              </div>
+          <div>
+            <Label>Pretensão Salarial</Label>
+            <div className="relative mt-1.5">
+              <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="text"
+                inputMode="numeric"
+                placeholder="Ex: 8000"
+                className="pl-9"
+                value={salaryExpectation}
+                onChange={(e) => {
+                  const raw = e.target.value.replace(/\D/g, '');
+                  setSalaryExpectation(raw);
+                }}
+              />
             </div>
-          )}
+            {salaryExpectation && (
+              <p className="text-xs text-muted-foreground mt-1">
+                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(salaryExpectation))}
+              </p>
+            )}
+          </div>
 
           <Separator />
 
