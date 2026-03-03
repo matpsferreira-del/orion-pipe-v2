@@ -1,19 +1,30 @@
 
 
-# Mapeamento de Vagas — Limite de Visibilidade + Colunas Cidade/Estado
+# Botão "Acionar Automação" — Já implementado
 
-## Problema 1: Limite de visibilidade
-A query atual usa `supabase.from('job_postings').select('*')` sem paginação. O Supabase limita queries a 1000 linhas por padrão, truncando silenciosamente os resultados. Atualmente há apenas 11 registros, mas conforme o Manus gerar mais vagas, o limite será atingido. A solução é usar o utilitário `fetchAllRows` que já existe no projeto (`src/lib/fetchAllRows.ts`) para buscar todos os registros em lotes.
+O botão "Acionar Automação" **já faz exatamente o que foi solicitado**. No arquivo `src/pages/MapeamentoVagas.tsx` (linhas 78-85), o `triggerMutation` executa:
 
-## Problema 2: Cidade e Estado em uma coluna só
-Atualmente a tabela mostra "Local" como uma única coluna combinando cidade e estado. O pedido é separar em duas colunas distintas.
+```typescript
+const { error } = await supabase.from('automation_triggers').insert({
+  search_term: filterSearchTerm !== ALL ? filterSearchTerm : (search || null),
+  location: [cidade, estado].filter(Boolean).join(', ') || null,
+  status: 'pending',
+});
+```
 
-## Mudanças
+Isso já insere um registro na tabela `automation_triggers` com `search_term`, `location` e `status: 'pending'`.
 
-### `src/pages/MapeamentoVagas.tsx`
-1. **Importar `fetchAllRows`** e usá-lo na `queryFn` em vez do `supabase.from().select()` direto
-2. **Separar a coluna "Local"** em duas colunas: "Cidade" e "Estado" (UF)
-3. Manter responsividade: no mobile, esconder a coluna Estado (`hidden md:table-cell`)
+## O que pode estar falhando
 
-Apenas 1 arquivo modificado.
+O problema reportado anteriormente ("a integração não funciona daqui para lá") não é no INSERT — ele funciona. O problema é que **nenhum serviço externo (Manus) está consumindo esses registros**. Não existe webhook ou chamada de API que notifique o Manus quando um trigger é criado.
+
+## Plano — Nenhuma mudança necessária no INSERT
+
+O código atual já atende ao requisito descrito. Se o objetivo é garantir que o Manus receba a notificação, seria necessário:
+
+1. Obter a URL da API do Manus
+2. Criar uma edge function que faça POST para essa URL após o INSERT
+3. Chamar essa edge function no `onSuccess` da mutation
+
+Mas o INSERT em si já está correto e funcional.
 
