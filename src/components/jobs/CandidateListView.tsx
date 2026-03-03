@@ -119,7 +119,12 @@ export function CandidateListView({
                         <p className="font-medium text-sm truncate hover:underline">
                           {party?.full_name || 'Candidato desconhecido'}
                         </p>
-                        {party?.headline && (
+                        {(party?.current_title || party?.current_company) && (
+                          <p className="text-xs text-muted-foreground truncate max-w-[150px] sm:max-w-[200px]">
+                            {[party.current_title, party.current_company].filter(Boolean).join(' · ')}
+                          </p>
+                        )}
+                        {!(party?.current_title || party?.current_company) && party?.headline && (
                           <p className="text-xs text-muted-foreground truncate max-w-[150px] sm:max-w-[200px]">{party.headline}</p>
                         )}
                         {/* Mobile: show stage + status inline */}

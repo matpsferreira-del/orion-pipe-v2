@@ -6,20 +6,26 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CheckCircle, Loader2, Briefcase, User, Link as LinkIcon } from 'lucide-react';
+import { CheckCircle, Loader2, Briefcase, User, Link as LinkIcon, Building, BadgeCheck } from 'lucide-react';
 
 export default function ChromeExtension() {
   const [searchParams] = useSearchParams();
   const [nome, setNome] = useState('');
   const [linkedinUrl, setLinkedinUrl] = useState('');
+  const [cargo, setCargo] = useState('');
+  const [empresaAtual, setEmpresaAtual] = useState('');
   const [selectedJobId, setSelectedJobId] = useState('');
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     const paramNome = searchParams.get('nome');
     const paramUrl = searchParams.get('url');
+    const paramCargo = searchParams.get('cargo');
+    const paramEmpresa = searchParams.get('empresa');
     if (paramNome) setNome(decodeURIComponent(paramNome));
     if (paramUrl) setLinkedinUrl(decodeURIComponent(paramUrl));
+    if (paramCargo) setCargo(decodeURIComponent(paramCargo));
+    if (paramEmpresa) setEmpresaAtual(decodeURIComponent(paramEmpresa));
   }, [searchParams]);
 
   const { data: jobs = [], isLoading: loadingJobs } = useQuery({
@@ -44,6 +50,8 @@ export default function ChromeExtension() {
         p_full_name: nome.trim(),
         p_linkedin_url: linkedinUrl.trim() || null,
         p_created_from: 'ats' as const,
+        p_current_title: cargo.trim() || null,
+        p_current_company: empresaAtual.trim() || null,
       });
       if (partyError) throw partyError;
 
@@ -133,6 +141,34 @@ export default function ChromeExtension() {
             value={linkedinUrl}
             onChange={(e) => setLinkedinUrl(e.target.value)}
             placeholder="https://linkedin.com/in/..."
+            className="h-9 text-sm"
+          />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="cargo" className="text-xs font-medium flex items-center gap-1.5">
+            <BadgeCheck className="h-3.5 w-3.5 text-muted-foreground" />
+            Cargo Atual
+          </Label>
+          <Input
+            id="cargo"
+            value={cargo}
+            onChange={(e) => setCargo(e.target.value)}
+            placeholder="Ex: Gerente Financeiro"
+            className="h-9 text-sm"
+          />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="empresa" className="text-xs font-medium flex items-center gap-1.5">
+            <Building className="h-3.5 w-3.5 text-muted-foreground" />
+            Empresa Atual
+          </Label>
+          <Input
+            id="empresa"
+            value={empresaAtual}
+            onChange={(e) => setEmpresaAtual(e.target.value)}
+            placeholder="Ex: XP Inc"
             className="h-9 text-sm"
           />
         </div>
