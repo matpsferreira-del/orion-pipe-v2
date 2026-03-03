@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -57,6 +57,10 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
   const { data: profiles = [] } = useProfiles();
   const { data: stages = [] } = useJobStages(job.id);
   const { data: applications = [], isLoading: loadingApps } = useApplicationsWithParties(job.id);
+
+  const mapeadoStage = useMemo(() => stages.find(s => s.name.toLowerCase() === 'mapeado'), [stages]);
+  const mapeadoApps = useMemo(() => mapeadoStage ? applications.filter(a => a.stage_id === mapeadoStage.id) : [], [applications, mapeadoStage]);
+  const nonMapeadoApps = useMemo(() => mapeadoStage ? applications.filter(a => a.stage_id !== mapeadoStage.id) : applications, [applications, mapeadoStage]);
   const updateStatus = useUpdateJobStatus();
   const updateAppStage = useUpdateApplicationStage();
   const updateAppStatus = useUpdateApplicationStatus();
@@ -461,15 +465,28 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
               </Button>
             </div>
           ) : (
-            <Tabs defaultValue="triagem">
+            <Tabs defaultValue="mapeados">
               <TabsList className="mb-4">
-                <TabsTrigger value="triagem">Triagem ({applications.length})</TabsTrigger>
+                <TabsTrigger value="mapeados">Mapeados ({mapeadoApps.length})</TabsTrigger>
+                <TabsTrigger value="triagem">Triagem ({nonMapeadoApps.length})</TabsTrigger>
                 <TabsTrigger value="etapas">Etapas</TabsTrigger>
               </TabsList>
 
+              <TabsContent value="mapeados">
+                <CandidateListView
+                  applications={mapeadoApps}
+                  stages={stages}
+                  selectedIds={selectedIds}
+                  onToggleSelect={handleToggleSelect}
+                  onCandidateClick={setSelectedApplication}
+                  onMoveToStage={handleMoveCandidate}
+                  onReject={handleRejectSingle}
+                />
+              </TabsContent>
+
               <TabsContent value="triagem">
                 <CandidateListView
-                  applications={applications}
+                  applications={nonMapeadoApps}
                   stages={stages}
                   selectedIds={selectedIds}
                   onToggleSelect={handleToggleSelect}
