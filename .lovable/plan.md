@@ -1,37 +1,34 @@
 
 
-# Reestruturação da UI de Candidatos na Vaga: Triagem (Lista) + Etapas (Kanban)
+# Otimização Mobile
 
-## Objetivo
-Reorganizar a aba "Candidatos" dentro do detalhe da vaga em **duas sub-abas**:
-1. **Triagem** — Lista tabular de todos os candidatos (como na imagem de referência), com checkboxes para seleção em massa e ações (triar para etapa, reprovar, email)
-2. **Etapas** — O Kanban existente com as colunas do pipeline
+## Problemas Identificados
+1. **Sidebar sempre visível** no mobile, ocupando ~60% da tela e empurrando o conteúdo principal
+2. **TopNav com tabs cortadas** — "Recrutamento" e "Configurações" ficam fora da tela
+3. **Conteúdo principal espremido** — textos, botões e cards truncados no espaço restante
 
-## Mudanças Planejadas
+## Plano
 
-### 1. Reestruturar tabs no `JobDetail.tsx`
-- Substituir a tab "Candidatos" por duas sub-tabs aninhadas: **"Triagem"** e **"Etapas"**
-- A tab "Triagem" mostra a lista tabular; a tab "Etapas" mostra o `CandidateKanban` existente
-- Manter a tab "Detalhes" como está
-- A barra de ações em massa (`BulkActionBar`) funciona em ambas as sub-tabs
+### 1. Sidebar colapsável no mobile (`AppLayout.tsx` + `AppSidebar.tsx`)
+- No mobile (`< 768px`), esconder a sidebar por padrão
+- Adicionar botão hamburger (☰) no `TopNav` para abrir/fechar a sidebar como overlay (posição absoluta com backdrop)
+- Sidebar abre como drawer lateral sobre o conteúdo, fecha ao clicar em um item ou no backdrop
+- Usar `useIsMobile()` hook existente
 
-### 2. Criar componente `CandidateListView.tsx` (novo arquivo)
-Componente de lista tabular inspirado na imagem de referência:
-- **Tabela** com colunas: Checkbox, Candidato (nome + idade + localização + ícones de contato), Situação (status da application), Data inscrição, Ações
-- **Checkbox** em cada linha + checkbox "selecionar todos" no header
-- **Coluna "Ações"**: dropdown com opções para triar o candidato para uma etapa específica do Kanban (lista as etapas do pipeline), reprovar, ou abrir detalhes
-- Ao clicar no nome do candidato, abre o `CandidateDetailDialog` existente
-- Reutiliza os mesmos `selectedIds` e `onToggleSelect` do `JobDetail`
+### 2. TopNav responsivo (`TopNav.tsx`)
+- No mobile, reduzir padding e tamanho dos botões de tabs
+- Esconder o texto do logo ("RecruitCRM"), manter só o ícone
+- Adicionar o botão hamburger à esquerda
+- Tabs menores com texto compacto
 
-### 3. Adicionar ação "Triar para Etapa" no `BulkActionBar`
-- Além de "Próxima Etapa" e "Reprovar", adicionar um dropdown **"Mover para Etapa"** que lista todas as etapas do pipeline
-- Permite mover os candidatos selecionados diretamente para qualquer etapa (não apenas a próxima)
+### 3. Páginas com padding responsivo
+- Revisar as páginas principais (Dashboard, Vagas, etc.) para usar padding menor no mobile (`p-4` em vez de `p-6`/`p-8`)
+- Garantir que grids de cards usem `grid-cols-1` no mobile
 
 ### Arquivos modificados:
-1. **`src/components/jobs/CandidateListView.tsx`** — Novo componente com tabela de triagem
-2. **`src/components/jobs/JobDetail.tsx`** — Reestruturar tabs com sub-tabs Triagem/Etapas
-3. **`src/components/jobs/BulkActionBar.tsx`** — Adicionar dropdown "Mover para Etapa"
-
-### Nenhuma mudança de banco necessária
-Toda a lógica usa os hooks existentes (`useUpdateApplicationStage`, `useUpdateApplicationStatus`).
+1. **`src/components/layout/TopNav.tsx`** — Botão hamburger, layout responsivo
+2. **`src/components/layout/AppSidebar.tsx`** — Drawer overlay no mobile com backdrop
+3. **`src/components/layout/AppLayout.tsx`** — Gerenciar estado aberto/fechado do sidebar mobile
+4. **`src/pages/Vagas.tsx`** — Padding responsivo
+5. **`src/pages/Dashboard.tsx`** — Padding responsivo
 
