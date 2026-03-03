@@ -69,7 +69,7 @@ export default function Dashboard() {
     const { opportunities: opps, invoices: invs, companies: comps } = filteredData;
     
     const activeOpps = opps.filter(o => 
-      !['fechado_ganhou', 'fechado_perdeu'].includes(o.stage)
+      !['fechado_perdeu'].includes(o.stage)
     );
     const wonOpps = opps.filter(o => o.stage === 'fechado_ganhou');
     const totalPipeline = activeOpps.reduce((sum, o) => sum + Number(o.valor_potencial), 0);
