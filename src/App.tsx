@@ -22,6 +22,7 @@ import RecrutamentoDashboard from "./pages/RecrutamentoDashboard";
 import MapeamentoVagas from "./pages/MapeamentoVagas";
 import ShortlistPresentation from "./pages/ShortlistPresentation";
 import Auth from "./pages/Auth";
+import ChromeExtension from "./pages/ChromeExtension";
 import NotFound from "./pages/NotFound";
 import { Loader2 } from "lucide-react";
 
@@ -71,7 +72,12 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            {/* Rotas públicas removidas — portal de vagas é um projeto separado */}
+            {/* Rota pública para extensão Chrome */}
+            <Route path="/chrome-extension" element={
+              <ProtectedRoute>
+                <ChromeExtension />
+              </ProtectedRoute>
+            } />
 
             <Route path="/auth" element={
               <PublicRoute>
