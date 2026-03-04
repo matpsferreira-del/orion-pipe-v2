@@ -1,29 +1,37 @@
 
 
-# Adicionar Cargo e Empresa Atual na extensão Chrome e aba Mapeados
+# Plano: Formatação de CV no módulo Recrutamento
 
-## Contexto
-A tabela `party` já tem um campo `headline` que é exibido na lista de candidatos. Não existe campo separado para "cargo atual" e "empresa atual". Precisamos adicionar esses dois campos.
+## Resumo
+Adicionar uma nova página "Formatação de CV" ao módulo de Recrutamento, com link no sidebar e rota dedicada. O código fornecido será adaptado para usar TypeScript, Tailwind CSS e o padrão do projeto, incluindo o uso de Lovable AI (via edge function) em vez de chamada direta à API Anthropic no frontend.
 
-## Plano
+## O que será feito
 
-### 1. Migração: adicionar colunas `current_title` e `current_company` na tabela `party`
-- `current_title TEXT` (nullable) -- cargo atual
-- `current_company TEXT` (nullable) -- empresa atual
+### 1. Criar página `src/pages/FormatacaoCV.tsx`
+- Converter o componente fornecido para TypeScript com tipagem adequada
+- Substituir os estilos inline (`S = {...}`) por classes Tailwind para consistência com o design system
+- Remover a lógica de carregamento de mammoth via script tag e usar import dinâmico ou manter como script externo com tipagem
+- A página mantém 3 etapas: upload, processamento e editor/preview
 
-### 2. Atualizar a RPC `resolve_party` para aceitar os novos parâmetros
-- Adicionar `p_current_title TEXT DEFAULT NULL` e `p_current_company TEXT DEFAULT NULL`
-- Na criação, gravar os valores; na atualização de party existente, preencher apenas se os campos estiverem vazios (mesmo padrão COALESCE atual)
+### 2. Criar edge function `supabase/functions/extract-cv/index.ts`
+- Recebe o arquivo (base64 para PDF, texto extraído para DOCX) 
+- Chama a Lovable AI (modelo `google/gemini-2.5-pro` ou `openai/gpt-5`) com o prompt de extração
+- Retorna o JSON estruturado do CV
+- Isso evita expor chaves de API no frontend
 
-### 3. Atualizar `ChromeExtension.tsx`
-- Adicionar campos `cargo` e `empresaAtual` no estado, pré-preenchidos via URL params (`?nome=...&url=...&cargo=...&empresa=...`)
-- Dois novos inputs no formulário (entre LinkedIn e Vaga)
-- Passar `p_current_title` e `p_current_company` na chamada `resolve_party`
+### 3. Atualizar navegação
+- **`src/components/layout/AppSidebar.tsx`**: Adicionar item `{ to: '/formatacao-cv', icon: FileText, label: 'Formatação de CV' }` no array `recrutamento`
+- **`src/components/layout/TopNav.tsx`**: Adicionar `'/formatacao-cv': 'recrutamento'` no `routeToTab`
+- **`src/App.tsx`**: Adicionar rota `<Route path="/formatacao-cv" element={<FormatacaoCV />} />`
 
-### 4. Atualizar a listagem na aba Mapeados (`CandidateListView.tsx`)
-- O `_party` retornado pelo hook `useApplicationsWithParties` já faz `select('id, full_name, email_raw, phone_raw, headline, linkedin_url')` — adicionar `current_title, current_company` nessa query
-- Exibir cargo e empresa abaixo do nome do candidato (no mesmo espaço onde hoje mostra `headline`), no formato "Cargo · Empresa" ou só um deles se o outro estiver vazio
+### 4. Adaptações do código fornecido
+- Substituir chamada direta a `api.anthropic.com` por chamada à edge function
+- Manter a lógica de export PDF usando `html-to-image` + `jspdf` (já disponíveis no projeto)
+- Remover estilos CSS globais injetados via `document.createElement("style")` e usar Tailwind + `@keyframes` no `index.css`
+- Adicionar tipagem para o objeto `cvData`
 
-### 5. Atualizar o tipo `ApplicationWithRelations` em `types/ats.ts`
-- Adicionar `current_title` e `current_company` ao tipo `_party`
+### Considerações técnicas
+- O modelo Lovable AI suporta processamento de texto para extração estruturada, adequado para este caso
+- PDFs binários precisarão ser enviados como base64 para a edge function, que usará o modelo com suporte multimodal
+- A exportação PDF já segue o padrão arquitetural do projeto (html-to-image + jsPDF)
 
