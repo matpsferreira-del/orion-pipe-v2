@@ -20,6 +20,7 @@ import {
   UserCircle,
   Briefcase,
   Radar,
+  FileText,
 } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -82,6 +83,7 @@ const tabNavItems = {
     { to: '/recrutamento', icon: LayoutDashboard, label: 'Dashboard' },
     { to: '/pessoas', icon: UserCircle, label: 'Banco de Talentos' },
     { to: '/vagas', icon: Briefcase, label: 'Vagas' },
+    { to: '/formatacao-cv', icon: FileText, label: 'Formatação de CV' },
   ],
   configuracoes: [
     { to: '/equipe', icon: Users, label: 'Equipe' },

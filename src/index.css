@@ -301,3 +301,16 @@
     border-radius: 3px;
   }
 }
+
+/* CV Editor contentEditable placeholder */
+[contenteditable]:empty:before {
+  content: attr(data-placeholder);
+  color: #94A3B8;
+  font-style: italic;
+  pointer-events: none;
+}
+
+@media print {
+  button, .no-print { display: none !important; }
+  body { margin: 0; background: white; }
+}
