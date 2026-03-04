@@ -24,7 +24,7 @@ import { ApplicationWithRelations } from '@/types/ats';
 import { useUpdateApplicationStatus } from '@/hooks/useApplications';
 import { 
   jobStatusLabels, jobStatusColors, priorityLabels, priorityColors, 
-  JobPriority, jobAreaLabels, JobArea
+  JobPriority, jobAreaLabels, JobArea, applicationStatusLabels
 } from '@/types/ats';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -89,7 +89,7 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
     return new Date(date).toLocaleDateString('pt-BR');
   };
 
-  const handleExportMapeados = (apps: ApplicationWithRelations[]) => {
+  const handleExportCandidatos = (apps: ApplicationWithRelations[]) => {
     const rows = apps.map(a => {
       const p = a._party;
       const stage = stages.find(s => s.id === a.stage_id);
@@ -100,16 +100,20 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
         Email: p?.email_raw || '',
         Telefone: p?.phone_raw || '',
         LinkedIn: p?.linkedin_url || '',
+        Headline: p?.headline || '',
         Etapa: stage?.name || '',
+        Situação: applicationStatusLabels[a.status] || a.status,
+        Fonte: a.source || '',
         'Pretensão Salarial': a.salary_expectation != null ? Number(a.salary_expectation) : '',
+        Nota: a.rating != null ? a.rating : '',
         'Data Inscrição': new Date(a.applied_at).toLocaleDateString('pt-BR'),
         Observações: a.notes || '',
       };
     });
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Mapeados');
-    XLSX.writeFile(wb, `mapeados-${job.title.replace(/\s+/g, '-').toLowerCase()}.xlsx`);
+    XLSX.utils.book_append_sheet(wb, ws, 'Candidatos');
+    XLSX.writeFile(wb, `candidatos-${job.title.replace(/\s+/g, '-').toLowerCase()}.xlsx`);
     toast.success(`${rows.length} candidato(s) exportado(s)`);
   };
 
@@ -497,10 +501,10 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
                   <TabsTrigger value="triagem">Triagem ({nonMapeadoApps.length})</TabsTrigger>
                   <TabsTrigger value="etapas">Etapas</TabsTrigger>
                 </TabsList>
-                {mapeadoApps.length > 0 && (
-                  <Button variant="outline" size="sm" onClick={() => handleExportMapeados(mapeadoApps)}>
+                {applications.length > 0 && (
+                  <Button variant="outline" size="sm" onClick={() => handleExportCandidatos(applications)}>
                     <Download className="h-4 w-4 mr-1" />
-                    Exportar
+                    Exportar Todos
                   </Button>
                 )}
               </div>
