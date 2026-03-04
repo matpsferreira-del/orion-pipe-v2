@@ -13,29 +13,76 @@ serve(async (req) => {
   }
 
   try {
-    const body = await req.json();
+    const { system, messages } = await req.json();
 
-    const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
-    if (!ANTHROPIC_API_KEY) {
-      throw new Error("ANTHROPIC_API_KEY is not configured");
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) {
+      throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
+    // Convert Anthropic-style messages to OpenAI-compatible format for Lovable AI
+    const openaiMessages: any[] = [];
+
+    if (system) {
+      openaiMessages.push({ role: "system", content: system });
+    }
+
+    for (const msg of messages) {
+      if (typeof msg.content === "string") {
+        openaiMessages.push({ role: msg.role, content: msg.content });
+      } else if (Array.isArray(msg.content)) {
+        // Convert content blocks
+        const parts: any[] = [];
+        for (const block of msg.content) {
+          if (block.type === "text") {
+            parts.push({ type: "text", text: block.text });
+          } else if (block.type === "document" && block.source?.type === "base64") {
+            // Convert document to inline_data for Gemini via OpenAI-compatible format
+            parts.push({
+              type: "image_url",
+              image_url: {
+                url: `data:${block.source.media_type};base64,${block.source.data}`,
+              },
+            });
+          }
+        }
+        openaiMessages.push({ role: msg.role, content: parts });
+      }
+    }
+
+    const response = await fetch("https://ai.lovable.dev/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-api-key": ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: openaiMessages,
+        max_tokens: 16000,
+      }),
     });
 
     const data = await response.json();
 
-    return new Response(JSON.stringify(data), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: response.status,
-    });
+    if (!response.ok) {
+      console.error("Lovable AI error:", JSON.stringify(data));
+      return new Response(JSON.stringify({ error: { message: data?.error?.message || "AI request failed" } }), {
+        status: response.status,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Extract text from OpenAI-compatible response and return in a format the frontend expects
+    const text = data.choices?.[0]?.message?.content || "";
+
+    return new Response(
+      JSON.stringify({ content: [{ text }] }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+      }
+    );
   } catch (e) {
     console.error("extract-cv error:", e);
     return new Response(

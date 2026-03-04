@@ -138,11 +138,9 @@ export default function FormatacaoCV() {
         ];
       }
 
-      // Call edge function proxy to Anthropic
+      // Call edge function proxy to Lovable AI
       const { data, error: fnError } = await supabase.functions.invoke("extract-cv", {
         body: {
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 16000,
           system: EXTRACT_PROMPT,
           messages,
         },
