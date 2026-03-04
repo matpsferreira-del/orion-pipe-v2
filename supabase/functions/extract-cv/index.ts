@@ -86,7 +86,7 @@ serve(async (req) => {
           { role: "system", content: EXTRACT_PROMPT },
           { role: "user", content: userContent },
         ],
-        max_tokens: 8000,
+        max_tokens: 16000,
       }),
     });
 
@@ -110,14 +110,32 @@ serve(async (req) => {
 
     const data = await response.json();
     const text = data.choices?.[0]?.message?.content || "";
-    const clean = text.replace(/```json|```/g, "").trim();
+
+    // Robust JSON extraction
+    let cleaned = text.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
+    const jsonStart = cleaned.search(/\{/);
+    const jsonEnd = cleaned.lastIndexOf("}");
+    if (jsonStart === -1 || jsonEnd === -1) {
+      console.error("No JSON object found in AI response:", cleaned.substring(0, 500));
+      throw new Error("A IA não retornou um JSON válido. Tente novamente.");
+    }
+    cleaned = cleaned.substring(jsonStart, jsonEnd + 1);
 
     let cvData;
     try {
-      cvData = JSON.parse(clean);
+      cvData = JSON.parse(cleaned);
     } catch {
-      console.error("Failed to parse AI response as JSON:", clean.substring(0, 500));
-      throw new Error("A IA não retornou um JSON válido. Tente novamente.");
+      // Fix common issues: trailing commas, control characters
+      cleaned = cleaned
+        .replace(/,\s*}/g, "}")
+        .replace(/,\s*]/g, "]")
+        .replace(/[\x00-\x1F\x7F]/g, "");
+      try {
+        cvData = JSON.parse(cleaned);
+      } catch {
+        console.error("Failed to parse AI response as JSON:", cleaned.substring(0, 500));
+        throw new Error("A IA não retornou um JSON válido. Tente novamente.");
+      }
     }
 
     return new Response(JSON.stringify({ cvData }), {
