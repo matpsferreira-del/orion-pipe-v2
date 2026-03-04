@@ -1,188 +1,262 @@
-import { useState, useRef, useCallback } from 'react';
-import { toPng } from 'html-to-image';
-import jsPDF from 'jspdf';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
-import { Loader2, Upload, FileText, Download, Pencil, Eye, Plus, X, ChevronLeft } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Progress } from '@/components/ui/progress';
-import { cn } from '@/lib/utils';
-import type { CVData, CVExperience, CVFormacao } from '@/types/cv';
+// ─────────────────────────────────────────────────────────────
+// FormatacaoCV — Página /formatacao-cv no Lovable
+//
+// COMO USAR:
+//   1. Salve este arquivo em: src/pages/FormatacaoCV.jsx
+//   2. No seu router (ex: App.tsx), adicione:
+//        import FormatacaoCV from "@/pages/FormatacaoCV";
+//        <Route path="/formatacao-cv" element={<FormatacaoCV />} />
+//   3. Pronto — o botão que já aponta para /formatacao-cv vai funcionar.
+// ─────────────────────────────────────────────────────────────
 
-// ── Mammoth loader ──
-declare global {
-  interface Window { mammoth?: any; }
+import { useState, useRef, useCallback } from "react";
+
+// ─────────────────────────────────────────────
+// CORES ORION (extraídas do .docx original)
+// cyan: #06B6D4 | navy: #0F172A | slate: #475569 | light: #64748B
+// ─────────────────────────────────────────────
+
+const EXTRACT_PROMPT = `Você é um especialista em leitura e extração de dados de currículos para a empresa Orion.
+Você receberá um CV em qualquer formato — LinkedIn PDF, Word convertido, CV tradicional, currículo Lattes, ou qualquer outro layout — e deve extrair ABSOLUTAMENTE TODAS as informações presentes, retornando SOMENTE um JSON válido, sem markdown, sem blocos de código, sem qualquer texto antes ou depois.
+
+Identifique automaticamente o formato do documento e adapte a extração. Independente do layout, mapeie as informações para a estrutura abaixo:
+
+ESTRUTURA OBRIGATÓRIA:
+{
+  "nome": "string — nome completo do candidato",
+  "cargo_titulo": "string — cargo atual, título profissional ou headline. Se não houver, inferir pela experiência mais recente",
+  "email": "string — endereço de e-mail, se presente",
+  "telefone": "string — telefone ou celular, se presente",
+  "linkedin": "string — URL do LinkedIn, se presente",
+  "localizacao": "string — cidade e estado/país",
+  "resumo": "string — copie integralmente o texto de resumo, objetivo, perfil ou summary. Se não houver seção dedicada, deixe vazio",
+  "experiencias": [
+    {
+      "empresa": "string — nome exato da empresa ou organização",
+      "cargo": "string — cargo ou função exata",
+      "periodo": "string — período completo como aparece no CV, ex: jan/2022 - dez/2023 ou 2022 - Atual",
+      "localizacao": "string — cidade/país da experiência, se presente",
+      "descricao": "string — texto introdutório ou descritivo da função, copiado integralmente",
+      "responsabilidades": ["string — cada responsabilidade, atividade ou atribuição listada, texto completo"],
+      "resultados": ["string — cada resultado, conquista, entrega ou impacto quantificado, texto completo"]
+    }
+  ],
+  "formacao": [
+    {
+      "curso": "string — nome do curso ou área de estudo",
+      "instituicao": "string — nome da instituição de ensino",
+      "nivel": "string — nível: MBA / Especialização / Pós-Graduação / Bacharelado / Licenciatura / Tecnólogo / Técnico etc.",
+      "periodo": "string — período ou ano de conclusão"
+    }
+  ],
+  "idiomas": ["string — idioma e nível, ex: Inglês avançado, Espanhol intermediário"]
 }
 
-function loadMammoth(): Promise<void> {
+REGRAS CRÍTICAS — SIGA TODAS:
+1. NÃO omita NENHUMA experiência — extraia todas, inclusive estágios, freelas e trabalhos antigos
+2. NÃO trunce nem resuma nenhum texto — copie os conteúdos integralmente
+3. NÃO invente informações — campos ausentes ficam como "" ou []
+4. Separe claramente: texto introdutório vai em "descricao", atividades/atribuições em "responsabilidades", conquistas/métricas em "resultados". Se não houver separação clara, coloque tudo em "responsabilidades"
+5. Ordene experiências da mais recente para a mais antiga
+6. Se o CV tiver seções com nomes diferentes (ex: "Atuação Profissional", "Histórico", "Trajetória"), trate-as como experiências
+7. Retorne APENAS o JSON puro, sem nenhum caractere fora do objeto JSON`;
+
+// Carrega mammoth.js via script tag (compatível com Vite/Lovable/bundlers)
+function loadMammoth() {
   return new Promise((resolve, reject) => {
     if (window.mammoth) return resolve();
-    const script = document.createElement('script');
-    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.8.0/mammoth.browser.min.js';
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error('Falha ao carregar mammoth.js'));
+    const script = document.createElement("script");
+    script.src = "https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.8.0/mammoth.browser.min.js";
+    script.onload = resolve;
+    script.onerror = () => reject(new Error("Falha ao carregar mammoth.js"));
     document.head.appendChild(script);
   });
 }
 
-function readAsBase64(file: File): Promise<string> {
-  return new Promise((res, rej) => {
-    const r = new FileReader();
-    r.onload = () => res((r.result as string).split(',')[1]);
-    r.onerror = rej;
-    r.readAsDataURL(file);
-  });
-}
-
-// ── Deep helpers ──
-function getDeep(obj: any, keys: string[]): any {
-  return keys.reduce((o, k) => (o != null ? o[k] : undefined), obj);
-}
-function setDeep(obj: any, keys: string[], value: any): any {
-  let cur = obj;
-  for (let i = 0; i < keys.length - 1; i++) {
-    if (Array.isArray(cur[keys[i]])) cur[keys[i]] = [...cur[keys[i]]];
-    else cur[keys[i]] = { ...cur[keys[i]] };
-    cur = cur[keys[i]];
+// CSS global injetado como <style> no mount (compatível com Lovable/Vite)
+const GLOBAL_CSS = `
+  @keyframes orion-spin { to { transform: rotate(360deg); } }
+  [contenteditable]:empty:before {
+    content: attr(data-placeholder);
+    color: #94A3B8;
+    font-style: italic;
+    pointer-events: none;
   }
-  cur[keys[keys.length - 1]] = value;
-  return obj;
-}
+  @media print {
+    .orion-no-print, .orion-no-print * { display: none !important; }
+    body { margin: 0; background: white; }
+  }
+`;
 
 // ═══════════════════════════════════════════════
-// MAIN PAGE
+// APP PRINCIPAL
 // ═══════════════════════════════════════════════
 export default function FormatacaoCV() {
-  const [step, setStep] = useState<'upload' | 'processing' | 'preview'>('upload');
-  const [cvData, setCvData] = useState<CVData | null>(null);
-  const [error, setError] = useState('');
-  const [dragOver, setDragOver] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
+  // Injeta CSS global uma única vez no mount
+  useState(() => {
+    const id = "orion-cv-styles";
+    if (!document.getElementById(id)) {
+      const el = document.createElement("style");
+      el.id = id;
+      el.textContent = GLOBAL_CSS;
+      document.head.appendChild(el);
+    }
+  });
 
-  const processFile = async (file: File | undefined) => {
-    if (!file) return;
-    const isPDF = file.type === 'application/pdf' || file.name?.endsWith('.pdf');
-    const isDOCX = file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || file.name?.endsWith('.docx');
-    if (!isPDF && !isDOCX) {
-      setError('Por favor, envie um arquivo PDF ou Word (.docx).');
+  const [step, setStep] = useState("upload");
+  const [cvData, setCvData] = useState(null);
+  const [error, setError] = useState("");
+  const [dragOver, setDragOver] = useState(false);
+  const fileRef = useRef(null);
+
+  const readAsBase64 = (file) =>
+    new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = () => res(r.result.split(",")[1]);
+      r.onerror = rej;
+      r.readAsDataURL(file);
+    });
+
+  const processFile = async (file) => {
+    const isPDF = file?.type === "application/pdf" || file?.name?.endsWith(".pdf");
+    const isDOCX =
+      file?.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+      file?.name?.endsWith(".docx");
+    if (!file || (!isPDF && !isDOCX)) {
+      setError("Por favor, envie um arquivo PDF ou Word (.docx).");
       return;
     }
-    setError('');
-    setStep('processing');
+    setError("");
+    setStep("processing");
     try {
-      let body: { fileBase64?: string; fileText?: string; fileType: string };
+      let messages;
       if (isPDF) {
+        // PDF: enviar como documento binário direto para a API
         const base64 = await readAsBase64(file);
-        body = { fileBase64: base64, fileType: 'pdf' };
+        messages = [
+          {
+            role: "user",
+            content: [
+              { type: "document", source: { type: "base64", media_type: "application/pdf", data: base64 } },
+              { type: "text", text: "Extraia todas as informações deste CV e retorne o JSON estruturado." },
+            ],
+          },
+        ];
       } else {
+        // DOCX: carrega mammoth via script tag (compatível com Vite/Lovable)
         await loadMammoth();
         const mammoth = window.mammoth;
-        if (!mammoth) throw new Error('Não foi possível carregar o leitor de arquivos Word.');
+        if (!mammoth) throw new Error("Não foi possível carregar o leitor de arquivos Word.");
         const arrayBuffer = await file.arrayBuffer();
         const result = await mammoth.extractRawText({ arrayBuffer });
-        const text = result.value || '';
-        if (text.trim().length < 50) throw new Error('Não foi possível extrair texto suficiente do arquivo Word.');
-        body = { fileText: text, fileType: 'docx' };
+        const text = result.value || "";
+        if (text.trim().length < 50) throw new Error("Não foi possível extrair texto do arquivo Word.");
+        messages = [
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: "Extraia todas as informações deste CV e retorne o JSON estruturado.\n\n---\n" + text,
+              },
+            ],
+          },
+        ];
       }
-
-      const { data, error: fnError } = await supabase.functions.invoke('extract-cv', { body });
-
-      if (fnError) throw new Error(fnError.message || 'Erro ao processar CV');
-      if (data?.error) throw new Error(data.error);
-      if (!data?.cvData) throw new Error('Resposta inválida do servidor');
-
-      setCvData(data.cvData);
-      setStep('preview');
-    } catch (err: any) {
-      setError(`Erro ao processar: ${err.message || 'tente novamente.'}`);
-      setStep('upload');
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 8000,
+          system: EXTRACT_PROMPT,
+          messages,
+        }),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error.message);
+      const text = data.content?.map((b) => b.text || "").join("") || "";
+      const clean = text.replace(/```json|```/g, "").trim();
+      setCvData(JSON.parse(clean));
+      setStep("preview");
+    } catch (err) {
+      setError(`Erro ao processar: ${err.message || "tente novamente."}`);
+      setStep("upload");
     }
   };
 
-  const onDrop = (e: React.DragEvent) => {
+  const onDrop = (e) => {
     e.preventDefault();
     setDragOver(false);
     processFile(e.dataTransfer.files[0]);
   };
 
-  // ── PROCESSING ──
-  if (step === 'processing') {
+  // ── PROCESSANDO ──
+  if (step === "processing")
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="bg-card rounded-2xl p-12 text-center shadow-lg max-w-md w-full border border-border">
-          <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-6" />
-          <p className="text-lg font-semibold text-foreground mb-2">Lendo e extraindo dados do CV...</p>
-          <p className="text-sm text-muted-foreground">A IA está identificando o formato e estruturando as informações</p>
-          <Progress value={60} className="mt-6" />
+      <div style={S.fullCenter}>
+        <div style={S.loadingCard}>
+          <div style={S.spinner} />
+          <p style={{ color: "#0F172A", fontWeight: 700, fontSize: 18, marginTop: 24, marginBottom: 4 }}>
+            Lendo e extraindo dados do CV...
+          </p>
+          <p style={{ color: "#64748B", fontSize: 14 }}>
+            A IA está identificando o formato e estruturando as informações
+          </p>
         </div>
       </div>
     );
-  }
 
   // ── EDITOR ──
-  if (step === 'preview' && cvData) {
+  if (step === "preview" && cvData)
     return (
       <EditorScreen
         data={cvData}
-        onReset={() => { setCvData(null); setStep('upload'); }}
+        onReset={() => {
+          setCvData(null);
+          setStep("upload");
+        }}
       />
     );
-  }
 
   // ── UPLOAD ──
   return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh] px-6 py-10">
-      <div className="text-center mb-10">
-        <span className="inline-block bg-[#0F172A] text-primary px-4 py-1.5 rounded-full text-xs font-extrabold tracking-widest mb-4">
-          ✦ ORION
-        </span>
-        <h1 className="text-3xl font-extrabold text-foreground tracking-tight mb-2">CV Transformer</h1>
-        <p className="text-muted-foreground text-sm max-w-md leading-relaxed">
-          Importe qualquer CV e gere automaticamente o modelo padrão Orion
-        </p>
+    <div style={S.uploadPage}>
+      <div style={S.uploadHeader}>
+        <div style={S.orionBadge}>✦ ORION</div>
+        <h1 style={S.uploadTitle}>CV Transformer</h1>
+        <p style={S.uploadSubtitle}>Importe qualquer CV e gere automaticamente o modelo padrão Orion</p>
       </div>
 
       <div
-        onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-        onDragLeave={() => setDragOver(false)}
         onDrop={onDrop}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDragOver(true);
+        }}
+        onDragLeave={() => setDragOver(false)}
         onClick={() => fileRef.current?.click()}
-        className={cn(
-          'w-full max-w-lg border-2 border-dashed rounded-2xl p-12 text-center cursor-pointer transition-all',
-          dragOver ? 'border-primary bg-primary/5' : 'border-border bg-muted/30 hover:border-primary/50'
-        )}
+        style={{
+          ...S.dropZone,
+          borderColor: dragOver ? "#06B6D4" : "#CBD5E1",
+          background: dragOver ? "#F0FDFE" : "#FAFAFA",
+        }}
       >
-        <Upload className="h-10 w-10 text-muted-foreground mx-auto mb-4" />
-        <p className="text-base font-semibold text-foreground mb-1">Arraste o CV aqui</p>
-        <p className="text-sm text-muted-foreground mb-4">ou clique para selecionar</p>
-        <p className="text-xs text-muted-foreground mb-4">Suporta PDF, LinkedIn PDF e Word (.docx)</p>
-        <Button size="sm" className="rounded-full">
-          <FileText className="h-4 w-4 mr-2" />
-          Selecionar arquivo
-        </Button>
+        <div style={{ fontSize: 52, marginBottom: 16 }}>📄</div>
+        <p style={{ fontSize: 18, fontWeight: 700, color: "#0F172A", margin: "0 0 6px" }}>Arraste o CV aqui</p>
+        <p style={{ fontSize: 13, color: "#94A3B8", margin: "0 0 6px" }}>ou clique para selecionar</p>
+        <p style={{ fontSize: 11, color: "#CBD5E1", margin: "0 0 20px" }}>Suporta PDF, LinkedIn PDF e Word (.docx)</p>
+        <div style={S.dropBtn}>Selecionar arquivo</div>
         <input
           ref={fileRef}
           type="file"
-          accept=".pdf,.docx"
-          className="hidden"
-          onChange={(e) => processFile(e.target.files?.[0])}
+          accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+          style={{ display: "none" }}
+          onChange={(e) => processFile(e.target.files[0])}
         />
       </div>
 
-      {error && (
-        <div className="mt-4 bg-destructive/10 border border-destructive/30 text-destructive rounded-xl px-4 py-3 text-sm max-w-lg w-full">
-          {error}
-        </div>
-      )}
-
-      <div className="mt-8 bg-card border border-border rounded-xl p-5 max-w-lg w-full">
-        <h3 className="text-xs font-bold text-primary tracking-widest uppercase mb-3">Formatos suportados</h3>
-        <p className="text-sm text-muted-foreground">📄 PDF — qualquer CV em PDF</p>
-        <p className="text-sm text-muted-foreground">🔗 LinkedIn PDF — perfil exportado diretamente do LinkedIn</p>
-        <p className="text-sm text-muted-foreground">📝 Word (.docx) — CV em formato Word</p>
-      </div>
+      {error && <div style={S.errorBox}>{error}</div>}
     </div>
   );
 }
@@ -190,67 +264,78 @@ export default function FormatacaoCV() {
 // ═══════════════════════════════════════════════
 // EDITOR SCREEN
 // ═══════════════════════════════════════════════
-function EditorScreen({ data, onReset }: { data: CVData; onReset: () => void }) {
-  const [cv, setCv] = useState<CVData>(data);
+function EditorScreen({ data, onReset }) {
+  const [cv, setCv] = useState(data);
   const [editing, setEditing] = useState(false);
   const [exporting, setExporting] = useState(false);
-  const [hiddenSections, setHiddenSections] = useState<string[]>([]);
-  const docRef = useRef<HTMLDivElement>(null);
+  const [hiddenSections, setHiddenSections] = useState([]);
 
-  const toggleSection = (key: string) =>
-    setHiddenSections((prev) =>
-      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
-    );
+  const toggleSection = (key) =>
+    setHiddenSections((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
+  const docRef = useRef(null);
 
   const handleExportPDF = useCallback(async () => {
     if (!docRef.current) return;
     setExporting(true);
     try {
-      const dataUrl = await toPng(docRef.current, {
-        quality: 0.95,
-        pixelRatio: 2,
-        backgroundColor: '#ffffff',
+      // Carrega libs dinamicamente
+      const [html2canvasModule, jsPDFModule] = await Promise.all([
+        import("https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.esm.js"),
+        import("https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.esm.min.js"),
+      ]);
+      const html2canvas = html2canvasModule.default;
+      const { jsPDF } = jsPDFModule;
+
+      const canvas = await html2canvas(docRef.current, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: "#ffffff",
+        logging: false,
       });
-      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+      const imgData = canvas.toDataURL("image/jpeg", 0.95);
+      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+
       const pageW = pdf.internal.pageSize.getWidth();
       const pageH = pdf.internal.pageSize.getHeight();
-      const img = new Image();
-      img.src = dataUrl;
-      await new Promise((res) => { img.onload = res; });
-      const ratio = img.width / img.height;
+      const ratio = canvas.width / canvas.height;
       const imgH = pageW / ratio;
+
+      // Se o CV for mais alto que uma página, adiciona páginas
       let yOffset = 0;
       while (yOffset < imgH) {
         if (yOffset > 0) pdf.addPage();
-        pdf.addImage(dataUrl, 'PNG', 0, -yOffset, pageW, imgH);
+        pdf.addImage(imgData, "JPEG", 0, -yOffset, pageW, imgH);
         yOffset += pageH;
       }
-      const nomeArquivo = (cv.nome || 'CV').replace(/\s+/g, '_');
+
+      const nomeArquivo = (cv.nome || "CV").replace(/\s+/g, "_");
       pdf.save(`CV_${nomeArquivo}_Orion.pdf`);
     } catch (err) {
-      console.error('Erro ao gerar PDF:', err);
-      toast({ title: 'Erro ao gerar PDF', description: 'Tente novamente.', variant: 'destructive' });
+      console.error("Erro ao gerar PDF:", err);
+      alert("Erro ao gerar PDF. Tente novamente.");
     } finally {
       setExporting(false);
     }
   }, [cv.nome]);
 
-  const setField = (path: string, value: string) => {
-    setCv((prev) => setDeep({ ...prev }, path.split('.'), value));
+  // ── helpers de campo simples ──
+  const setField = (path, value) => {
+    setCv((prev) => deepSet({ ...prev }, path.split("."), value));
   };
 
-  const addToArray = (path: string) => {
-    const keys = path.split('.');
+  // ── helpers de array de primitivos ──
+  const addToArray = (path) => {
+    const keys = path.split(".");
     setCv((prev) => {
       const next = { ...prev };
       const arr = getDeep(next, keys);
-      setDeep(next, keys, [...(arr || []), '']);
+      setDeep(next, keys, [...(arr || []), ""]);
       return next;
     });
   };
-
-  const removeFromArray = (path: string, idx: number) => {
-    const keys = path.split('.');
+  const removeFromArray = (path, idx) => {
+    const keys = path.split(".");
     setCv((prev) => {
       const next = { ...prev };
       const arr = [...(getDeep(next, keys) || [])];
@@ -259,9 +344,8 @@ function EditorScreen({ data, onReset }: { data: CVData; onReset: () => void }) 
       return next;
     });
   };
-
-  const setArrayItem = (path: string, idx: number, val: string) => {
-    const keys = path.split('.');
+  const setArrayItem = (path, idx, val) => {
+    const keys = path.split(".");
     setCv((prev) => {
       const next = { ...prev };
       const arr = [...(getDeep(next, keys) || [])];
@@ -271,16 +355,24 @@ function EditorScreen({ data, onReset }: { data: CVData; onReset: () => void }) 
     });
   };
 
+  // ── helpers de experiências e formação ──
   const addExp = () =>
     setCv((prev) => ({
       ...prev,
       experiencias: [
         ...(prev.experiencias || []),
-        { empresa: '', cargo: '', periodo: '', localizacao: '', descricao: '', responsabilidades: [], resultados: [] },
+        {
+          empresa: "",
+          cargo: "",
+          periodo: "",
+          localizacao: "",
+          descricao: "",
+          responsabilidades: [],
+          resultados: [],
+        },
       ],
     }));
-
-  const removeExp = (i: number) =>
+  const removeExp = (i) =>
     setCv((prev) => {
       const arr = [...prev.experiencias];
       arr.splice(i, 1);
@@ -290,10 +382,9 @@ function EditorScreen({ data, onReset }: { data: CVData; onReset: () => void }) 
   const addFormacao = () =>
     setCv((prev) => ({
       ...prev,
-      formacao: [...(prev.formacao || []), { nivel: '', curso: '', instituicao: '', periodo: '' }],
+      formacao: [...(prev.formacao || []), { nivel: "", curso: "", instituicao: "", periodo: "" }],
     }));
-
-  const removeFormacao = (i: number) =>
+  const removeFormacao = (i) =>
     setCv((prev) => {
       const arr = [...prev.formacao];
       arr.splice(i, 1);
@@ -301,38 +392,45 @@ function EditorScreen({ data, onReset }: { data: CVData; onReset: () => void }) 
     });
 
   return (
-    <div className="min-h-full">
+    <div style={S.previewPage}>
       {/* TOOLBAR */}
-      <div className="sticky top-0 z-50 bg-card border-b border-border px-4 py-3 flex items-center gap-3 shadow-sm">
-        <Button variant="outline" size="sm" onClick={onReset}>
-          <ChevronLeft className="h-4 w-4 mr-1" /> Novo CV
-        </Button>
-        <span className="flex-1 font-bold text-foreground text-sm truncate">{cv.nome}</span>
-        <div className="flex items-center gap-2">
-          <Button
-            variant={editing ? 'default' : 'outline'}
-            size="sm"
+      <div style={S.toolbar}>
+        <button onClick={onReset} style={S.toolbarBack}>
+          ← Novo CV
+        </button>
+        <span style={S.toolbarName}>{cv.nome}</span>
+        <div style={{ display: "flex", gap: 10 }}>
+          <button
             onClick={() => setEditing((e) => !e)}
+            style={{
+              ...S.editToggleBtn,
+              background: editing ? "#06B6D4" : "white",
+              color: editing ? "white" : "#0F172A",
+            }}
           >
-            {editing ? <><Eye className="h-4 w-4 mr-1" /> Visualizar</> : <><Pencil className="h-4 w-4 mr-1" /> Editar</>}
-          </Button>
-          <Button size="sm" onClick={handleExportPDF} disabled={exporting} className="bg-[#0F172A] text-primary hover:bg-[#1e293b]">
-            {exporting ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Download className="h-4 w-4 mr-1" />}
-            {exporting ? 'Gerando...' : 'Baixar PDF'}
-          </Button>
+            {editing ? "✓ Visualizar" : "✏️ Editar"}
+          </button>
+          <button
+            onClick={handleExportPDF}
+            disabled={exporting}
+            style={{ ...S.printBtn, opacity: exporting ? 0.7 : 1, cursor: exporting ? "wait" : "pointer" }}
+          >
+            {exporting ? "⏳ Gerando..." : "⬇️ Baixar PDF"}
+          </button>
         </div>
       </div>
 
       {editing && (
-        <div className="bg-primary/5 border-b border-primary/20 px-4 py-2.5 text-sm text-primary text-center">
-          ✏️ Modo edição ativo — clique em qualquer campo para editar. Use "Visualizar" para ver o resultado limpo.
+        <div style={S.editBanner}>
+          ✏️ <strong>Modo edição ativo</strong> — clique em qualquer campo para editar. Use{" "}
+          <strong>"Visualizar"</strong> para ver o resultado limpo antes de baixar.
         </div>
       )}
 
-      {/* DOCUMENT */}
-      <div className="max-w-[860px] mx-auto my-8 bg-white shadow-xl rounded overflow-hidden">
+      {/* DOCUMENTO */}
+      <div style={S.docWrapper}>
         <div ref={docRef}>
-          <CVDocument
+          <CVDoc
             cv={cv}
             editing={editing}
             setField={setField}
@@ -352,144 +450,307 @@ function EditorScreen({ data, onReset }: { data: CVData; onReset: () => void }) 
   );
 }
 
-// ═══════════════════════════════════════════════
-// CV DOCUMENT
-// ═══════════════════════════════════════════════
-interface CVDocProps {
-  cv: CVData;
-  editing: boolean;
-  setField: (path: string, value: string) => void;
-  addToArray: (path: string) => void;
-  removeFromArray: (path: string, idx: number) => void;
-  setArrayItem: (path: string, idx: number, val: string) => void;
-  addExp: () => void;
-  removeExp: (i: number) => void;
-  addFormacao: () => void;
-  removeFormacao: (i: number) => void;
-  hiddenSections: string[];
-  toggleSection: (key: string) => void;
+// utilitários de path profundo
+function getDeep(obj, keys) {
+  return keys.reduce((o, k) => (o != null ? o[k] : undefined), obj);
+}
+function setDeep(obj, keys, value) {
+  let cur = obj;
+  for (let i = 0; i < keys.length - 1; i++) {
+    if (Array.isArray(cur[keys[i]])) cur[keys[i]] = [...cur[keys[i]]];
+    else cur[keys[i]] = { ...cur[keys[i]] };
+    cur = cur[keys[i]];
+  }
+  cur[keys[keys.length - 1]] = value;
+  return obj;
+}
+function deepSet(obj, keys, value) {
+  return setDeep(obj, keys, value);
 }
 
-function CVDocument({
-  cv, editing, setField, addToArray, removeFromArray, setArrayItem,
-  addExp, removeExp, addFormacao, removeFormacao, hiddenSections, toggleSection,
-}: CVDocProps) {
+// ═══════════════════════════════════════════════
+// DOCUMENTO CV
+// ═══════════════════════════════════════════════
+function CVDoc({
+  cv,
+  editing,
+  setField,
+  addToArray,
+  removeFromArray,
+  setArrayItem,
+  addExp,
+  removeExp,
+  addFormacao,
+  removeFormacao,
+  hiddenSections = [],
+  toggleSection = () => {},
+}) {
   return (
-    <div style={{ fontFamily: "'Segoe UI','Calibri',Arial,sans-serif", color: '#0F172A' }}>
-      {/* HEADER */}
-      <div className="bg-[#0F172A] px-12 py-9 flex justify-between items-start gap-8">
-        <div>
-          <EditableField editing={editing} value={cv.nome} onChange={(v) => setField('nome', v)}
-            className="text-[28px] font-extrabold text-white block" placeholder="Nome Completo" />
-          <EditableField editing={editing} value={cv.cargo_titulo} onChange={(v) => setField('cargo_titulo', v)}
-            className="mt-1.5 text-sm text-slate-400 block max-w-md" placeholder="Cargo / Especialidade" />
+    <div style={S.doc}>
+      {/* ══ CABEÇALHO ══ */}
+      <div style={S.docHeader}>
+        <div style={{ flex: 1 }}>
+          <EditableText
+            editing={editing}
+            value={cv.nome}
+            onChange={(v) => setField("nome", v)}
+            style={S.docName}
+            placeholder="Nome Completo"
+          />
+          <EditableText
+            editing={editing}
+            value={cv.cargo_titulo}
+            onChange={(v) => setField("cargo_titulo", v)}
+            style={S.docCargo}
+            placeholder="Cargo / Especialidade"
+          />
         </div>
-        <div className="flex flex-col gap-1.5 text-right flex-shrink-0 mt-1">
-          <ContactLine icon="📍" editing={editing} value={cv.localizacao} onChange={(v) => setField('localizacao', v)} placeholder="Cidade - UF" />
-          <ContactLine icon="📞" editing={editing} value={cv.telefone} onChange={(v) => setField('telefone', v)} placeholder="Telefone" />
-          <ContactLine icon="✉️" editing={editing} value={cv.email} onChange={(v) => setField('email', v)} placeholder="E-mail" />
-          <ContactLine icon="🔗" editing={editing} value={cv.linkedin} onChange={(v) => setField('linkedin', v)} placeholder="URL LinkedIn" isLink />
+        <div style={S.docContato}>
+          <ContactLine
+            icon="📍"
+            editing={editing}
+            value={cv.localizacao}
+            onChange={(v) => setField("localizacao", v)}
+            placeholder="Cidade - UF"
+          />
+          <ContactLine
+            icon="📞"
+            editing={editing}
+            value={cv.telefone}
+            onChange={(v) => setField("telefone", v)}
+            placeholder="Telefone"
+          />
+          <ContactLine
+            icon="✉️"
+            editing={editing}
+            value={cv.email}
+            onChange={(v) => setField("email", v)}
+            placeholder="E-mail"
+          />
+          <ContactLine
+            icon="🔗"
+            editing={editing}
+            value={cv.linkedin}
+            onChange={(v) => setField("linkedin", v)}
+            placeholder="URL LinkedIn"
+            isLink
+          />
         </div>
       </div>
 
-      {/* BODY */}
-      <div className="px-12 py-9">
-        {/* Resumo */}
-        <Section title="RESUMO PROFISSIONAL" editing={editing} hidden={hiddenSections.includes('resumo')} onToggle={() => toggleSection('resumo')}>
-          <EditableField editing={editing} value={cv.resumo} onChange={(v) => setField('resumo', v)}
-            className="text-[13px] text-slate-600 leading-relaxed block" placeholder="Resumo profissional..." multiline />
+      <div style={S.docBody}>
+        {/* ══ RESUMO ══ */}
+        <Section
+          title="RESUMO DAS QUALIFICAÇÕES"
+          sectionKey="resumo"
+          editing={editing}
+          hidden={hiddenSections.includes("resumo")}
+          onToggle={() => toggleSection("resumo")}
+        >
+          <EditableText
+            editing={editing}
+            value={cv.resumo}
+            onChange={(v) => setField("resumo", v)}
+            style={S.resumoText}
+            placeholder="Resumo profissional..."
+            multiline
+          />
         </Section>
 
-        {/* Experiências */}
-        <Section title="EXPERIÊNCIA PROFISSIONAL" editing={editing} hidden={hiddenSections.includes('experiencias')} onToggle={() => toggleSection('experiencias')}>
+        {/* ══ EXPERIÊNCIA ══ */}
+        <Section
+          title="EXPERIÊNCIA PROFISSIONAL"
+          sectionKey="experiencias"
+          editing={editing}
+          hidden={hiddenSections.includes("experiencias")}
+          onToggle={() => toggleSection("experiencias")}
+        >
           {(cv.experiencias || []).map((exp, i) => (
-            <div key={i} className="pb-5 border-b border-slate-100 mb-5 last:border-0">
-              <div className="flex justify-between items-start mb-1.5 gap-4">
-                <div>
-                  <EditableField editing={editing} value={exp.empresa} onChange={(v) => setField(`experiencias.${i}.empresa`, v)}
-                    className="font-bold text-primary text-[13px] inline" placeholder="Empresa" inline />
-                  {exp.empresa && exp.cargo && <span className="text-slate-400 mx-1">·</span>}
-                  <EditableField editing={editing} value={exp.cargo} onChange={(v) => setField(`experiencias.${i}.cargo`, v)}
-                    className="font-semibold text-[#0F172A] text-[13px] inline" placeholder="Cargo" inline />
+            <div
+              key={i}
+              style={{
+                ...S.expItem,
+                marginBottom: i < cv.experiencias.length - 1 ? 24 : 0,
+              }}
+            >
+              {/* header da exp */}
+              <div style={S.expHeader}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <EditableText
+                    editing={editing}
+                    value={exp.empresa}
+                    onChange={(v) => setField(`experiencias.${i}.empresa`, v)}
+                    style={S.expEmpresa}
+                    placeholder="Empresa"
+                    inline
+                  />
+                  {exp.empresa && exp.cargo && <span style={{ color: "#CBD5E1", fontSize: 13 }}> · </span>}
+                  <EditableText
+                    editing={editing}
+                    value={exp.cargo}
+                    onChange={(v) => setField(`experiencias.${i}.cargo`, v)}
+                    style={S.expCargo}
+                    placeholder="Cargo"
+                    inline
+                  />
                 </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <EditableField editing={editing} value={exp.periodo} onChange={(v) => setField(`experiencias.${i}.periodo`, v)}
-                    className="text-[11px] text-slate-500 bg-slate-50 px-2.5 py-0.5 rounded-full border border-slate-200 inline-block" placeholder="Período" inline />
-                  <EditableField editing={editing} value={exp.localizacao} onChange={(v) => setField(`experiencias.${i}.localizacao`, v)}
-                    className="text-[10px] text-slate-400 italic inline-block" placeholder="Localização" inline />
+                <div
+                  style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4, flexShrink: 0 }}
+                >
+                  <EditableText
+                    editing={editing}
+                    value={exp.periodo}
+                    onChange={(v) => setField(`experiencias.${i}.periodo`, v)}
+                    style={S.expPeriodo}
+                    placeholder="Período"
+                    inline
+                  />
+                  <EditableText
+                    editing={editing}
+                    value={exp.localizacao}
+                    onChange={(v) => setField(`experiencias.${i}.localizacao`, v)}
+                    style={S.expLocalizacao}
+                    placeholder="Localização"
+                    inline
+                  />
                   {editing && (
-                    <button onClick={() => removeExp(i)} className="text-red-400 text-[10px] hover:text-red-600">✕ remover</button>
+                    <button onClick={() => removeExp(i)} style={S.removeBtnRed}>
+                      ✕ remover experiência
+                    </button>
                   )}
                 </div>
               </div>
 
-              <EditableField editing={editing} value={exp.descricao} onChange={(v) => setField(`experiencias.${i}.descricao`, v)}
-                className="text-[12px] text-slate-600 my-1 leading-relaxed block" placeholder="Descrição / contexto..." multiline />
+              {/* descrição corrida */}
+              <EditableText
+                editing={editing}
+                value={exp.descricao}
+                onChange={(v) => setField(`experiencias.${i}.descricao`, v)}
+                style={S.expDesc}
+                placeholder="Descrição / contexto da função..."
+                multiline
+              />
 
-              <BulletList editing={editing} items={exp.responsabilidades || []} dot="▸" dotColor="text-primary"
+              {/* responsabilidades */}
+              <BulletList
+                editing={editing}
+                items={exp.responsabilidades || []}
+                dot="•"
+                dotColor="#CBD5E1"
+                placeholder="Responsabilidade..."
+                addLabel="+ responsabilidade"
                 onAdd={() => addToArray(`experiencias.${i}.responsabilidades`)}
                 onRemove={(j) => removeFromArray(`experiencias.${i}.responsabilidades`, j)}
                 onChange={(j, v) => setArrayItem(`experiencias.${i}.responsabilidades`, j, v)}
-                placeholder="Responsabilidade..." addLabel="+ responsabilidade" />
+              />
 
+              {/* resultados */}
               {((exp.resultados && exp.resultados.length > 0) || editing) && (
-                <div className="bg-primary/5 border border-primary/15 rounded-lg p-3 mt-2">
-                  <span className="text-[11px] font-bold text-primary uppercase tracking-wider block mb-1.5">Resultados</span>
-                  <BulletList editing={editing} items={exp.resultados || []} dot="★" dotColor="text-primary"
+                <div style={S.resultadosBox}>
+                  <span style={S.resultadosLabel}>Resultados</span>
+                  <BulletList
+                    editing={editing}
+                    items={exp.resultados || []}
+                    dot="▸"
+                    dotColor="#06B6D4"
+                    placeholder="Resultado / entrega..."
+                    addLabel="+ resultado"
                     onAdd={() => addToArray(`experiencias.${i}.resultados`)}
                     onRemove={(j) => removeFromArray(`experiencias.${i}.resultados`, j)}
                     onChange={(j, v) => setArrayItem(`experiencias.${i}.resultados`, j, v)}
-                    placeholder="Resultado..." addLabel="+ resultado" />
+                  />
                 </div>
               )}
             </div>
           ))}
+
           {editing && (
-            <button onClick={addExp} className="w-full text-center border border-dashed border-primary text-primary rounded-lg py-2 text-[12px] hover:bg-primary/5 transition">
+            <button onClick={addExp} style={S.addBlockBtn}>
               + adicionar experiência
             </button>
           )}
         </Section>
 
-        {/* Formação + Idiomas */}
-        <div className="flex gap-10">
-          <div className="flex-1">
-            <Section title="FORMAÇÃO ACADÊMICA" editing={editing} hidden={hiddenSections.includes('formacao')} onToggle={() => toggleSection('formacao')}>
+        {/* ══ FORMAÇÃO + IDIOMAS ══ */}
+        <div style={S.twoCol}>
+          {/* Formação */}
+          <div style={{ flex: 1 }}>
+            <Section
+              title="FORMAÇÃO ACADÊMICA"
+              sectionKey="formacao"
+              editing={editing}
+              hidden={hiddenSections.includes("formacao")}
+              onToggle={() => toggleSection("formacao")}
+            >
               {(cv.formacao || []).map((f, i) => (
-                <div key={i} className="mb-3 relative">
+                <div key={i} style={{ marginBottom: 14, position: "relative" }}>
                   {editing && (
-                    <button onClick={() => removeFormacao(i)} className="absolute top-0 right-0 text-red-400 text-[10px] hover:text-red-600">✕ remover</button>
+                    <button
+                      onClick={() => removeFormacao(i)}
+                      style={{ ...S.removeBtnRed, position: "absolute", top: 0, right: 0, fontSize: 10 }}
+                    >
+                      ✕ remover
+                    </button>
                   )}
-                  <EditableField editing={editing} value={f.curso} onChange={(v) => setField(`formacao.${i}.curso`, v)}
-                    className="font-bold text-[#0F172A] text-[13px] block" placeholder="Nível + Curso" />
-                  <EditableField editing={editing} value={f.instituicao} onChange={(v) => setField(`formacao.${i}.instituicao`, v)}
-                    className="text-primary text-[12px] font-semibold block mt-0.5" placeholder="Instituição" />
-                  <EditableField editing={editing} value={f.periodo} onChange={(v) => setField(`formacao.${i}.periodo`, v)}
-                    className="text-slate-400 text-[11px] block mt-0.5" placeholder="Período" />
+                  <EditableText
+                    editing={editing}
+                    value={[f.nivel, f.curso].filter(Boolean).join(" ")}
+                    onChange={(v) => setField(`formacao.${i}.curso`, v)}
+                    style={S.formacaoCurso}
+                    placeholder="Nível + Curso"
+                  />
+                  <EditableText
+                    editing={editing}
+                    value={f.instituicao}
+                    onChange={(v) => setField(`formacao.${i}.instituicao`, v)}
+                    style={S.formacaoInst}
+                    placeholder="Instituição"
+                  />
+                  <EditableText
+                    editing={editing}
+                    value={f.periodo}
+                    onChange={(v) => setField(`formacao.${i}.periodo`, v)}
+                    style={S.formacaoPeriodo}
+                    placeholder="Período"
+                  />
                 </div>
               ))}
               {editing && (
-                <button onClick={addFormacao} className="w-full text-center border border-dashed border-primary text-primary rounded-lg py-1.5 text-[11px] hover:bg-primary/5 transition">
+                <button onClick={addFormacao} style={S.addBlockBtn}>
                   + adicionar formação
                 </button>
               )}
             </Section>
           </div>
 
-          <div className="w-48 flex-shrink-0">
-            <Section title="IDIOMAS" editing={editing} hidden={hiddenSections.includes('idiomas')} onToggle={() => toggleSection('idiomas')}>
-              <BulletList editing={editing} items={cv.idiomas || []} dot="" dotColor=""
-                onAdd={() => addToArray('idiomas')}
-                onRemove={(j) => removeFromArray('idiomas', j)}
-                onChange={(j, v) => setArrayItem('idiomas', j, v)}
-                placeholder="Idioma..." addLabel="+ idioma" chipStyle />
+          {/* Idiomas */}
+          <div style={{ flex: 1 }}>
+            <Section
+              title="IDIOMAS"
+              sectionKey="idiomas"
+              editing={editing}
+              hidden={hiddenSections.includes("idiomas")}
+              onToggle={() => toggleSection("idiomas")}
+            >
+              <BulletList
+                editing={editing}
+                items={cv.idiomas || []}
+                dot="•"
+                dotColor="#06B6D4"
+                placeholder="Ex: Inglês avançado"
+                addLabel="+ idioma"
+                onAdd={() => addToArray("idiomas")}
+                onRemove={(j) => removeFromArray("idiomas", j)}
+                onChange={(j, v) => setArrayItem("idiomas", j, v)}
+                chipStyle
+              />
             </Section>
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="mt-8 pt-4 border-t border-slate-200 flex justify-between text-[11px] text-slate-300">
-          <span>✦ ORION</span>
+        {/* Rodapé */}
+        <div style={S.footer}>
+          <span style={{ color: "#06B6D4", fontWeight: 700 }}>✦ ORION</span>
           <span>Gerado automaticamente · CV Transformer</span>
         </div>
       </div>
@@ -498,71 +759,97 @@ function CVDocument({
 }
 
 // ═══════════════════════════════════════════════
-// HELPER COMPONENTS
+// COMPONENTES AUXILIARES
 // ═══════════════════════════════════════════════
 
-function EditableField({
-  editing, value, onChange, className, placeholder, multiline, inline,
-}: {
-  editing: boolean; value: string; onChange: (v: string) => void;
-  className?: string; placeholder?: string; multiline?: boolean; inline?: boolean;
-}) {
-  const ref = useRef<HTMLElement>(null);
+// Texto editável via contentEditable
+function EditableText({ editing, value, onChange, style, placeholder, multiline, inline }) {
+  const ref = useRef(null);
 
   if (!editing) {
     if (!value) return null;
-    const Tag = inline ? 'span' : 'div';
-    return <Tag className={className}>{value}</Tag>;
+    const Tag = inline ? "span" : "div";
+    return <Tag style={style}>{value}</Tag>;
   }
 
+  const baseEditStyle = {
+    ...style,
+    outline: "none",
+    borderBottom: "1.5px dashed #06B6D4",
+    background: "rgba(6,182,212,0.03)",
+    borderRadius: 2,
+    padding: "1px 4px",
+    cursor: "text",
+    display: inline ? "inline-block" : "block",
+    whiteSpace: multiline ? "pre-wrap" : "pre",
+    minWidth: 40,
+  };
+
   return (
-    <span
+    <div
       ref={ref}
       contentEditable
       suppressContentEditableWarning
-      className={cn(className, 'outline-none border-b border-dashed border-primary/40 bg-primary/[0.02] rounded-sm px-1 cursor-text', inline ? 'inline-block' : 'block')}
-      style={{ whiteSpace: multiline ? 'pre-wrap' : 'pre', minWidth: 40 }}
       data-placeholder={placeholder}
-      onBlur={() => onChange(ref.current?.innerText?.trim() || '')}
-      onKeyDown={(e) => { if (!multiline && e.key === 'Enter') { e.preventDefault(); (e.target as HTMLElement).blur(); } }}
-      dangerouslySetInnerHTML={{ __html: value || '' }}
+      style={baseEditStyle}
+      onBlur={() => onChange(ref.current?.innerText?.trim() || "")}
+      onKeyDown={(e) => {
+        if (!multiline && e.key === "Enter") {
+          e.preventDefault();
+          ref.current?.blur();
+        }
+      }}
+      dangerouslySetInnerHTML={{ __html: value || "" }}
     />
   );
 }
 
-function ContactLine({ icon, editing, value, onChange, placeholder, isLink }: {
-  icon: string; editing: boolean; value: string; onChange: (v: string) => void; placeholder: string; isLink?: boolean;
-}) {
+// Linha de contato no cabeçalho escuro
+function ContactLine({ icon, editing, value, onChange, placeholder, isLink }) {
   if (!editing && !value) return null;
   return (
-    <div className="flex items-center gap-2 justify-end text-[12px]">
-      <span>{icon}</span>
+    <div style={{ display: "flex", alignItems: "center", gap: 5, justifyContent: "flex-end" }}>
+      <span style={{ color: "#06B6D4", fontSize: 12 }}>{icon}</span>
       {editing ? (
         <input
-          value={value || ''}
+          value={value || ""}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
-          className="bg-transparent border-b border-dashed border-slate-600 text-slate-300 text-[12px] outline-none w-44 text-right font-[inherit]"
+          style={{
+            background: "transparent",
+            border: "none",
+            borderBottom: "1.5px dashed #475569",
+            color: "#CBD5E1",
+            fontSize: 12,
+            outline: "none",
+            width: 170,
+            textAlign: "right",
+            fontFamily: "inherit",
+          }}
         />
       ) : isLink ? (
-        <a href={value} target="_blank" rel="noopener noreferrer" className="text-primary underline">LinkedIn</a>
+        <a
+          href={value}
+          target="_blank"
+          rel="noreferrer"
+          style={{ color: "#06B6D4", textDecoration: "none", fontWeight: 600, fontSize: 12 }}
+        >
+          LinkedIn
+        </a>
       ) : (
-        <span className="text-slate-300">{value}</span>
+        <span style={{ color: "#CBD5E1", fontSize: 12 }}>{value}</span>
       )}
     </div>
   );
 }
 
-function BulletList({ editing, items, dot, dotColor, onAdd, onRemove, onChange, placeholder, addLabel, chipStyle }: {
-  editing: boolean; items: string[]; dot: string; dotColor: string;
-  onAdd: () => void; onRemove: (j: number) => void; onChange: (j: number, v: string) => void;
-  placeholder?: string; addLabel?: string; chipStyle?: boolean;
-}) {
+// Lista de bullets editável
+function BulletList({ editing, items, dot, dotColor, onAdd, onRemove, onChange, placeholder, addLabel, chipStyle }) {
   return (
     <div>
       {items.map((item, j) => (
-        <div key={j} className="flex items-start gap-1.5 mb-1">
-          {dot && <span className={cn('text-[12px] mt-0.5 flex-shrink-0', dotColor)}>{dot}</span>}
+        <div key={j} style={{ display: "flex", alignItems: "flex-start", gap: 7, marginBottom: 5 }}>
+          <span style={{ color: dotColor, fontSize: 12, flexShrink: 0, marginTop: 3 }}>{dot}</span>
           {editing ? (
             <>
               <textarea
@@ -570,43 +857,67 @@ function BulletList({ editing, items, dot, dotColor, onAdd, onRemove, onChange, 
                 onChange={(e) => onChange(j, e.target.value)}
                 placeholder={placeholder}
                 rows={2}
-                className="flex-1 text-[12px] text-slate-600 border-b border-dashed border-primary/40 outline-none resize-y font-[inherit] leading-relaxed bg-primary/[0.02] rounded-sm px-1"
+                style={{
+                  flex: 1,
+                  fontSize: 12,
+                  color: "#475569",
+                  border: "none",
+                  borderBottom: "1.5px dashed #06B6D4",
+                  outline: "none",
+                  resize: "vertical",
+                  fontFamily: "inherit",
+                  lineHeight: 1.6,
+                  background: "rgba(6,182,212,0.03)",
+                  padding: "2px 4px",
+                  borderRadius: 2,
+                }}
               />
-              <button onClick={() => onRemove(j)} className="text-red-400 text-[12px] hover:text-red-600 flex-shrink-0">✕</button>
+              <button onClick={() => onRemove(j)} style={S.removeInlineBtn} title="Remover">
+                ✕
+              </button>
             </>
           ) : chipStyle ? (
-            <span className="bg-slate-50 text-slate-600 border border-slate-200 rounded-full px-2.5 py-0.5 text-[11px]">{item}</span>
+            <span style={S.chip}>{item}</span>
           ) : (
-            <span className="text-[12px] text-slate-600 leading-relaxed">{item}</span>
+            <span style={{ fontSize: 12, color: "#475569", lineHeight: 1.6 }}>{item}</span>
           )}
         </div>
       ))}
       {editing && (
-        <button onClick={onAdd} className="border border-dashed border-primary text-primary rounded-md px-2.5 py-0.5 text-[11px] mt-1 hover:bg-primary/5 transition">
-          {addLabel || '+ adicionar'}
+        <button onClick={onAdd} style={S.addItemBtn}>
+          {addLabel}
         </button>
       )}
     </div>
   );
 }
 
-function Section({ title, children, editing, hidden, onToggle }: {
-  title: string; children: React.ReactNode; editing?: boolean; hidden?: boolean; onToggle?: () => void;
-}) {
+// Section
+function Section({ title, children, editing, hidden, onToggle, sectionKey }) {
   return (
-    <div className={cn('mb-7', hidden && 'opacity-40')}>
-      <div className="flex items-center gap-3 mb-3.5">
-        <span className="text-[11px] font-extrabold tracking-[0.12em] text-primary uppercase whitespace-nowrap">{title}</span>
-        <div className="flex-1 h-px bg-slate-200" />
-        {editing && onToggle && (
+    <div style={{ ...S.section, opacity: hidden ? 0.4 : 1 }}>
+      <div style={S.sectionHeader}>
+        <span style={S.sectionTitle}>{title}</span>
+        <div style={S.sectionLine} />
+        {editing && (
           <button
             onClick={onToggle}
-            className={cn(
-              'rounded-md px-2 py-0.5 text-[11px] font-semibold border whitespace-nowrap flex-shrink-0',
-              hidden ? 'bg-red-50 border-red-200 text-red-500' : 'bg-primary/5 border-primary/20 text-primary'
-            )}
+            title={hidden ? "Mostrar seção no CV" : "Ocultar seção do CV"}
+            style={{
+              background: hidden ? "#FEF2F2" : "#F0FDFE",
+              border: `1px solid ${hidden ? "#FECACA" : "#A5F3FC"}`,
+              borderRadius: 6,
+              padding: "2px 8px",
+              fontSize: 11,
+              cursor: "pointer",
+              color: hidden ? "#EF4444" : "#0E7490",
+              fontFamily: "inherit",
+              fontWeight: 600,
+              whiteSpace: "nowrap",
+              flexShrink: 0,
+            }}
           >
-            {hidden ? '👁 Mostrar' : '🗑 Remover'}
+            {hidden ? "👁 Mostrar" : "🗑 Remover"}
           </button>
         )}
       </div>
@@ -614,3 +925,329 @@ function Section({ title, children, editing, hidden, onToggle }: {
     </div>
   );
 }
+
+// ═══════════════════════════════════════════════
+// ESTILOS
+// ═══════════════════════════════════════════════
+const S = {
+  // Upload
+  uploadPage: {
+    minHeight: "100vh",
+    background: "linear-gradient(135deg,#F8FAFC,#E2F8FC)",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "40px 24px",
+    fontFamily: "'Segoe UI',system-ui,sans-serif",
+  },
+  uploadHeader: { textAlign: "center", marginBottom: 40 },
+  orionBadge: {
+    display: "inline-block",
+    background: "#0F172A",
+    color: "#06B6D4",
+    padding: "6px 16px",
+    borderRadius: 99,
+    fontSize: 12,
+    fontWeight: 800,
+    letterSpacing: "0.15em",
+    marginBottom: 16,
+  },
+  uploadTitle: { fontSize: 36, fontWeight: 800, color: "#0F172A", margin: "0 0 8px", letterSpacing: "-0.02em" },
+  uploadSubtitle: { fontSize: 15, color: "#64748B", maxWidth: 420, lineHeight: 1.6, margin: 0 },
+  dropZone: {
+    width: "100%",
+    maxWidth: 480,
+    border: "2px dashed",
+    borderRadius: 20,
+    padding: "48px 32px",
+    textAlign: "center",
+    cursor: "pointer",
+    transition: "all .2s",
+    boxSizing: "border-box",
+  },
+  dropBtn: {
+    display: "inline-block",
+    background: "#06B6D4",
+    color: "white",
+    padding: "10px 24px",
+    borderRadius: 99,
+    fontSize: 13,
+    fontWeight: 700,
+  },
+  errorBox: {
+    marginTop: 16,
+    background: "#FEF2F2",
+    border: "1px solid #FECACA",
+    color: "#DC2626",
+    borderRadius: 10,
+    padding: "12px 16px",
+    fontSize: 13,
+    maxWidth: 480,
+    width: "100%",
+    boxSizing: "border-box",
+  },
+  howTo: {
+    marginTop: 32,
+    background: "white",
+    border: "1px solid #E2E8F0",
+    borderRadius: 14,
+    padding: "20px 24px",
+    maxWidth: 480,
+    width: "100%",
+    boxSizing: "border-box",
+  },
+  howToTitle: {
+    fontSize: 12,
+    fontWeight: 700,
+    color: "#06B6D4",
+    letterSpacing: "0.08em",
+    margin: "0 0 10px",
+    textTransform: "uppercase",
+  },
+  howToStep: { fontSize: 13, color: "#475569", margin: "4px 0" },
+
+  // Loading
+  fullCenter: {
+    minHeight: "100vh",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    background: "#F8FAFC",
+    fontFamily: "'Segoe UI',system-ui,sans-serif",
+  },
+  loadingCard: {
+    background: "white",
+    borderRadius: 20,
+    padding: "48px 64px",
+    textAlign: "center",
+    boxShadow: "0 4px 40px rgba(0,0,0,.08)",
+  },
+  spinner: {
+    width: 48,
+    height: 48,
+    border: "4px solid #E2E8F0",
+    borderTop: "4px solid #06B6D4",
+    borderRadius: "50%",
+    animation: "orion-spin .8s linear infinite",
+    margin: "0 auto",
+  },
+
+  // Toolbar / Preview
+  previewPage: { minHeight: "100vh", background: "#F1F5F9", fontFamily: "'Segoe UI',system-ui,sans-serif" },
+  toolbar: {
+    position: "sticky",
+    top: 0,
+    zIndex: 100,
+    background: "white",
+    borderBottom: "1px solid #E2E8F0",
+    padding: "12px 24px",
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
+    boxShadow: "0 1px 8px rgba(0,0,0,.06)",
+  },
+  toolbarBack: {
+    background: "none",
+    border: "1px solid #E2E8F0",
+    borderRadius: 8,
+    padding: "6px 14px",
+    fontSize: 13,
+    color: "#64748B",
+    cursor: "pointer",
+    fontFamily: "inherit",
+  },
+  toolbarName: { flex: 1, fontWeight: 700, color: "#0F172A", fontSize: 15 },
+  editToggleBtn: {
+    border: "1.5px solid #06B6D4",
+    borderRadius: 10,
+    padding: "8px 18px",
+    fontSize: 13,
+    fontWeight: 700,
+    cursor: "pointer",
+    fontFamily: "inherit",
+    transition: "all .15s",
+  },
+  printBtn: {
+    background: "#0F172A",
+    color: "#06B6D4",
+    border: "none",
+    borderRadius: 10,
+    padding: "8px 18px",
+    fontSize: 13,
+    fontWeight: 700,
+    cursor: "pointer",
+    fontFamily: "inherit",
+  },
+  editBanner: {
+    background: "#F0FDFE",
+    borderBottom: "1px solid #A5F3FC",
+    padding: "10px 24px",
+    fontSize: 13,
+    color: "#0E7490",
+    textAlign: "center",
+  },
+  docWrapper: {
+    maxWidth: 860,
+    margin: "32px auto",
+    background: "white",
+    boxShadow: "0 4px 40px rgba(0,0,0,.10)",
+    borderRadius: 4,
+    overflow: "hidden",
+  },
+
+  // Documento
+  doc: { fontFamily: "'Segoe UI','Calibri',Arial,sans-serif", color: "#0F172A" },
+  docHeader: {
+    background: "#0F172A",
+    padding: "36px 48px",
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: 32,
+  },
+  docName: { margin: 0, fontSize: 28, fontWeight: 800, color: "white", letterSpacing: "-0.01em", display: "block" },
+  docCargo: {
+    margin: "6px 0 0",
+    fontSize: 14,
+    color: "#94A3B8",
+    fontWeight: 400,
+    lineHeight: 1.5,
+    maxWidth: 420,
+    display: "block",
+  },
+  docContato: { display: "flex", flexDirection: "column", gap: 6, textAlign: "right", flexShrink: 0, marginTop: 4 },
+  docBody: { padding: "36px 48px" },
+
+  section: { marginBottom: 28 },
+  sectionHeader: { display: "flex", alignItems: "center", gap: 12, marginBottom: 14 },
+  sectionTitle: {
+    fontSize: 11,
+    fontWeight: 800,
+    letterSpacing: "0.12em",
+    color: "#06B6D4",
+    textTransform: "uppercase",
+    whiteSpace: "nowrap",
+  },
+  sectionLine: { flex: 1, height: 1, background: "#E2E8F0" },
+
+  resumoText: { fontSize: 13, color: "#475569", lineHeight: 1.7, margin: 0, display: "block" },
+
+  expItem: { paddingBottom: 22, borderBottom: "1px solid #F1F5F9" },
+  expHeader: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6, gap: 16 },
+  expEmpresa: { fontWeight: 700, color: "#06B6D4", fontSize: 13 },
+  expCargo: { fontWeight: 600, color: "#0F172A", fontSize: 13 },
+  expPeriodo: {
+    fontSize: 11,
+    color: "#64748B",
+    flexShrink: 0,
+    background: "#F8FAFC",
+    padding: "3px 10px",
+    borderRadius: 99,
+    border: "1px solid #E2E8F0",
+    display: "inline-block",
+  },
+  expLocalizacao: { fontSize: 10, color: "#94A3B8", fontStyle: "italic", display: "inline-block" },
+  expDesc: { fontSize: 12, color: "#475569", margin: "4px 0 8px", lineHeight: 1.65, display: "block" },
+
+  resultadosBox: {
+    background: "#F0FDFE",
+    border: "1px solid #CFFAFE",
+    borderRadius: 8,
+    padding: "10px 14px",
+    marginTop: 8,
+  },
+  resultadosLabel: {
+    fontSize: 11,
+    fontWeight: 700,
+    color: "#06B6D4",
+    textTransform: "uppercase",
+    letterSpacing: "0.08em",
+    display: "block",
+    marginBottom: 6,
+  },
+
+  twoCol: { display: "flex", gap: 40 },
+  formacaoCurso: { margin: 0, fontWeight: 700, color: "#0F172A", fontSize: 13, display: "block" },
+  formacaoInst: { margin: "2px 0 0", color: "#06B6D4", fontSize: 12, fontWeight: 600, display: "block" },
+  formacaoPeriodo: { margin: "2px 0 0", color: "#94A3B8", fontSize: 11, display: "block" },
+
+  chip: {
+    background: "#F8FAFC",
+    color: "#475569",
+    border: "1px solid #E2E8F0",
+    borderRadius: 99,
+    padding: "3px 10px",
+    fontSize: 11,
+    display: "inline-block",
+  },
+
+  // Botões de edição
+  removeBtnRed: {
+    background: "none",
+    border: "none",
+    cursor: "pointer",
+    color: "#F87171",
+    fontSize: 10,
+    padding: "2px 4px",
+    fontFamily: "inherit",
+  },
+  removeInlineBtn: {
+    background: "none",
+    border: "none",
+    cursor: "pointer",
+    color: "#F87171",
+    fontSize: 12,
+    padding: "0 2px",
+    flexShrink: 0,
+    fontFamily: "inherit",
+    lineHeight: 1,
+  },
+  addItemBtn: {
+    background: "none",
+    border: "1px dashed #06B6D4",
+    color: "#06B6D4",
+    borderRadius: 6,
+    padding: "3px 10px",
+    fontSize: 11,
+    cursor: "pointer",
+    marginTop: 4,
+    fontFamily: "inherit",
+  },
+  addBlockBtn: {
+    background: "none",
+    border: "1.5px dashed #06B6D4",
+    color: "#06B6D4",
+    borderRadius: 8,
+    padding: "7px 16px",
+    fontSize: 12,
+    cursor: "pointer",
+    marginTop: 12,
+    fontFamily: "inherit",
+    width: "100%",
+    textAlign: "center",
+    display: "block",
+  },
+
+  footer: {
+    marginTop: 32,
+    paddingTop: 16,
+    borderTop: "1px solid #E2E8F0",
+    display: "flex",
+    justifyContent: "space-between",
+    fontSize: 11,
+    color: "#CBD5E1",
+  },
+};
+<div style={S.howTo}>
+  <p style={S.howToTitle}>Formatos suportados</p>
+  <p style={S.howToStep}>
+    📄 <strong>PDF</strong> — qualquer CV em PDF
+  </p>
+  <p style={S.howToStep}>
+    🔗 <strong>LinkedIn PDF</strong> — perfil exportado diretamente do LinkedIn
+  </p>
+  <p style={S.howToStep}>
+    📝 <strong>Word (.docx)</strong> — CV em formato Word
+  </p>
+</div>;

@@ -31,7 +31,7 @@ const queryClient = new QueryClient();
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
-  
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -39,17 +39,17 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
       </div>
     );
   }
-  
+
   if (!user) {
     return <Navigate to="/auth" replace />;
   }
-  
+
   return <>{children}</>;
 }
 
 function PublicRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
-  
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -57,11 +57,11 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
       </div>
     );
   }
-  
+
   if (user) {
     return <Navigate to="/" replace />;
   }
-  
+
   return <>{children}</>;
 }
 
@@ -74,22 +74,30 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             {/* Rota pública para extensão Chrome */}
-            <Route path="/chrome-extension" element={
-              <ProtectedRoute>
-                <ChromeExtension />
-              </ProtectedRoute>
-            } />
+            <Route
+              path="/chrome-extension"
+              element={
+                <ProtectedRoute>
+                  <ChromeExtension />
+                </ProtectedRoute>
+              }
+            />
 
-            <Route path="/auth" element={
-              <PublicRoute>
-                <Auth />
-              </PublicRoute>
-            } />
-            <Route element={
-              <ProtectedRoute>
-                <AppLayout />
-              </ProtectedRoute>
-            }>
+            <Route
+              path="/auth"
+              element={
+                <PublicRoute>
+                  <Auth />
+                </PublicRoute>
+              }
+            />
+            <Route
+              element={
+                <ProtectedRoute>
+                  <AppLayout />
+                </ProtectedRoute>
+              }
+            >
               <Route path="/" element={<Dashboard />} />
               <Route path="/pipeline" element={<Pipeline />} />
               <Route path="/empresas" element={<Empresas />} />
@@ -115,5 +123,8 @@ const App = () => (
     </AuthProvider>
   </QueryClientProvider>
 );
+import FormatacaoCV from "@/pages/FormatacaoCV";
 
+// dentro do <Routes>:
+<Route path="/formatacao-cv" element={<FormatacaoCV />} />;
 export default App;
