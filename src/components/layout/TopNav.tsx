@@ -67,13 +67,10 @@ export function TopNav({ activeTab, onTabChange, onMenuToggle }: TopNavProps) {
       )}
 
       {/* Logo */}
-      <div className="flex items-center gap-2 mr-4 md:mr-8">
-        <div className="h-8 w-8 rounded-lg gradient-primary flex items-center justify-center flex-shrink-0">
-          <Target className="h-5 w-5 text-primary-foreground" />
-        </div>
-        {!isMobile && (
-          <span className="font-semibold text-foreground text-sm">RecruitCRM</span>
-        )}
+      <div className="flex items-center mr-4 md:mr-8">
+        <span className="text-xl md:text-2xl font-bold tracking-wider text-foreground">
+          ORION<span className="text-primary">.</span>
+        </span>
       </div>
 
       {/* Tabs */}
