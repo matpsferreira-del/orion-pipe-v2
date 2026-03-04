@@ -1252,6 +1252,13 @@ export type Database = {
           similarity_score: number
         }[]
       }
+      get_application_counts_by_job: {
+        Args: never
+        Returns: {
+          count: number
+          job_id: string
+        }[]
+      }
       get_company_counts: {
         Args: never
         Returns: {
