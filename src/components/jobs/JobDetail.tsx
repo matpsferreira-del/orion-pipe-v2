@@ -7,8 +7,9 @@ import { Separator } from '@/components/ui/separator';
 import { 
   Building2, MapPin, Calendar, DollarSign, User, Clock, 
   Edit, UserPlus, Play, Pause, CheckCircle, XCircle,
-  Globe, GlobeLock, Copy, ExternalLink, Image, FileText, Loader2
+  Globe, GlobeLock, Copy, ExternalLink, Image, FileText, Loader2, Download
 } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { JobRow, useUpdateJobStatus, useJobStages, usePublishJob } from '@/hooks/useJobs';
 import { useApplicationsWithParties, useUpdateApplicationStage } from '@/hooks/useApplications';
 import { useCompanies } from '@/hooks/useCompanies';
@@ -86,6 +87,30 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
 
   const formatDate = (date: string) => {
     return new Date(date).toLocaleDateString('pt-BR');
+  };
+
+  const handleExportMapeados = (apps: ApplicationWithRelations[]) => {
+    const rows = apps.map(a => {
+      const p = a._party;
+      const stage = stages.find(s => s.id === a.stage_id);
+      return {
+        Nome: p?.full_name || '',
+        'Cargo Atual': p?.current_title || '',
+        'Empresa Atual': p?.current_company || '',
+        Email: p?.email_raw || '',
+        Telefone: p?.phone_raw || '',
+        LinkedIn: p?.linkedin_url || '',
+        Etapa: stage?.name || '',
+        'Pretensão Salarial': a.salary_expectation != null ? Number(a.salary_expectation) : '',
+        'Data Inscrição': new Date(a.applied_at).toLocaleDateString('pt-BR'),
+        Observações: a.notes || '',
+      };
+    });
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Mapeados');
+    XLSX.writeFile(wb, `mapeados-${job.title.replace(/\s+/g, '-').toLowerCase()}.xlsx`);
+    toast.success(`${rows.length} candidato(s) exportado(s)`);
   };
 
   const handleStatusChange = async (newStatus: 'open' | 'paused' | 'filled' | 'cancelled') => {
@@ -466,11 +491,19 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
             </div>
           ) : (
             <Tabs defaultValue="mapeados">
-              <TabsList className="mb-4">
-                <TabsTrigger value="mapeados">Mapeados ({mapeadoApps.length})</TabsTrigger>
-                <TabsTrigger value="triagem">Triagem ({nonMapeadoApps.length})</TabsTrigger>
-                <TabsTrigger value="etapas">Etapas</TabsTrigger>
-              </TabsList>
+              <div className="flex items-center justify-between mb-4">
+                <TabsList>
+                  <TabsTrigger value="mapeados">Mapeados ({mapeadoApps.length})</TabsTrigger>
+                  <TabsTrigger value="triagem">Triagem ({nonMapeadoApps.length})</TabsTrigger>
+                  <TabsTrigger value="etapas">Etapas</TabsTrigger>
+                </TabsList>
+                {mapeadoApps.length > 0 && (
+                  <Button variant="outline" size="sm" onClick={() => handleExportMapeados(mapeadoApps)}>
+                    <Download className="h-4 w-4 mr-1" />
+                    Exportar
+                  </Button>
+                )}
+              </div>
 
               <TabsContent value="mapeados">
                 <CandidateListView
