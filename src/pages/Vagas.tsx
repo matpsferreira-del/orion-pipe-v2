@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,7 +9,6 @@ import { Plus, Search, Filter, Loader2, LayoutGrid, List, Maximize2, Minimize2 }
 import { useJobs } from '@/hooks/useJobs';
 import { useCompanies } from '@/hooks/useCompanies';
 import { useProfiles } from '@/hooks/useProfiles';
-import { useApplications } from '@/hooks/useApplications';
 import { JobCard } from '@/components/jobs/JobCard';
 import { JobDialog } from '@/components/jobs/JobDialog';
 import { JobDetail } from '@/components/jobs/JobDetail';
@@ -16,6 +16,22 @@ import { JobStatus, jobStatusLabels } from '@/types/ats';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { JobRow } from '@/hooks/useJobs';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { supabase } from '@/integrations/supabase/client';
+
+function useApplicationCounts() {
+  return useQuery({
+    queryKey: ['application-counts'],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('get_application_counts_by_job');
+      if (error) throw error;
+      const counts: Record<string, number> = {};
+      (data || []).forEach((row: { job_id: string; count: number }) => {
+        counts[row.job_id] = row.count;
+      });
+      return counts;
+    },
+  });
+}
 
 export default function Vagas() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -29,16 +45,7 @@ export default function Vagas() {
   const { data: jobs = [], isLoading } = useJobs();
   const { data: companies = [] } = useCompanies();
   const { data: profiles = [] } = useProfiles();
-  const { data: allApplications = [] } = useApplications();
-
-  // Count applications per job
-  const applicationCounts = useMemo(() => {
-    const counts: Record<string, number> = {};
-    allApplications.forEach(app => {
-      counts[app.job_id] = (counts[app.job_id] || 0) + 1;
-    });
-    return counts;
-  }, [allApplications]);
+  const { data: applicationCounts = {} } = useApplicationCounts();
 
   // Filter jobs
   const filteredJobs = useMemo(() => {
