@@ -21,6 +21,7 @@ import ProposalGenerator from "./pages/ProposalGenerator";
 import RecrutamentoDashboard from "./pages/RecrutamentoDashboard";
 import MapeamentoVagas from "./pages/MapeamentoVagas";
 import ShortlistPresentation from "./pages/ShortlistPresentation";
+import FormatacaoCV from "./pages/FormatacaoCV";
 import Auth from "./pages/Auth";
 import ChromeExtension from "./pages/ChromeExtension";
 import NotFound from "./pages/NotFound";
@@ -97,6 +98,7 @@ const App = () => (
               <Route path="/recrutamento" element={<RecrutamentoDashboard />} />
               <Route path="/vagas" element={<Vagas />} />
               <Route path="/jobs/:id/shortlist-presentation" element={<ShortlistPresentation />} />
+              <Route path="/formatacao-cv" element={<FormatacaoCV />} />
               <Route path="/oportunidades" element={<Oportunidades />} />
               <Route path="/oportunidades/:id/proposta" element={<ProposalGenerator />} />
               <Route path="/tarefas" element={<Tarefas />} />
