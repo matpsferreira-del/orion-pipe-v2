@@ -1,37 +1,40 @@
 
 
-# Plano: Formatação de CV no módulo Recrutamento
+# Plano: Ordenação e filtro avançado de candidatos nas vagas
 
 ## Resumo
-Adicionar uma nova página "Formatação de CV" ao módulo de Recrutamento, com link no sidebar e rota dedicada. O código fornecido será adaptado para usar TypeScript, Tailwind CSS e o padrão do projeto, incluindo o uso de Lovable AI (via edge function) em vez de chamada direta à API Anthropic no frontend.
+Adicionar controles de ordenação por coluna em cada etapa (Kanban e lista) e um campo de busca/filtro textual que pesquisa em nome, cidade, estado, cargo, empresa, headline e notas do candidato.
 
-## O que será feito
+## Alterações
 
-### 1. Criar página `src/pages/FormatacaoCV.tsx`
-- Converter o componente fornecido para TypeScript com tipagem adequada
-- Substituir os estilos inline (`S = {...}`) por classes Tailwind para consistência com o design system
-- Remover a lógica de carregamento de mammoth via script tag e usar import dinâmico ou manter como script externo com tipagem
-- A página mantém 3 etapas: upload, processamento e editor/preview
+### 1. `CandidateListView.tsx` — Ordenação por colunas + filtro textual
 
-### 2. Criar edge function `supabase/functions/extract-cv/index.ts`
-- Recebe o arquivo (base64 para PDF, texto extraído para DOCX) 
-- Chama a Lovable AI (modelo `google/gemini-2.5-pro` ou `openai/gpt-5`) com o prompt de extração
-- Retorna o JSON estruturado do CV
-- Isso evita expor chaves de API no frontend
+- Adicionar estado local `sortField` (nome, cargo, empresa, etapa, pretensão, data) e `sortDirection` (asc/desc).
+- Tornar os `TableHead` clicáveis para alternar a ordenação, exibindo um ícone de seta indicando a direção.
+- Adicionar um `Input` de busca acima da tabela que filtra candidatos por: `full_name`, `current_title`, `current_company`, `headline`, `city`, `state` (do party), `notes` (da application).
+- Aplicar `useMemo` para filtrar e ordenar as applications antes de renderizar.
 
-### 3. Atualizar navegação
-- **`src/components/layout/AppSidebar.tsx`**: Adicionar item `{ to: '/formatacao-cv', icon: FileText, label: 'Formatação de CV' }` no array `recrutamento`
-- **`src/components/layout/TopNav.tsx`**: Adicionar `'/formatacao-cv': 'recrutamento'` no `routeToTab`
-- **`src/App.tsx`**: Adicionar rota `<Route path="/formatacao-cv" element={<FormatacaoCV />} />`
+### 2. `CandidateKanban.tsx` — Ordenação dentro de cada coluna
 
-### 4. Adaptações do código fornecido
-- Substituir chamada direta a `api.anthropic.com` por chamada à edge function
-- Manter a lógica de export PDF usando `html-to-image` + `jspdf` (já disponíveis no projeto)
-- Remover estilos CSS globais injetados via `document.createElement("style")` e usar Tailwind + `@keyframes` no `index.css`
-- Adicionar tipagem para o objeto `cvData`
+- Adicionar um `Select` compacto no header de cada coluna Kanban para escolher a ordenação (Nome A-Z, Nome Z-A, Rating, Data de inscrição, Pretensão salarial).
+- Ordenar o array de applications dentro de cada coluna com `useMemo`.
 
-### Considerações técnicas
-- O modelo Lovable AI suporta processamento de texto para extração estruturada, adequado para este caso
-- PDFs binários precisarão ser enviados como base64 para a edge function, que usará o modelo com suporte multimodal
-- A exportação PDF já segue o padrão arquitetural do projeto (html-to-image + jsPDF)
+### 3. `JobDetail.tsx` — Filtro global propagado
+
+- Adicionar um `Input` de busca textual acima das abas (Mapeados/Triagem/Etapas) que filtra `applications` antes de passá-las aos componentes filhos.
+- O filtro pesquisa em: `full_name`, `current_title`, `current_company`, `headline`, `email_raw`, `city` (campo do party — já disponível? Precisa verificar).
+
+### 4. `useApplications.ts` — Incluir `city` e `state` no fetch de parties
+
+- Na função `fetchAllParties`, adicionar `city, state` ao `.select()` para que esses campos estejam disponíveis no frontend para filtragem.
+
+### 5. `ApplicationWithRelations` type (`src/types/ats.ts`)
+
+- Adicionar `city` e `state` opcionais ao tipo `_party` dentro de `ApplicationWithRelations`.
+
+## Detalhes técnicos
+
+- Nenhuma alteração de banco de dados necessária — `city` e `state` já existem na tabela `party`.
+- A ordenação e filtragem são 100% client-side (os dados já estão carregados em memória).
+- Arquivos modificados: `CandidateListView.tsx`, `CandidateKanban.tsx`, `JobDetail.tsx`, `useApplications.ts`, `src/types/ats.ts`.
 
