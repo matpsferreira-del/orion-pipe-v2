@@ -1,40 +1,48 @@
 
 
-# Plano: Ordenação e filtro avançado de candidatos nas vagas
+# Plano: Busca avançada com campos estruturados e pesquisa booleana
 
 ## Resumo
-Adicionar controles de ordenação por coluna em cada etapa (Kanban e lista) e um campo de busca/filtro textual que pesquisa em nome, cidade, estado, cargo, empresa, headline e notas do candidato.
+Substituir o campo de busca simples de candidatos por um painel de busca avançada expansível com campos individuais (como na imagem de referência) e suporte a operadores booleanos (AND, OR, aspas para frase exata, parênteses) no campo de texto principal.
 
 ## Alterações
 
-### 1. `CandidateListView.tsx` — Ordenação por colunas + filtro textual
+### 1. Novo componente `AdvancedCandidateSearch.tsx`
+Criar um componente colapsável (usando Collapsible) com:
+- **Campo de busca booleana** no topo — aceita operadores `AND`, `OR`, `()`, `""` para combinar termos livremente em todos os campos do candidato
+- **Campos individuais (dropdowns e inputs):**
+  - Cargo (input texto — filtra `current_title`)
+  - Empresa (input texto — filtra `current_company`)
+  - Localidade (select com cidades/estados disponíveis nos candidatos da vaga)
+  - Competências/Tags (multi-select com tags existentes nos candidatos)
+  - Pretensão salarial (range min/max)
+  - Fonte/Origem (select com opções: Manual, Indicação, LinkedIn, etc.)
+  - Rating (select: 1-5 estrelas mínimo)
+- Botões "Aplicar Filtros" e "Limpar"
+- Exibir badges removíveis para filtros ativos
 
-- Adicionar estado local `sortField` (nome, cargo, empresa, etapa, pretensão, data) e `sortDirection` (asc/desc).
-- Tornar os `TableHead` clicáveis para alternar a ordenação, exibindo um ícone de seta indicando a direção.
-- Adicionar um `Input` de busca acima da tabela que filtra candidatos por: `full_name`, `current_title`, `current_company`, `headline`, `city`, `state` (do party), `notes` (da application).
-- Aplicar `useMemo` para filtrar e ordenar as applications antes de renderizar.
+### 2. Lógica de parsing booleano (`src/utils/booleanSearch.ts`)
+Criar um parser simples que:
+- Divide a query em tokens respeitando aspas (`"full stack"`)
+- Interpreta `AND` (padrão entre termos), `OR`, e parênteses para agrupamento
+- Retorna uma função `(text: string) => boolean` para testar cada candidato
+- Exemplo: `"gerente AND (São Paulo OR Curitiba)"` → match se contém "gerente" E ("São Paulo" OU "Curitiba")
 
-### 2. `CandidateKanban.tsx` — Ordenação dentro de cada coluna
+### 3. Atualizar `JobDetail.tsx`
+- Substituir o `Input` de busca simples pelo novo `AdvancedCandidateSearch`
+- Receber os filtros estruturados + query booleana como estado
+- Atualizar o `filteredApplications` useMemo para aplicar todos os filtros combinados
 
-- Adicionar um `Select` compacto no header de cada coluna Kanban para escolher a ordenação (Nome A-Z, Nome Z-A, Rating, Data de inscrição, Pretensão salarial).
-- Ordenar o array de applications dentro de cada coluna com `useMemo`.
+### 4. Atualizar `useApplications.ts` — incluir `tags` no fetch
+- Adicionar `tags` ao `.select()` do `fetchAllParties` para suportar filtragem por competências/tags
 
-### 3. `JobDetail.tsx` — Filtro global propagado
-
-- Adicionar um `Input` de busca textual acima das abas (Mapeados/Triagem/Etapas) que filtra `applications` antes de passá-las aos componentes filhos.
-- O filtro pesquisa em: `full_name`, `current_title`, `current_company`, `headline`, `email_raw`, `city` (campo do party — já disponível? Precisa verificar).
-
-### 4. `useApplications.ts` — Incluir `city` e `state` no fetch de parties
-
-- Na função `fetchAllParties`, adicionar `city, state` ao `.select()` para que esses campos estejam disponíveis no frontend para filtragem.
-
-### 5. `ApplicationWithRelations` type (`src/types/ats.ts`)
-
-- Adicionar `city` e `state` opcionais ao tipo `_party` dentro de `ApplicationWithRelations`.
+### 5. Atualizar `ApplicationWithRelations` em `src/types/ats.ts`
+- Adicionar `tags: string[]` ao tipo `_party`
 
 ## Detalhes técnicos
-
-- Nenhuma alteração de banco de dados necessária — `city` e `state` já existem na tabela `party`.
-- A ordenação e filtragem são 100% client-side (os dados já estão carregados em memória).
-- Arquivos modificados: `CandidateListView.tsx`, `CandidateKanban.tsx`, `JobDetail.tsx`, `useApplications.ts`, `src/types/ats.ts`.
+- Sem alterações no banco de dados — `tags` já existe na tabela `party`
+- Toda a filtragem é client-side (dados já em memória)
+- O parser booleano é uma função pura, testável e reutilizável
+- Arquivos criados: `AdvancedCandidateSearch.tsx`, `src/utils/booleanSearch.ts`
+- Arquivos modificados: `JobDetail.tsx`, `useApplications.ts`, `src/types/ats.ts`
 
