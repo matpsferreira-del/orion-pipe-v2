@@ -1,48 +1,63 @@
 
 
-# Plano: Busca avançada com campos estruturados e pesquisa booleana
+# Plano: Abrir permissões de edição para todos os usuários (exceto faturamento)
 
-## Resumo
-Substituir o campo de busca simples de candidatos por um painel de busca avançada expansível com campos individuais (como na imagem de referência) e suporte a operadores booleanos (AND, OR, aspas para frase exata, parênteses) no campo de texto principal.
+## Objetivo
+Permitir que todos os usuários autenticados possam criar, editar e excluir dados de recrutamento (ATS) e comercial (CRM). As permissões de faturamento (tabela `invoices`) permanecem inalteradas.
 
-## Alterações
+## Tabelas afetadas e mudanças nas políticas RLS
 
-### 1. Novo componente `AdvancedCandidateSearch.tsx`
-Criar um componente colapsável (usando Collapsible) com:
-- **Campo de busca booleana** no topo — aceita operadores `AND`, `OR`, `()`, `""` para combinar termos livremente em todos os campos do candidato
-- **Campos individuais (dropdowns e inputs):**
-  - Cargo (input texto — filtra `current_title`)
-  - Empresa (input texto — filtra `current_company`)
-  - Localidade (select com cidades/estados disponíveis nos candidatos da vaga)
-  - Competências/Tags (multi-select com tags existentes nos candidatos)
-  - Pretensão salarial (range min/max)
-  - Fonte/Origem (select com opções: Manual, Indicação, LinkedIn, etc.)
-  - Rating (select: 1-5 estrelas mínimo)
-- Botões "Aplicar Filtros" e "Limpar"
-- Exibir badges removíveis para filtros ativos
+### CRM / Comercial
 
-### 2. Lógica de parsing booleano (`src/utils/booleanSearch.ts`)
-Criar um parser simples que:
-- Divide a query em tokens respeitando aspas (`"full stack"`)
-- Interpreta `AND` (padrão entre termos), `OR`, e parênteses para agrupamento
-- Retorna uma função `(text: string) => boolean` para testar cada candidato
-- Exemplo: `"gerente AND (São Paulo OR Curitiba)"` → match se contém "gerente" E ("São Paulo" OU "Curitiba")
+**1. `companies`**
+- UPDATE: de "responsavel + admin/gestor" → todos autenticados
+- DELETE: de "admin only" → todos autenticados
 
-### 3. Atualizar `JobDetail.tsx`
-- Substituir o `Input` de busca simples pelo novo `AdvancedCandidateSearch`
-- Receber os filtros estruturados + query booleana como estado
-- Atualizar o `filteredApplications` useMemo para aplicar todos os filtros combinados
+**2. `contacts`**
+- INSERT (autenticado): de "admin ou company access" → todos autenticados
+- UPDATE: de "admin ou company access" → todos autenticados
+- DELETE: de "admin/gestor" → todos autenticados
 
-### 4. Atualizar `useApplications.ts` — incluir `tags` no fetch
-- Adicionar `tags` ao `.select()` do `fetchAllParties` para suportar filtragem por competências/tags
+**3. `opportunities`**
+- UPDATE: de "responsavel + admin/gestor" → todos autenticados
+- DELETE: de "admin only" → todos autenticados
 
-### 5. Atualizar `ApplicationWithRelations` em `src/types/ats.ts`
-- Adicionar `tags: string[]` ao tipo `_party`
+**4. `activities`**
+- INSERT: de "own user_id" → todos autenticados
+- UPDATE: de "own user_id" → todos autenticados
+- DELETE: de "own user_id" → todos autenticados
 
-## Detalhes técnicos
-- Sem alterações no banco de dados — `tags` já existe na tabela `party`
-- Toda a filtragem é client-side (dados já em memória)
-- O parser booleano é uma função pura, testável e reutilizável
-- Arquivos criados: `AdvancedCandidateSearch.tsx`, `src/utils/booleanSearch.ts`
-- Arquivos modificados: `JobDetail.tsx`, `useApplications.ts`, `src/types/ats.ts`
+**5. `tasks`**
+- INSERT: de "own user/responsavel" → todos autenticados
+- UPDATE: de "own user/responsavel" → todos autenticados
+- DELETE: de "own user_id" → todos autenticados
+
+### ATS / Recrutamento
+
+**6. `jobs`**
+- UPDATE: de "responsavel/created_by/admin/gestor" → todos autenticados
+- DELETE: de "admin only" → todos autenticados
+
+**7. `applications`**
+- UPDATE: de "responsavel/created_by/admin/gestor" → todos autenticados
+- DELETE: de "admin only" → todos autenticados
+
+**8. `job_pipeline_stages`**
+- ALL (manage): de "responsavel/created_by/admin/gestor" → todos autenticados
+
+**9. `party`**
+- DELETE: de "admin only" → todos autenticados (UPDATE ja permite todos autenticados)
+
+### SEM alteração
+- **`invoices`** — mantém políticas atuais (admin/gestor para insert/update, admin para delete)
+- **SELECT policies** — sem alteração (mantém visibilidade baseada em company access)
+
+## Implementação
+Uma única migração SQL que:
+1. Faz `DROP POLICY` das políticas restritivas listadas acima
+2. Cria novas políticas com `auth.uid() IS NOT NULL` para as operações correspondentes
+
+## Frontend
+- Remover verificação `isAdmin` no `Faturamento.tsx` para editar/excluir — **NÃO**, isso deve continuar restrito
+- Verificar se há guards no frontend que bloqueiam edição para consultores em CRM/ATS e removê-los se necessário
 
