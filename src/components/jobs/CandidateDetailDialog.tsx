@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
+import { supabase } from '@/integrations/supabase/client';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
@@ -35,11 +36,22 @@ export function CandidateDetailDialog({
   stages,
   jobId 
 }: CandidateDetailDialogProps) {
-  const [notes, setNotes] = useState(application?.notes || '');
-  const [rating, setRating] = useState(application?.rating || 0);
-  const [salaryExpectation, setSalaryExpectation] = useState(
-    application?.salary_expectation != null ? String(application.salary_expectation) : ''
-  );
+  const [notes, setNotes] = useState('');
+  const [rating, setRating] = useState(0);
+  const [salaryExpectation, setSalaryExpectation] = useState('');
+  const [phoneInput, setPhoneInput] = useState('');
+
+  // Reset state when application changes
+  useEffect(() => {
+    if (application) {
+      setNotes(application.notes || '');
+      setRating(application.rating || 0);
+      setSalaryExpectation(
+        application.salary_expectation != null ? String(application.salary_expectation) : ''
+      );
+      setPhoneInput(application._party?.phone_raw || '');
+    }
+  }, [application?.id]);
 
   const updateApplication = useUpdateApplication();
   const updateStatus = useUpdateApplicationStatus();
@@ -63,9 +75,17 @@ export function CandidateDetailDialog({
         rating: rating || null,
         salary_expectation: parsedSalary || null,
       });
-      toast.success('Notas salvas');
+      // Update party phone if changed
+      if (party && phoneInput !== (party.phone_raw || '')) {
+        const { error } = await supabase
+          .from('party')
+          .update({ phone_raw: phoneInput || null })
+          .eq('id', party.id);
+        if (error) throw error;
+      }
+      toast.success('Dados salvos');
     } catch (error) {
-      toast.error('Erro ao salvar notas');
+      toast.error('Erro ao salvar');
     }
   };
 
@@ -149,6 +169,21 @@ export function CandidateDetailDialog({
                   </a>
                 )}
               </div>
+            </div>
+          </div>
+
+          {/* Phone */}
+          <div>
+            <Label>Telefone</Label>
+            <div className="relative mt-1.5">
+              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="tel"
+                placeholder="(11) 99999-9999"
+                className="pl-9"
+                value={phoneInput}
+                onChange={(e) => setPhoneInput(e.target.value)}
+              />
             </div>
           </div>
 
@@ -267,7 +302,7 @@ export function CandidateDetailDialog({
               onClick={handleSaveNotes}
               disabled={updateApplication.isPending}
             >
-              Salvar Notas
+              Salvar Dados
             </Button>
           </div>
 
