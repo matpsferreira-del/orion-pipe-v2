@@ -7,7 +7,7 @@ import { Separator } from '@/components/ui/separator';
 import { 
   Building2, MapPin, Calendar, DollarSign, User, Clock, 
   Edit, UserPlus, Play, Pause, CheckCircle, XCircle,
-  Globe, GlobeLock, Copy, ExternalLink, Image, FileText, Loader2, Download, Search
+  Globe, GlobeLock, Copy, ExternalLink, Image, FileText, Loader2, Download
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { JobRow, useUpdateJobStatus, useJobStages, usePublishJob } from '@/hooks/useJobs';
@@ -21,7 +21,8 @@ import { LinkedInPostDialog } from './LinkedInPostDialog';
 import { CandidateDetailDialog } from './CandidateDetailDialog';
 import { BulkActionBar } from './BulkActionBar';
 import { ApplicationWithRelations } from '@/types/ats';
-import { Input } from '@/components/ui/input';
+import { AdvancedCandidateSearch, AdvancedFilters, emptyFilters } from './AdvancedCandidateSearch';
+import { createBooleanMatcher } from '@/utils/booleanSearch';
 import { useUpdateApplicationStatus } from '@/hooks/useApplications';
 import { 
   jobStatusLabels, jobStatusColors, priorityLabels, priorityColors, 
@@ -42,7 +43,7 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
   const [showLinkedInPost, setShowLinkedInPost] = useState(false);
   const [generatingShortlist, setGeneratingShortlist] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [candidateSearch, setCandidateSearch] = useState('');
+  const [advancedFilters, setAdvancedFilters] = useState<AdvancedFilters>(emptyFilters);
   const navigate = useNavigate();
 
   const handleToggleSelect = useCallback((id: string) => {
@@ -64,17 +65,64 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
   const mapeadoStage = useMemo(() => stages.find(s => s.name.toLowerCase() === 'mapeado'), [stages]);
 
   const filteredApplications = useMemo(() => {
-    if (!candidateSearch.trim()) return applications;
-    const term = candidateSearch.toLowerCase();
-    return applications.filter(app => {
-      const p = app._party;
-      const searchStr = [
-        p?.full_name, p?.current_title, p?.current_company, p?.headline,
-        p?.email_raw, p?.city, p?.state, app.notes,
-      ].filter(Boolean).join(' ').toLowerCase();
-      return searchStr.includes(term);
-    });
-  }, [applications, candidateSearch]);
+    let result = applications;
+    const { booleanQuery, cargo, empresa, localidade, salaryMin, salaryMax, source, minRating, tags } = advancedFilters;
+
+    // Boolean text search across all fields
+    if (booleanQuery.trim()) {
+      const matcher = createBooleanMatcher(booleanQuery);
+      result = result.filter(app => {
+        const p = app._party;
+        const searchStr = [
+          p?.full_name, p?.current_title, p?.current_company, p?.headline,
+          p?.email_raw, p?.city, p?.state, app.notes,
+          ...(Array.isArray((p as any)?.tags) ? (p as any).tags : []),
+        ].filter(Boolean).join(' ');
+        return matcher(searchStr);
+      });
+    }
+
+    // Structured filters
+    if (cargo) {
+      const term = cargo.toLowerCase();
+      result = result.filter(a => a._party?.current_title?.toLowerCase().includes(term));
+    }
+    if (empresa) {
+      const term = empresa.toLowerCase();
+      result = result.filter(a => a._party?.current_company?.toLowerCase().includes(term));
+    }
+    if (localidade) {
+      const term = localidade.toLowerCase();
+      result = result.filter(a => {
+        const p = a._party;
+        const loc = [p?.city, p?.state].filter(Boolean).join(', ').toLowerCase();
+        return loc.includes(term) || p?.city?.toLowerCase() === term || p?.state?.toLowerCase() === term;
+      });
+    }
+    if (salaryMin) {
+      const min = Number(salaryMin);
+      result = result.filter(a => a.salary_expectation != null && Number(a.salary_expectation) >= min);
+    }
+    if (salaryMax) {
+      const max = Number(salaryMax);
+      result = result.filter(a => a.salary_expectation != null && Number(a.salary_expectation) <= max);
+    }
+    if (source) {
+      result = result.filter(a => a.source === source);
+    }
+    if (minRating) {
+      const min = Number(minRating);
+      result = result.filter(a => a.rating != null && a.rating >= min);
+    }
+    if (tags.length > 0) {
+      result = result.filter(a => {
+        const pTags = Array.isArray((a._party as any)?.tags) ? (a._party as any).tags as string[] : [];
+        return tags.every(t => pTags.includes(t));
+      });
+    }
+
+    return result;
+  }, [applications, advancedFilters]);
 
   const mapeadoApps = useMemo(() => mapeadoStage ? filteredApplications.filter(a => a.stage_id === mapeadoStage.id) : [], [filteredApplications, mapeadoStage]);
   const nonMapeadoApps = useMemo(() => mapeadoStage ? filteredApplications.filter(a => a.stage_id !== mapeadoStage.id) : filteredApplications, [filteredApplications, mapeadoStage]);
@@ -511,28 +559,34 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
             </div>
           ) : (
             <Tabs defaultValue="mapeados">
-              <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
-                <TabsList>
-                  <TabsTrigger value="mapeados">Mapeados ({mapeadoApps.length})</TabsTrigger>
-                  <TabsTrigger value="triagem">Triagem ({nonMapeadoApps.length})</TabsTrigger>
-                  <TabsTrigger value="etapas">Etapas</TabsTrigger>
-                </TabsList>
-                <div className="flex items-center gap-2">
-                  <div className="relative">
-                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Buscar candidato..."
-                      value={candidateSearch}
-                      onChange={(e) => setCandidateSearch(e.target.value)}
-                      className="pl-9 h-9 w-[220px]"
-                    />
+              <div className="space-y-3 mb-4">
+                <AdvancedCandidateSearch
+                  filters={advancedFilters}
+                  onFiltersChange={setAdvancedFilters}
+                  applications={applications}
+                  activeFilterCount={
+                    [
+                      advancedFilters.cargo, advancedFilters.empresa, advancedFilters.localidade,
+                      advancedFilters.source, advancedFilters.minRating,
+                      advancedFilters.salaryMin || advancedFilters.salaryMax ? 'x' : '',
+                      advancedFilters.tags.length > 0 ? 'x' : '',
+                    ].filter(Boolean).length
+                  }
+                />
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <TabsList>
+                    <TabsTrigger value="mapeados">Mapeados ({mapeadoApps.length})</TabsTrigger>
+                    <TabsTrigger value="triagem">Triagem ({nonMapeadoApps.length})</TabsTrigger>
+                    <TabsTrigger value="etapas">Etapas</TabsTrigger>
+                  </TabsList>
+                  <div className="flex items-center gap-2">
+                    {applications.length > 0 && (
+                      <Button variant="outline" size="sm" onClick={() => handleExportCandidatos(applications)}>
+                        <Download className="h-4 w-4 mr-1" />
+                        Exportar Todos
+                      </Button>
+                    )}
                   </div>
-                  {applications.length > 0 && (
-                    <Button variant="outline" size="sm" onClick={() => handleExportCandidatos(applications)}>
-                      <Download className="h-4 w-4 mr-1" />
-                      Exportar Todos
-                    </Button>
-                  )}
                 </div>
               </div>
 
