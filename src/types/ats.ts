@@ -84,6 +84,7 @@ export interface ApplicationWithRelations extends Application {
     current_company: string | null;
     city: string | null;
     state: string | null;
+    tags?: string[] | null;
   } | null;
   _stage?: JobPipelineStage | null;
   _job?: { title: string; company_id: string } | null;

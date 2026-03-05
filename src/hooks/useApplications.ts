@@ -59,7 +59,7 @@ async function fetchAllParties(partyIds: string[]) {
     const batch = partyIds.slice(i, i + 500);
     const { data, error } = await supabase
       .from('party')
-      .select('id, full_name, email_raw, phone_raw, headline, linkedin_url, current_title, current_company, city, state')
+      .select('id, full_name, email_raw, phone_raw, headline, linkedin_url, current_title, current_company, city, state, tags')
       .in('id', batch);
     if (error) throw error;
     if (data) allData.push(...data);
