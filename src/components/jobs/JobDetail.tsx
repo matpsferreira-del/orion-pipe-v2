@@ -7,7 +7,7 @@ import { Separator } from '@/components/ui/separator';
 import { 
   Building2, MapPin, Calendar, DollarSign, User, Clock, 
   Edit, UserPlus, Play, Pause, CheckCircle, XCircle,
-  Globe, GlobeLock, Copy, ExternalLink, Image, FileText, Loader2, Download
+  Globe, GlobeLock, Copy, ExternalLink, Image, FileText, Loader2, Download, Search
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { JobRow, useUpdateJobStatus, useJobStages, usePublishJob } from '@/hooks/useJobs';
@@ -21,6 +21,7 @@ import { LinkedInPostDialog } from './LinkedInPostDialog';
 import { CandidateDetailDialog } from './CandidateDetailDialog';
 import { BulkActionBar } from './BulkActionBar';
 import { ApplicationWithRelations } from '@/types/ats';
+import { Input } from '@/components/ui/input';
 import { useUpdateApplicationStatus } from '@/hooks/useApplications';
 import { 
   jobStatusLabels, jobStatusColors, priorityLabels, priorityColors, 
@@ -41,6 +42,7 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
   const [showLinkedInPost, setShowLinkedInPost] = useState(false);
   const [generatingShortlist, setGeneratingShortlist] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [candidateSearch, setCandidateSearch] = useState('');
   const navigate = useNavigate();
 
   const handleToggleSelect = useCallback((id: string) => {
@@ -60,8 +62,22 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
   const { data: applications = [], isLoading: loadingApps } = useApplicationsWithParties(job.id);
 
   const mapeadoStage = useMemo(() => stages.find(s => s.name.toLowerCase() === 'mapeado'), [stages]);
-  const mapeadoApps = useMemo(() => mapeadoStage ? applications.filter(a => a.stage_id === mapeadoStage.id) : [], [applications, mapeadoStage]);
-  const nonMapeadoApps = useMemo(() => mapeadoStage ? applications.filter(a => a.stage_id !== mapeadoStage.id) : applications, [applications, mapeadoStage]);
+
+  const filteredApplications = useMemo(() => {
+    if (!candidateSearch.trim()) return applications;
+    const term = candidateSearch.toLowerCase();
+    return applications.filter(app => {
+      const p = app._party;
+      const searchStr = [
+        p?.full_name, p?.current_title, p?.current_company, p?.headline,
+        p?.email_raw, p?.city, p?.state, app.notes,
+      ].filter(Boolean).join(' ').toLowerCase();
+      return searchStr.includes(term);
+    });
+  }, [applications, candidateSearch]);
+
+  const mapeadoApps = useMemo(() => mapeadoStage ? filteredApplications.filter(a => a.stage_id === mapeadoStage.id) : [], [filteredApplications, mapeadoStage]);
+  const nonMapeadoApps = useMemo(() => mapeadoStage ? filteredApplications.filter(a => a.stage_id !== mapeadoStage.id) : filteredApplications, [filteredApplications, mapeadoStage]);
   const updateStatus = useUpdateJobStatus();
   const updateAppStage = useUpdateApplicationStage();
   const updateAppStatus = useUpdateApplicationStatus();
@@ -495,18 +511,29 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
             </div>
           ) : (
             <Tabs defaultValue="mapeados">
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
                 <TabsList>
                   <TabsTrigger value="mapeados">Mapeados ({mapeadoApps.length})</TabsTrigger>
                   <TabsTrigger value="triagem">Triagem ({nonMapeadoApps.length})</TabsTrigger>
                   <TabsTrigger value="etapas">Etapas</TabsTrigger>
                 </TabsList>
-                {applications.length > 0 && (
-                  <Button variant="outline" size="sm" onClick={() => handleExportCandidatos(applications)}>
-                    <Download className="h-4 w-4 mr-1" />
-                    Exportar Todos
-                  </Button>
-                )}
+                <div className="flex items-center gap-2">
+                  <div className="relative">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Buscar candidato..."
+                      value={candidateSearch}
+                      onChange={(e) => setCandidateSearch(e.target.value)}
+                      className="pl-9 h-9 w-[220px]"
+                    />
+                  </div>
+                  {applications.length > 0 && (
+                    <Button variant="outline" size="sm" onClick={() => handleExportCandidatos(applications)}>
+                      <Download className="h-4 w-4 mr-1" />
+                      Exportar Todos
+                    </Button>
+                  )}
+                </div>
               </div>
 
               <TabsContent value="mapeados">

@@ -1,10 +1,40 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { JobPipelineStage, ApplicationWithRelations, applicationStatusLabels } from '@/types/ats';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Star, Mail, Phone, Linkedin, DollarSign } from 'lucide-react';
+
+type KanbanSortOption = 'name_asc' | 'name_desc' | 'rating' | 'date' | 'salary';
+
+const sortLabels: Record<KanbanSortOption, string> = {
+  name_asc: 'Nome A-Z',
+  name_desc: 'Nome Z-A',
+  rating: 'Rating',
+  date: 'Data inscrição',
+  salary: 'Pretensão',
+};
+
+function sortApplications(apps: ApplicationWithRelations[], sortBy: KanbanSortOption) {
+  return [...apps].sort((a, b) => {
+    switch (sortBy) {
+      case 'name_asc':
+        return (a._party?.full_name || '').localeCompare(b._party?.full_name || '');
+      case 'name_desc':
+        return (b._party?.full_name || '').localeCompare(a._party?.full_name || '');
+      case 'rating':
+        return (b.rating || 0) - (a.rating || 0);
+      case 'date':
+        return new Date(b.applied_at).getTime() - new Date(a.applied_at).getTime();
+      case 'salary':
+        return (Number(b.salary_expectation) || 0) - (Number(a.salary_expectation) || 0);
+      default:
+        return 0;
+    }
+  });
+}
 
 interface CandidateKanbanProps {
   stages: JobPipelineStage[];
@@ -79,6 +109,10 @@ interface KanbanColumnProps {
 }
 
 function KanbanColumn({ stage, applications, onDrop, onCardClick, selectedIds, onToggleSelect }: KanbanColumnProps) {
+  const [sortBy, setSortBy] = useState<KanbanSortOption>('name_asc');
+
+  const sortedApps = useMemo(() => sortApplications(applications, sortBy), [applications, sortBy]);
+
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     e.currentTarget.classList.add('bg-primary/5');
@@ -117,7 +151,7 @@ function KanbanColumn({ stage, applications, onDrop, onCardClick, selectedIds, o
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
-      <div className="mb-3">
+      <div className="mb-3 space-y-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             {onToggleSelect && applications.length > 0 && (
@@ -137,10 +171,22 @@ function KanbanColumn({ stage, applications, onDrop, onCardClick, selectedIds, o
             {applications.length}
           </span>
         </div>
+        {applications.length > 1 && (
+          <Select value={sortBy} onValueChange={(v) => setSortBy(v as KanbanSortOption)}>
+            <SelectTrigger className="h-7 text-[11px] w-full bg-background">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.entries(sortLabels).map(([key, label]) => (
+                <SelectItem key={key} value={key} className="text-xs">{label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
       </div>
 
       <div className="flex-1 space-y-2 overflow-y-auto scrollbar-thin">
-        {applications.map((app) => (
+        {sortedApps.map((app) => (
           <CandidateCard
             key={app.id}
             application={app}
@@ -216,6 +262,11 @@ function CandidateCard({ application, onClick, selected, onToggleSelect }: Candi
           {party?.headline && (
             <p className="text-xs text-muted-foreground truncate mt-0.5">
               {party.headline}
+            </p>
+          )}
+          {(party?.city || party?.state) && (
+            <p className="text-[10px] text-muted-foreground truncate mt-0.5">
+              {[party.city, party.state].filter(Boolean).join(' - ')}
             </p>
           )}
         </div>
