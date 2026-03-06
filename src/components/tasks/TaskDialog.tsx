@@ -96,7 +96,7 @@ export function TaskDialog({
       descricao: descricao || null,
       priority,
       status,
-      due_date: new Date(dueDate).toISOString(),
+      due_date: new Date(dueDate + 'T12:00:00').toISOString(),
       company_id: companyId || null,
       opportunity_id: opportunityId || null,
       user_id: isEditing ? editTask!.user_id : profile.id,
