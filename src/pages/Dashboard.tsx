@@ -18,6 +18,7 @@ import { Target, TrendingUp, DollarSign, Building2, Clock, CheckCircle2, Loader2
 
 export default function Dashboard() {
   const [selectedMemberId, setSelectedMemberId] = useState<string>('all');
+  const [calendarDate, setCalendarDate] = useState<Date | undefined>(undefined);
   
   const { data: opportunities = [], isLoading: loadingOpps } = useOpportunities();
   const { data: invoices = [], isLoading: loadingInvoices } = useInvoices();
