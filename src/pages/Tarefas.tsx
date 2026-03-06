@@ -3,18 +3,19 @@ import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useTasks, useUpdateTask, useDeleteTask, TaskRow } from '@/hooks/useTasks';
 import { useCompanies } from '@/hooks/useCompanies';
 import { useProfiles } from '@/hooks/useProfiles';
 import { useAuth } from '@/contexts/AuthContext';
-import { Plus, Search, Filter, Calendar, Clock, Building2, Trash2, Loader2, Bell, CheckCircle2, AlertCircle, Clock4 } from 'lucide-react';
+import { Plus, Search, Filter, Calendar, Clock, Building2, Trash2, Loader2, Bell, CheckCircle2, AlertCircle, Clock4, Pencil } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, isToday, isTomorrow, isPast, isThisWeek, addDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { TaskDialog } from '@/components/tasks/TaskDialog';
+import { TaskCalendar } from '@/components/tasks/TaskCalendar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const priorityConfig: Record<string, { label: string; className: string }> = {
@@ -23,19 +24,14 @@ const priorityConfig: Record<string, { label: string; className: string }> = {
   alta: { label: 'Alta', className: 'bg-destructive/10 text-destructive border-destructive/20' },
 };
 
-const statusConfig: Record<string, { label: string; icon: React.ElementType }> = {
-  pendente: { label: 'Pendente', icon: Clock4 },
-  em_andamento: { label: 'Em Andamento', icon: Clock },
-  concluida: { label: 'Concluída', icon: CheckCircle2 },
-  cancelada: { label: 'Cancelada', icon: AlertCircle },
-};
-
 export default function Tarefas() {
   const { profile } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterPriority, setFilterPriority] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<TaskRow | null>(null);
+  const [calendarDate, setCalendarDate] = useState<Date | undefined>(undefined);
 
   const { data: tasks = [], isLoading } = useTasks();
   const { data: companies = [] } = useCompanies();
@@ -101,6 +97,16 @@ export default function Tarefas() {
     await deleteTask.mutateAsync(taskId);
   };
 
+  const handleEdit = (task: TaskRow) => {
+    setEditingTask(task);
+    setDialogOpen(true);
+  };
+
+  const handleDialogClose = (open: boolean) => {
+    setDialogOpen(open);
+    if (!open) setEditingTask(null);
+  };
+
   const TaskCard = ({ task }: { task: TaskRow }) => {
     const priority = priorityConfig[task.priority] || priorityConfig.media;
     const companyName = getCompanyName(task.company_id);
@@ -120,7 +126,7 @@ export default function Tarefas() {
             onCheckedChange={() => handleToggleComplete(task)}
             className="mt-1"
           />
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0 cursor-pointer" onClick={() => handleEdit(task)}>
             <div className="flex items-center gap-2 flex-wrap">
               <span className={cn(
                 "font-medium text-sm sm:text-base",
@@ -132,15 +138,11 @@ export default function Tarefas() {
                 {priority.label}
               </Badge>
               {overdue && (
-                <Badge variant="destructive" className="text-xs">
-                  Atrasada
-                </Badge>
+                <Badge variant="destructive" className="text-xs">Atrasada</Badge>
               )}
             </div>
             {task.descricao && (
-              <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                {task.descricao}
-              </p>
+              <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{task.descricao}</p>
             )}
             <div className="flex items-center gap-3 sm:gap-4 mt-2 text-xs text-muted-foreground flex-wrap">
               {companyName && (
@@ -158,24 +160,31 @@ export default function Tarefas() {
               <span className="hidden sm:inline">• {responsavelName}</span>
             </div>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0"
-            onClick={() => handleDelete(task.id)}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
+          <div className="flex items-center gap-1 shrink-0">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-muted-foreground hover:text-primary"
+              onClick={() => handleEdit(task)}
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-muted-foreground hover:text-destructive"
+              onClick={() => handleDelete(task.id)}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </div>
     );
   };
 
   const TaskSection = ({ title, tasks, icon: Icon, className }: { 
-    title: string; 
-    tasks: TaskRow[]; 
-    icon: React.ElementType;
-    className?: string;
+    title: string; tasks: TaskRow[]; icon: React.ElementType; className?: string;
   }) => {
     if (tasks.length === 0) return null;
     return (
@@ -186,9 +195,7 @@ export default function Tarefas() {
           <Badge variant="secondary" className="ml-auto">{tasks.length}</Badge>
         </div>
         <div className="space-y-2">
-          {tasks.map(task => (
-            <TaskCard key={task.id} task={task} />
-          ))}
+          {tasks.map(task => <TaskCard key={task.id} task={task} />)}
         </div>
       </div>
     );
@@ -215,7 +222,7 @@ export default function Tarefas() {
         title="Tarefas"
         description="Gerencie suas atividades e follow-ups"
         actions={
-          <Button onClick={() => setDialogOpen(true)}>
+          <Button onClick={() => { setEditingTask(null); setDialogOpen(true); }}>
             <Plus className="h-4 w-4 mr-2" />
             <span className="hidden sm:inline">Nova Tarefa</span>
             <span className="sm:hidden">Nova</span>
@@ -225,70 +232,45 @@ export default function Tarefas() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
-        <Card>
-          <CardContent className="p-3 sm:p-4">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                <Clock4 className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-xl sm:text-2xl font-bold">{stats.total}</p>
-                <p className="text-xs text-muted-foreground">Pendentes</p>
-              </div>
+        <Card><CardContent className="p-3 sm:p-4">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+              <Clock4 className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
             </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-3 sm:p-4">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg bg-destructive/10 flex items-center justify-center shrink-0">
-                <AlertCircle className="h-4 w-4 sm:h-5 sm:w-5 text-destructive" />
-              </div>
-              <div>
-                <p className="text-xl sm:text-2xl font-bold text-destructive">{stats.overdue}</p>
-                <p className="text-xs text-muted-foreground">Atrasadas</p>
-              </div>
+            <div><p className="text-xl sm:text-2xl font-bold">{stats.total}</p><p className="text-xs text-muted-foreground">Pendentes</p></div>
+          </div>
+        </CardContent></Card>
+        <Card><CardContent className="p-3 sm:p-4">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg bg-destructive/10 flex items-center justify-center shrink-0">
+              <AlertCircle className="h-4 w-4 sm:h-5 sm:w-5 text-destructive" />
             </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-3 sm:p-4">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg bg-warning/10 flex items-center justify-center shrink-0">
-                <Bell className="h-4 w-4 sm:h-5 sm:w-5 text-warning" />
-              </div>
-              <div>
-                <p className="text-xl sm:text-2xl font-bold">{stats.today}</p>
-                <p className="text-xs text-muted-foreground">Para Hoje</p>
-              </div>
+            <div><p className="text-xl sm:text-2xl font-bold text-destructive">{stats.overdue}</p><p className="text-xs text-muted-foreground">Atrasadas</p></div>
+          </div>
+        </CardContent></Card>
+        <Card><CardContent className="p-3 sm:p-4">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg bg-warning/10 flex items-center justify-center shrink-0">
+              <Bell className="h-4 w-4 sm:h-5 sm:w-5 text-warning" />
             </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-3 sm:p-4">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg bg-success/10 flex items-center justify-center shrink-0">
-                <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 text-success" />
-              </div>
-              <div>
-                <p className="text-xl sm:text-2xl font-bold text-success">{stats.completed}</p>
-                <p className="text-xs text-muted-foreground">Concluídas</p>
-              </div>
+            <div><p className="text-xl sm:text-2xl font-bold">{stats.today}</p><p className="text-xs text-muted-foreground">Para Hoje</p></div>
+          </div>
+        </CardContent></Card>
+        <Card><CardContent className="p-3 sm:p-4">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg bg-success/10 flex items-center justify-center shrink-0">
+              <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 text-success" />
             </div>
-          </CardContent>
-        </Card>
+            <div><p className="text-xl sm:text-2xl font-bold text-success">{stats.completed}</p><p className="text-xs text-muted-foreground">Concluídas</p></div>
+          </div>
+        </CardContent></Card>
       </div>
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-2 sm:gap-3">
         <div className="relative flex-1 min-w-0 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar tarefas..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9"
-          />
+          <Input placeholder="Buscar tarefas..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9" />
         </div>
         <Select value={filterPriority} onValueChange={setFilterPriority}>
           <SelectTrigger className="w-full sm:w-[150px]">
@@ -315,57 +297,60 @@ export default function Tarefas() {
         </Select>
       </div>
 
-      {/* Tasks List */}
-      <Tabs defaultValue="pending" className="w-full">
-        <TabsList>
-          <TabsTrigger value="pending" className="text-xs sm:text-sm">
-            Pendentes ({stats.total})
-          </TabsTrigger>
-          <TabsTrigger value="completed" className="text-xs sm:text-sm">
-            Concluídas ({stats.completed})
-          </TabsTrigger>
-        </TabsList>
+      {/* Main content with calendar sidebar */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6">
+        <Tabs defaultValue="pending" className="w-full">
+          <TabsList>
+            <TabsTrigger value="pending" className="text-xs sm:text-sm">Pendentes ({stats.total})</TabsTrigger>
+            <TabsTrigger value="completed" className="text-xs sm:text-sm">Concluídas ({stats.completed})</TabsTrigger>
+          </TabsList>
 
-        <TabsContent value="pending" className="space-y-4 sm:space-y-6 mt-4 sm:mt-6">
-          {stats.total === 0 ? (
-            <Card>
-              <CardContent className="py-12 text-center">
+          <TabsContent value="pending" className="space-y-4 sm:space-y-6 mt-4 sm:mt-6">
+            {stats.total === 0 ? (
+              <Card><CardContent className="py-12 text-center">
                 <CheckCircle2 className="h-12 w-12 mx-auto text-success mb-4" />
                 <h3 className="font-medium text-lg">Tudo em dia!</h3>
                 <p className="text-muted-foreground mt-1">Você não tem tarefas pendentes</p>
-              </CardContent>
-            </Card>
-          ) : (
-            <>
-              <TaskSection title="Atrasadas" tasks={groupedTasks.overdue} icon={AlertCircle} className="text-destructive" />
-              <TaskSection title="Hoje" tasks={groupedTasks.today} icon={Bell} className="text-warning" />
-              <TaskSection title="Amanhã" tasks={groupedTasks.tomorrow} icon={Calendar} />
-              <TaskSection title="Esta Semana" tasks={groupedTasks.thisWeek} icon={Clock} />
-              <TaskSection title="Futuras" tasks={groupedTasks.later} icon={Calendar} className="text-muted-foreground" />
-            </>
-          )}
-        </TabsContent>
+              </CardContent></Card>
+            ) : (
+              <>
+                <TaskSection title="Atrasadas" tasks={groupedTasks.overdue} icon={AlertCircle} className="text-destructive" />
+                <TaskSection title="Hoje" tasks={groupedTasks.today} icon={Bell} className="text-warning" />
+                <TaskSection title="Amanhã" tasks={groupedTasks.tomorrow} icon={Calendar} />
+                <TaskSection title="Esta Semana" tasks={groupedTasks.thisWeek} icon={Clock} />
+                <TaskSection title="Futuras" tasks={groupedTasks.later} icon={Calendar} className="text-muted-foreground" />
+              </>
+            )}
+          </TabsContent>
 
-        <TabsContent value="completed" className="mt-4 sm:mt-6">
-          {groupedTasks.completed.length === 0 ? (
-            <Card>
-              <CardContent className="py-12 text-center">
+          <TabsContent value="completed" className="mt-4 sm:mt-6">
+            {groupedTasks.completed.length === 0 ? (
+              <Card><CardContent className="py-12 text-center">
                 <Clock4 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                 <h3 className="font-medium text-lg">Nenhuma tarefa concluída</h3>
                 <p className="text-muted-foreground mt-1">Complete algumas tarefas para vê-las aqui</p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-2">
-              {groupedTasks.completed.map(task => (
-                <TaskCard key={task.id} task={task} />
-              ))}
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
+              </CardContent></Card>
+            ) : (
+              <div className="space-y-2">
+                {groupedTasks.completed.map(task => <TaskCard key={task.id} task={task} />)}
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
 
-      <TaskDialog open={dialogOpen} onOpenChange={setDialogOpen} />
+        {/* Mini Calendar Sidebar */}
+        <div className="hidden lg:block">
+          <div className="sticky top-4">
+            <TaskCalendar
+              tasks={tasks}
+              selectedDate={calendarDate}
+              onSelectDate={setCalendarDate}
+            />
+          </div>
+        </div>
+      </div>
+
+      <TaskDialog open={dialogOpen} onOpenChange={handleDialogClose} editTask={editingTask} />
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { RevenueChart } from '@/components/dashboard/RevenueChart';
 import { LeadSourceChart } from '@/components/dashboard/LeadSourceChart';
 import { RecentActivities } from '@/components/dashboard/RecentActivities';
 import { TasksList } from '@/components/dashboard/TasksList';
+import { TaskCalendar } from '@/components/tasks/TaskCalendar';
 import { useOpportunities } from '@/hooks/useOpportunities';
 import { useInvoices } from '@/hooks/useInvoices';
 import { useCompanies } from '@/hooks/useCompanies';
@@ -17,6 +18,7 @@ import { Target, TrendingUp, DollarSign, Building2, Clock, CheckCircle2, Loader2
 
 export default function Dashboard() {
   const [selectedMemberId, setSelectedMemberId] = useState<string>('all');
+  const [calendarDate, setCalendarDate] = useState<Date | undefined>(undefined);
   
   const { data: opportunities = [], isLoading: loadingOpps } = useOpportunities();
   const { data: invoices = [], isLoading: loadingInvoices } = useInvoices();
@@ -204,10 +206,11 @@ export default function Dashboard() {
       </div>
 
       {/* Bottom Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <LeadSourceChart opportunities={filteredData.opportunities} />
         <RecentActivities activities={filteredData.activities} profiles={profiles} companies={companies} />
         <TasksList tasks={filteredData.tasks} profiles={profiles} companies={companies} />
+        <TaskCalendar tasks={filteredData.tasks} selectedDate={calendarDate} onSelectDate={setCalendarDate} compact />
       </div>
     </div>
   );
