@@ -6,6 +6,7 @@ import { RevenueChart } from '@/components/dashboard/RevenueChart';
 import { LeadSourceChart } from '@/components/dashboard/LeadSourceChart';
 import { RecentActivities } from '@/components/dashboard/RecentActivities';
 import { TasksList } from '@/components/dashboard/TasksList';
+import { TaskCalendar } from '@/components/tasks/TaskCalendar';
 import { useOpportunities } from '@/hooks/useOpportunities';
 import { useInvoices } from '@/hooks/useInvoices';
 import { useCompanies } from '@/hooks/useCompanies';
