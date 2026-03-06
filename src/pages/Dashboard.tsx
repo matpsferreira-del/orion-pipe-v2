@@ -206,10 +206,11 @@ export default function Dashboard() {
       </div>
 
       {/* Bottom Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <LeadSourceChart opportunities={filteredData.opportunities} />
         <RecentActivities activities={filteredData.activities} profiles={profiles} companies={companies} />
         <TasksList tasks={filteredData.tasks} profiles={profiles} companies={companies} />
+        <TaskCalendar tasks={filteredData.tasks} selectedDate={calendarDate} onSelectDate={setCalendarDate} compact />
       </div>
     </div>
   );
