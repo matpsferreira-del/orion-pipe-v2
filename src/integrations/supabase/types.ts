@@ -372,6 +372,126 @@ export type Database = {
           },
         ]
       }
+      cv_education: {
+        Row: {
+          created_at: string | null
+          degree: string | null
+          end_date: string | null
+          field_of_study: string | null
+          id: string
+          institution: string | null
+          party_id: string
+          start_date: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          degree?: string | null
+          end_date?: string | null
+          field_of_study?: string | null
+          id?: string
+          institution?: string | null
+          party_id: string
+          start_date?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          degree?: string | null
+          end_date?: string | null
+          field_of_study?: string | null
+          id?: string
+          institution?: string | null
+          party_id?: string
+          start_date?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cv_education_party_id_fkey"
+            columns: ["party_id"]
+            isOneToOne: false
+            referencedRelation: "party"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cv_experiences: {
+        Row: {
+          company: string | null
+          created_at: string | null
+          description: string | null
+          end_date: string | null
+          id: string
+          is_current: boolean | null
+          party_id: string
+          role: string | null
+          start_date: string | null
+        }
+        Insert: {
+          company?: string | null
+          created_at?: string | null
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          is_current?: boolean | null
+          party_id: string
+          role?: string | null
+          start_date?: string | null
+        }
+        Update: {
+          company?: string | null
+          created_at?: string | null
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          is_current?: boolean | null
+          party_id?: string
+          role?: string | null
+          start_date?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cv_experiences_party_id_fkey"
+            columns: ["party_id"]
+            isOneToOne: false
+            referencedRelation: "party"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cv_skills: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          id: string
+          level: string | null
+          party_id: string
+          skill: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          id?: string
+          level?: string | null
+          party_id: string
+          skill: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          id?: string
+          level?: string | null
+          party_id?: string
+          skill?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cv_skills_party_id_fkey"
+            columns: ["party_id"]
+            isOneToOne: false
+            referencedRelation: "party"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invoices: {
         Row: {
           cnpj_cliente: string
@@ -767,6 +887,8 @@ export type Database = {
           created_from: Database["public"]["Enums"]["party_created_from"]
           current_company: string | null
           current_title: string | null
+          cv_parse_status: string | null
+          cv_parsed_at: string | null
           email_norm: string | null
           email_raw: string | null
           full_name: string
@@ -775,11 +897,13 @@ export type Database = {
           linkedin_url: string | null
           merged_into_party_id: string | null
           notes: string | null
+          parsed_summary: string | null
           phone_e164: string | null
           phone_raw: string | null
           state: string | null
           status: Database["public"]["Enums"]["party_status"]
           tags: Json | null
+          total_exp_years: number | null
           updated_at: string
         }
         Insert: {
@@ -789,6 +913,8 @@ export type Database = {
           created_from: Database["public"]["Enums"]["party_created_from"]
           current_company?: string | null
           current_title?: string | null
+          cv_parse_status?: string | null
+          cv_parsed_at?: string | null
           email_norm?: string | null
           email_raw?: string | null
           full_name: string
@@ -797,11 +923,13 @@ export type Database = {
           linkedin_url?: string | null
           merged_into_party_id?: string | null
           notes?: string | null
+          parsed_summary?: string | null
           phone_e164?: string | null
           phone_raw?: string | null
           state?: string | null
           status?: Database["public"]["Enums"]["party_status"]
           tags?: Json | null
+          total_exp_years?: number | null
           updated_at?: string
         }
         Update: {
@@ -811,6 +939,8 @@ export type Database = {
           created_from?: Database["public"]["Enums"]["party_created_from"]
           current_company?: string | null
           current_title?: string | null
+          cv_parse_status?: string | null
+          cv_parsed_at?: string | null
           email_norm?: string | null
           email_raw?: string | null
           full_name?: string
@@ -819,11 +949,13 @@ export type Database = {
           linkedin_url?: string | null
           merged_into_party_id?: string | null
           notes?: string | null
+          parsed_summary?: string | null
           phone_e164?: string | null
           phone_raw?: string | null
           state?: string | null
           status?: Database["public"]["Enums"]["party_status"]
           tags?: Json | null
+          total_exp_years?: number | null
           updated_at?: string
         }
         Relationships: [
