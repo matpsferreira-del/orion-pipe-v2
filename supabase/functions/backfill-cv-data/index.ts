@@ -12,12 +12,9 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Site Orion (portal) client
+    // Site Orion (portal) client – uses publishable anon key
     const portalUrl = "https://eeazdhbvizaqwsdebgjg.supabase.co";
-    const portalKey = Deno.env.get("conexaocandidatura");
-    if (!portalKey) {
-      throw new Error("conexaocandidatura secret not configured");
-    }
+    const portalKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVlYXpkaGJ2aXphcXdzZGViZ2pnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE1MjAwNDQsImV4cCI6MjA4NzA5NjA0NH0.3CuZYhcgnF_q58XaZUtJec_1s3ZvvrNdpUOFkuHXmv8";
     const portal = createClient(portalUrl, portalKey);
 
     // CRM (this project) client
