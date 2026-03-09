@@ -11,12 +11,13 @@ import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { 
   Mail, Phone, Linkedin, Star, ExternalLink, 
-  CheckCircle, XCircle, UserMinus, DollarSign
+  CheckCircle, XCircle, UserMinus, DollarSign, FileText
 } from 'lucide-react';
 import { 
   ApplicationWithRelations, JobPipelineStage, 
   applicationStatusLabels, ApplicationStatus, sourceLabels 
 } from '@/types/ats';
+import { CandidateCVSection } from './CandidateCVSection';
 import { useUpdateApplication, useUpdateApplicationStatus, useUpdateApplicationStage } from '@/hooks/useApplications';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -115,7 +116,7 @@ export function CandidateDetailDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Detalhes do Candidato</DialogTitle>
         </DialogHeader>
@@ -305,6 +306,17 @@ export function CandidateDetailDialog({
               Salvar Dados
             </Button>
           </div>
+
+          {/* CV Data */}
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <FileText className="h-4 w-4 text-primary" />
+              <Label className="text-sm font-semibold">Dados do Currículo</Label>
+            </div>
+            <CandidateCVSection partyId={party?.id} />
+          </div>
+
+          <Separator />
 
           {/* Source & Date */}
           <div className="flex items-center justify-between text-xs text-muted-foreground">
