@@ -307,6 +307,17 @@ export function CandidateDetailDialog({
             </Button>
           </div>
 
+          {/* CV Data */}
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <FileText className="h-4 w-4 text-primary" />
+              <Label className="text-sm font-semibold">Dados do Currículo</Label>
+            </div>
+            <CandidateCVSection partyId={party?.id} />
+          </div>
+
+          <Separator />
+
           {/* Source & Date */}
           <div className="flex items-center justify-between text-xs text-muted-foreground">
             <span>Origem: {sourceLabels[application.source]}</span>
