@@ -9,3 +9,5 @@ project_id = "ocrsfcjiutvojzdfotou"
     verify_jwt = false
   [functions.extract-cv]
     verify_jwt = false
+  [functions.backfill-cv-data]
+    verify_jwt = false
