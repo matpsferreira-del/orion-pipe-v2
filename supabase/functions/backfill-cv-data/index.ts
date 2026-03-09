@@ -12,26 +12,26 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Site Orion (portal) client – uses publishable anon key
+    // Site Orion (portal) – publishable anon key
     const portalUrl = "https://eeazdhbvizaqwsdebgjg.supabase.co";
     const portalKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVlYXpkaGJ2aXphcXdzZGViZ2pnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE1MjAwNDQsImV4cCI6MjA4NzA5NjA0NH0.3CuZYhcgnF_q58XaZUtJec_1s3ZvvrNdpUOFkuHXmv8";
     const portal = createClient(portalUrl, portalKey);
 
-    // CRM (this project) client
+    // CRM (this project) – service role for writes
     const crmUrl = Deno.env.get("SUPABASE_URL")!;
     const crmKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const crm = createClient(crmUrl, crmKey);
 
-    // 1. Get all candidates from portal with parsed CV
-    const { data: candidates, error: candErr } = await portal
-      .from("candidates")
+    // 1. Get all applications from portal with parsed CV
+    const { data: apps, error: appErr } = await portal
+      .from("applications")
       .select("id, email, full_name, parsed_summary, total_exp_years, cv_parse_status")
       .eq("cv_parse_status", "done");
 
-    if (candErr) throw new Error(`Error fetching candidates: ${candErr.message}`);
-    if (!candidates || candidates.length === 0) {
+    if (appErr) throw new Error(`Error fetching applications: ${appErr.message}`);
+    if (!apps || apps.length === 0) {
       return new Response(
-        JSON.stringify({ message: "No candidates with parsed CVs found", synced: 0 }),
+        JSON.stringify({ message: "No applications with parsed CVs found", synced: 0 }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -39,11 +39,10 @@ Deno.serve(async (req) => {
     let synced = 0;
     const errors: string[] = [];
 
-    for (const cand of candidates) {
+    for (const app of apps) {
       try {
-        if (!cand.email) continue;
-
-        const emailLower = cand.email.toLowerCase().trim();
+        if (!app.email) continue;
+        const emailLower = app.email.toLowerCase().trim();
 
         // Find matching party in CRM
         const { data: party } = await crm
@@ -53,22 +52,21 @@ Deno.serve(async (req) => {
           .maybeSingle();
 
         if (!party?.id) continue;
-
         const partyId = party.id;
 
         // Update party metadata
         await crm.from("party").update({
-          parsed_summary: cand.parsed_summary || null,
-          total_exp_years: cand.total_exp_years || null,
+          parsed_summary: app.parsed_summary || null,
+          total_exp_years: app.total_exp_years || null,
           cv_parse_status: "done",
           cv_parsed_at: new Date().toISOString(),
         }).eq("id", partyId);
 
-        // Fetch CV data from portal
+        // Fetch CV data from portal (source_table = 'applications')
         const [expRes, skillRes, eduRes] = await Promise.all([
-          portal.from("cv_experiences").select("*").eq("source_id", cand.id).eq("source_table", "candidates"),
-          portal.from("cv_skills").select("*").eq("source_id", cand.id).eq("source_table", "candidates"),
-          portal.from("cv_education").select("*").eq("source_id", cand.id).eq("source_table", "candidates"),
+          portal.from("cv_experiences").select("*").eq("source_id", app.id).eq("source_table", "applications"),
+          portal.from("cv_skills").select("*").eq("source_id", app.id).eq("source_table", "applications"),
+          portal.from("cv_education").select("*").eq("source_id", app.id).eq("source_table", "applications"),
         ]);
 
         // Clear existing CV data in CRM for this party
@@ -121,14 +119,14 @@ Deno.serve(async (req) => {
 
         synced++;
       } catch (err) {
-        errors.push(`${cand.email}: ${err instanceof Error ? err.message : String(err)}`);
+        errors.push(`${app.email}: ${err instanceof Error ? err.message : String(err)}`);
       }
     }
 
     return new Response(
       JSON.stringify({
         message: `Backfill complete`,
-        total_candidates: candidates.length,
+        total_applications: apps.length,
         synced,
         errors: errors.length > 0 ? errors : undefined,
       }),
