@@ -11,12 +11,13 @@ import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { 
   Mail, Phone, Linkedin, Star, ExternalLink, 
-  CheckCircle, XCircle, UserMinus, DollarSign
+  CheckCircle, XCircle, UserMinus, DollarSign, FileText
 } from 'lucide-react';
 import { 
   ApplicationWithRelations, JobPipelineStage, 
   applicationStatusLabels, ApplicationStatus, sourceLabels 
 } from '@/types/ats';
+import { CandidateCVSection } from './CandidateCVSection';
 import { useUpdateApplication, useUpdateApplicationStatus, useUpdateApplicationStage } from '@/hooks/useApplications';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
