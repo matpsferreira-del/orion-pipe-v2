@@ -21,6 +21,7 @@ import ProposalGenerator from "./pages/ProposalGenerator";
 import RecrutamentoDashboard from "./pages/RecrutamentoDashboard";
 import MapeamentoVagas from "./pages/MapeamentoVagas";
 import ShortlistPresentation from "./pages/ShortlistPresentation";
+import PostGenerator from "./pages/PostGenerator";
 // @ts-ignore
 import FormatacaoCV from "./pages/FormatacaoCV";
 import Auth from "./pages/Auth";
