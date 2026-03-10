@@ -6,7 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CheckCircle, Loader2, Briefcase, User, Link as LinkIcon, Building, BadgeCheck } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { CheckCircle, Loader2, Briefcase, User, Link as LinkIcon, Building, BadgeCheck, Crosshair, ArrowRight } from 'lucide-react';
 
 export default function ChromeExtension() {
   const [searchParams] = useSearchParams();
@@ -45,7 +46,6 @@ export default function ChromeExtension() {
     mutationFn: async () => {
       if (!nome.trim() || !selectedJobId) throw new Error('Preencha todos os campos');
 
-      // 1. Resolve or create the party
       const { data: partyId, error: partyError } = await supabase.rpc('resolve_party', {
         p_full_name: nome.trim(),
         p_linkedin_url: linkedinUrl.trim() || null,
@@ -55,13 +55,11 @@ export default function ChromeExtension() {
       });
       if (partyError) throw partyError;
 
-      // 2. Ensure candidate role
       await supabase.rpc('ensure_party_role', {
         p_party_id: partyId,
         p_role: 'candidate' as const,
       });
 
-      // 3. Find the "Mapeado" stage for this job
       const { data: stages, error: stagesError } = await supabase
         .from('job_pipeline_stages')
         .select('id, name')
@@ -71,7 +69,6 @@ export default function ChromeExtension() {
       const mapeadoStage = stages?.find(s => s.name.toLowerCase() === 'mapeado');
       if (!mapeadoStage) throw new Error('Etapa "Mapeado" não encontrada nesta vaga. Crie a etapa primeiro.');
 
-      // 4. Insert application
       const { error: appError } = await supabase.from('applications').insert({
         job_id: selectedJobId,
         party_id: partyId,
@@ -86,129 +83,159 @@ export default function ChromeExtension() {
 
   if (saved) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <div className="text-center space-y-3">
-          <CheckCircle className="h-12 w-12 text-green-500 mx-auto" />
-          <h2 className="text-lg font-semibold text-foreground">Salvo com sucesso!</h2>
-          <p className="text-sm text-muted-foreground">
-            {nome} foi adicionado ao mapeamento da vaga.
-          </p>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              setSaved(false);
-              setSelectedJobId('');
-            }}
-          >
-            Salvar outro
-          </Button>
-        </div>
+      <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4">
+        <Card className="w-full max-w-md border-primary/20 shadow-lg">
+          <CardContent className="pt-10 pb-8 text-center space-y-4">
+            <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+              <CheckCircle className="h-8 w-8 text-primary" />
+            </div>
+            <h2 className="text-xl font-bold text-foreground">Candidato mapeado!</h2>
+            <p className="text-sm text-muted-foreground">
+              <span className="font-semibold text-foreground">{nome}</span> foi adicionado ao pipeline da vaga com sucesso.
+            </p>
+            <Button
+              variant="outline"
+              className="mt-2"
+              onClick={() => {
+                setSaved(false);
+                setSelectedJobId('');
+              }}
+            >
+              <ArrowRight className="h-4 w-4 mr-2" />
+              Mapear outro candidato
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      {/* Header */}
-      <div className="border-b px-4 py-3">
-        <h1 className="text-sm font-semibold text-foreground tracking-tight">Orion · Mapeamento</h1>
-      </div>
-
-      {/* Form */}
-      <div className="flex-1 p-4 space-y-5">
-        <div className="space-y-1.5">
-          <Label htmlFor="nome" className="text-xs font-medium flex items-center gap-1.5">
-            <User className="h-3.5 w-3.5 text-muted-foreground" />
-            Nome
-          </Label>
-          <Input
-            id="nome"
-            value={nome}
-            onChange={(e) => setNome(e.target.value)}
-            placeholder="Nome do candidato"
-            className="h-9 text-sm"
-          />
+    <div className="min-h-screen bg-muted/30 flex items-start justify-center p-4 md:p-8">
+      <div className="w-full max-w-lg space-y-6">
+        {/* Header */}
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">
+            <Crosshair className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-lg font-bold text-foreground tracking-tight">
+              Mapeamento de Candidatos
+            </h1>
+            <p className="text-xs text-muted-foreground">Adicione candidatos diretamente ao pipeline de uma vaga</p>
+          </div>
         </div>
 
-        <div className="space-y-1.5">
-          <Label htmlFor="linkedin" className="text-xs font-medium flex items-center gap-1.5">
-            <LinkIcon className="h-3.5 w-3.5 text-muted-foreground" />
-            URL do LinkedIn
-          </Label>
-          <Input
-            id="linkedin"
-            value={linkedinUrl}
-            onChange={(e) => setLinkedinUrl(e.target.value)}
-            placeholder="https://linkedin.com/in/..."
-            className="h-9 text-sm"
-          />
-        </div>
+        {/* Form Card */}
+        <Card className="shadow-sm border-border/60">
+          <CardContent className="p-5 md:p-6 space-y-5">
+            {/* Candidate Info Section */}
+            <div>
+              <p className="text-[11px] font-bold text-primary uppercase tracking-widest mb-4">Dados do Candidato</p>
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="nome" className="text-xs font-medium flex items-center gap-1.5">
+                    <User className="h-3.5 w-3.5 text-primary/60" />
+                    Nome Completo
+                  </Label>
+                  <Input
+                    id="nome"
+                    value={nome}
+                    onChange={(e) => setNome(e.target.value)}
+                    placeholder="Nome do candidato"
+                    className="h-10 text-sm"
+                  />
+                </div>
 
-        <div className="space-y-1.5">
-          <Label htmlFor="cargo" className="text-xs font-medium flex items-center gap-1.5">
-            <BadgeCheck className="h-3.5 w-3.5 text-muted-foreground" />
-            Cargo Atual
-          </Label>
-          <Input
-            id="cargo"
-            value={cargo}
-            onChange={(e) => setCargo(e.target.value)}
-            placeholder="Ex: Gerente Financeiro"
-            className="h-9 text-sm"
-          />
-        </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="linkedin" className="text-xs font-medium flex items-center gap-1.5">
+                    <LinkIcon className="h-3.5 w-3.5 text-primary/60" />
+                    URL do LinkedIn
+                  </Label>
+                  <Input
+                    id="linkedin"
+                    value={linkedinUrl}
+                    onChange={(e) => setLinkedinUrl(e.target.value)}
+                    placeholder="https://linkedin.com/in/..."
+                    className="h-10 text-sm"
+                  />
+                </div>
 
-        <div className="space-y-1.5">
-          <Label htmlFor="empresa" className="text-xs font-medium flex items-center gap-1.5">
-            <Building className="h-3.5 w-3.5 text-muted-foreground" />
-            Empresa Atual
-          </Label>
-          <Input
-            id="empresa"
-            value={empresaAtual}
-            onChange={(e) => setEmpresaAtual(e.target.value)}
-            placeholder="Ex: XP Inc"
-            className="h-9 text-sm"
-          />
-        </div>
-
-        <div className="space-y-1.5">
-          <Label className="text-xs font-medium flex items-center gap-1.5">
-            <Briefcase className="h-3.5 w-3.5 text-muted-foreground" />
-            Vaga
-          </Label>
-          {loadingJobs ? (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground py-2">
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              Carregando vagas...
-            </div>
-          ) : (
-            <Select value={selectedJobId} onValueChange={setSelectedJobId}>
-              <SelectTrigger className="h-9 text-sm">
-                <SelectValue placeholder="Selecione uma vaga" />
-              </SelectTrigger>
-              <SelectContent>
-                {jobs.map((job) => (
-                  <SelectItem key={job.id} value={job.id}>
-                    {job.job_code ? `#${job.job_code} · ` : ''}{job.title}
-                  </SelectItem>
-                ))}
-                {jobs.length === 0 && (
-                  <div className="px-2 py-3 text-xs text-muted-foreground text-center">
-                    Nenhuma vaga aberta
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="cargo" className="text-xs font-medium flex items-center gap-1.5">
+                      <BadgeCheck className="h-3.5 w-3.5 text-primary/60" />
+                      Cargo Atual
+                    </Label>
+                    <Input
+                      id="cargo"
+                      value={cargo}
+                      onChange={(e) => setCargo(e.target.value)}
+                      placeholder="Ex: Gerente Financeiro"
+                      className="h-10 text-sm"
+                    />
                   </div>
-                )}
-              </SelectContent>
-            </Select>
-          )}
-        </div>
-      </div>
 
-      {/* Footer */}
-      <div className="border-t p-4">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="empresa" className="text-xs font-medium flex items-center gap-1.5">
+                      <Building className="h-3.5 w-3.5 text-primary/60" />
+                      Empresa Atual
+                    </Label>
+                    <Input
+                      id="empresa"
+                      value={empresaAtual}
+                      onChange={(e) => setEmpresaAtual(e.target.value)}
+                      placeholder="Ex: XP Inc"
+                      className="h-10 text-sm"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Divider */}
+            <div className="border-t border-border/60" />
+
+            {/* Job Selection Section */}
+            <div>
+              <p className="text-[11px] font-bold text-primary uppercase tracking-widest mb-4">Vincular à Vaga</p>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium flex items-center gap-1.5">
+                  <Briefcase className="h-3.5 w-3.5 text-primary/60" />
+                  Vaga Aberta
+                </Label>
+                {loadingJobs ? (
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground py-3">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
+                    Carregando vagas...
+                  </div>
+                ) : (
+                  <Select value={selectedJobId} onValueChange={setSelectedJobId}>
+                    <SelectTrigger className="h-10 text-sm">
+                      <SelectValue placeholder="Selecione uma vaga" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {jobs.map((job) => (
+                        <SelectItem key={job.id} value={job.id}>
+                          {job.job_code ? `#${job.job_code} · ` : ''}{job.title}
+                        </SelectItem>
+                      ))}
+                      {jobs.length === 0 && (
+                        <div className="px-2 py-3 text-xs text-muted-foreground text-center">
+                          Nenhuma vaga aberta
+                        </div>
+                      )}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Submit */}
         <Button
-          className="w-full"
+          className="w-full h-11 text-sm font-semibold shadow-sm"
           disabled={!nome.trim() || !selectedJobId || saveMutation.isPending}
           onClick={() => saveMutation.mutate()}
         >
@@ -218,11 +245,15 @@ export default function ChromeExtension() {
               Salvando...
             </>
           ) : (
-            'Salvar no Mapeamento'
+            <>
+              <Crosshair className="h-4 w-4 mr-2" />
+              Salvar no Mapeamento
+            </>
           )}
         </Button>
+
         {saveMutation.isError && (
-          <p className="text-xs text-destructive mt-2 text-center">
+          <p className="text-xs text-destructive text-center -mt-3">
             {(saveMutation.error as Error).message}
           </p>
         )}
