@@ -79,6 +79,7 @@ const tabNavItems = {
     { to: '/faturamento', icon: Receipt, label: 'Faturamento' },
     { to: '/relatorios', icon: BarChart3, label: 'Relatórios' },
     { to: '/mapeamento-vagas', icon: Radar, label: 'Mapeamento de Vagas' },
+    { to: '/post-generator', icon: Share2, label: 'Gerador de Posts' },
   ],
   recrutamento: [
     { to: '/recrutamento', icon: LayoutDashboard, label: 'Dashboard' },
