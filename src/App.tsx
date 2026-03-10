@@ -21,6 +21,7 @@ import ProposalGenerator from "./pages/ProposalGenerator";
 import RecrutamentoDashboard from "./pages/RecrutamentoDashboard";
 import MapeamentoVagas from "./pages/MapeamentoVagas";
 import ShortlistPresentation from "./pages/ShortlistPresentation";
+import PostGenerator from "./pages/PostGenerator";
 // @ts-ignore
 import FormatacaoCV from "./pages/FormatacaoCV";
 import Auth from "./pages/Auth";
@@ -115,6 +116,7 @@ const App = () => (
               <Route path="/relatorios" element={<Relatorios />} />
               <Route path="/mapeamento-vagas" element={<MapeamentoVagas />} />
               <Route path="/equipe" element={<Equipe />} />
+              <Route path="/post-generator" element={<PostGenerator />} />
               <Route path="/configuracoes" element={<Configuracoes />} />
             </Route>
             <Route path="*" element={<NotFound />} />
