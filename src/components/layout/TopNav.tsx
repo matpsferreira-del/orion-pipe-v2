@@ -32,6 +32,7 @@ export const routeToTab: Record<string, TabType> = {
   '/relatorios': 'comercial',
   '/mapeamento-vagas': 'comercial',
   '/formatacao-cv': 'recrutamento',
+  '/chrome-extension': 'recrutamento',
   '/recrutamento': 'recrutamento',
   '/pessoas': 'recrutamento',
   '/vagas': 'recrutamento',
