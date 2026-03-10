@@ -86,6 +86,7 @@ const tabNavItems = {
     { to: '/pessoas', icon: UserCircle, label: 'Banco de Talentos' },
     { to: '/vagas', icon: Briefcase, label: 'Vagas' },
     { to: '/formatacao-cv', icon: FileText, label: 'Formatação de CV' },
+    { to: '/chrome-extension', icon: Radar, label: 'Extensão Chrome' },
   ],
   configuracoes: [
     { to: '/equipe', icon: Users, label: 'Equipe' },
