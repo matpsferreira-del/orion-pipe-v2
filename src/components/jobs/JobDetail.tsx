@@ -185,11 +185,38 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
   };
 
   const handleStatusChange = async (newStatus: 'open' | 'paused' | 'filled' | 'cancelled') => {
+    if (newStatus === 'filled') {
+      setShowClosingDialog(true);
+      return;
+    }
     try {
       await updateStatus.mutateAsync({ id: job.id, status: newStatus });
       toast.success(`Status atualizado para ${jobStatusLabels[newStatus]}`);
     } catch (error) {
       toast.error('Erro ao atualizar status');
+    }
+  };
+
+  const handleClosingConfirm = async (data: {
+    closingSalary: number | null;
+    closingCandidateId: string | null;
+    admissionDate: string | null;
+    closingNotes: string;
+  }) => {
+    try {
+      // Update job with closing info + status
+      await updateJob.mutateAsync({
+        id: job.id,
+        closing_salary: data.closingSalary,
+        closing_candidate_id: data.closingCandidateId,
+        admission_date: data.admissionDate,
+        closing_notes: data.closingNotes,
+      } as any);
+      await updateStatus.mutateAsync({ id: job.id, status: 'filled' });
+      setShowClosingDialog(false);
+      toast.success('Vaga marcada como preenchida!');
+    } catch {
+      toast.error('Erro ao fechar vaga');
     }
   };
 
