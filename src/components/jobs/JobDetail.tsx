@@ -20,6 +20,7 @@ import { CandidateListView } from './CandidateListView';
 import { AddCandidateDialog } from './AddCandidateDialog';
 import { LinkedInPostDialog } from './LinkedInPostDialog';
 import { CandidateDetailDialog } from './CandidateDetailDialog';
+import { OfferLetterPrompt } from './OfferLetterPrompt';
 import { BulkActionBar } from './BulkActionBar';
 import { ApplicationWithRelations } from '@/types/ats';
 import { AdvancedCandidateSearch, AdvancedFilters, emptyFilters } from './AdvancedCandidateSearch';
