@@ -708,6 +708,15 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
         onOpenChange={setShowLinkedInPost}
         job={job}
       />
+      {/* Job Closing Dialog */}
+      <JobClosingDialog
+        open={showClosingDialog}
+        onOpenChange={setShowClosingDialog}
+        onConfirm={handleClosingConfirm}
+        applications={applications}
+        stages={stages}
+        isPending={updateJob.isPending || updateStatus.isPending}
+      />
     </div>
   );
 }
