@@ -728,6 +728,14 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
         stages={stages}
         isPending={updateJob.isPending || updateStatus.isPending}
       />
+      {/* Offer Letter Prompt */}
+      <OfferLetterPrompt
+        open={!!offerLetterApp}
+        onOpenChange={(open) => { if (!open) setOfferLetterApp(null); }}
+        application={offerLetterApp}
+        jobTitle={job.title}
+        companyName={company?.nome_fantasia || ''}
+      />
     </div>
   );
 }
