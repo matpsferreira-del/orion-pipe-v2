@@ -26,6 +26,7 @@ import PostGenerator from "./pages/PostGenerator";
 import FormatacaoCV from "./pages/FormatacaoCV";
 import Auth from "./pages/Auth";
 import ChromeExtension from "./pages/ChromeExtension";
+import CartaOferta from "./pages/CartaOferta";
 import NotFound from "./pages/NotFound";
 import { Loader2 } from "lucide-react";
 
