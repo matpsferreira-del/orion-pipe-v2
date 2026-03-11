@@ -10,8 +10,9 @@ import {
   Globe, GlobeLock, Copy, ExternalLink, Image, FileText, Loader2, Download
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
-import { JobRow, useUpdateJobStatus, useJobStages, usePublishJob } from '@/hooks/useJobs';
+import { JobRow, useUpdateJobStatus, useUpdateJob, useJobStages, usePublishJob } from '@/hooks/useJobs';
 import { useApplicationsWithParties, useUpdateApplicationStage } from '@/hooks/useApplications';
+import { JobClosingDialog } from './JobClosingDialog';
 import { useCompanies } from '@/hooks/useCompanies';
 import { useProfiles } from '@/hooks/useProfiles';
 import { CandidateKanban } from './CandidateKanban';
