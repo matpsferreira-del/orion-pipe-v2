@@ -129,6 +129,7 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
   const mapeadoApps = useMemo(() => mapeadoStage ? filteredApplications.filter(a => a.stage_id === mapeadoStage.id) : [], [filteredApplications, mapeadoStage]);
   const nonMapeadoApps = useMemo(() => mapeadoStage ? filteredApplications.filter(a => a.stage_id !== mapeadoStage.id) : filteredApplications, [filteredApplications, mapeadoStage]);
   const updateStatus = useUpdateJobStatus();
+  const updateJob = useUpdateJob();
   const updateAppStage = useUpdateApplicationStage();
   const updateAppStatus = useUpdateApplicationStatus();
   const publishJob = usePublishJob();
