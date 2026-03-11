@@ -26,6 +26,7 @@ import PostGenerator from "./pages/PostGenerator";
 import FormatacaoCV from "./pages/FormatacaoCV";
 import Auth from "./pages/Auth";
 import ChromeExtension from "./pages/ChromeExtension";
+import CartaOferta from "./pages/CartaOferta";
 import NotFound from "./pages/NotFound";
 import { Loader2 } from "lucide-react";
 
@@ -117,6 +118,7 @@ const App = () => (
               <Route path="/mapeamento-vagas" element={<MapeamentoVagas />} />
               <Route path="/equipe" element={<Equipe />} />
               <Route path="/post-generator" element={<PostGenerator />} />
+              <Route path="/carta-oferta" element={<CartaOferta />} />
               <Route path="/configuracoes" element={<Configuracoes />} />
             </Route>
             <Route path="*" element={<NotFound />} />

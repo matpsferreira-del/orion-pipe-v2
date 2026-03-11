@@ -20,6 +20,7 @@ import { CandidateListView } from './CandidateListView';
 import { AddCandidateDialog } from './AddCandidateDialog';
 import { LinkedInPostDialog } from './LinkedInPostDialog';
 import { CandidateDetailDialog } from './CandidateDetailDialog';
+import { OfferLetterPrompt } from './OfferLetterPrompt';
 import { BulkActionBar } from './BulkActionBar';
 import { ApplicationWithRelations } from '@/types/ats';
 import { AdvancedCandidateSearch, AdvancedFilters, emptyFilters } from './AdvancedCandidateSearch';
@@ -43,6 +44,7 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
   const [selectedApplication, setSelectedApplication] = useState<ApplicationWithRelations | null>(null);
   const [showLinkedInPost, setShowLinkedInPost] = useState(false);
   const [showClosingDialog, setShowClosingDialog] = useState(false);
+  const [offerLetterApp, setOfferLetterApp] = useState<ApplicationWithRelations | null>(null);
   const [generatingShortlist, setGeneratingShortlist] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [advancedFilters, setAdvancedFilters] = useState<AdvancedFilters>(emptyFilters);
@@ -253,6 +255,15 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
         job_id: job.id 
       });
       toast.success('Candidato movido com sucesso');
+
+      // Check if moved to Fechamento stage
+      const fechamentoStage = stages.find(s => s.name.toLowerCase() === 'fechamento');
+      if (fechamentoStage && newStageId === fechamentoStage.id) {
+        const movedApp = applications.find(a => a.id === applicationId);
+        if (movedApp) {
+          setOfferLetterApp(movedApp);
+        }
+      }
     } catch (error) {
       toast.error('Erro ao mover candidato');
     }
@@ -716,6 +727,14 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
         applications={applications}
         stages={stages}
         isPending={updateJob.isPending || updateStatus.isPending}
+      />
+      {/* Offer Letter Prompt */}
+      <OfferLetterPrompt
+        open={!!offerLetterApp}
+        onOpenChange={(open) => { if (!open) setOfferLetterApp(null); }}
+        application={offerLetterApp}
+        jobTitle={job.title}
+        companyName={company?.nome_fantasia || ''}
       />
     </div>
   );
