@@ -10,8 +10,9 @@ import {
   Globe, GlobeLock, Copy, ExternalLink, Image, FileText, Loader2, Download
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
-import { JobRow, useUpdateJobStatus, useJobStages, usePublishJob } from '@/hooks/useJobs';
+import { JobRow, useUpdateJobStatus, useUpdateJob, useJobStages, usePublishJob } from '@/hooks/useJobs';
 import { useApplicationsWithParties, useUpdateApplicationStage } from '@/hooks/useApplications';
+import { JobClosingDialog } from './JobClosingDialog';
 import { useCompanies } from '@/hooks/useCompanies';
 import { useProfiles } from '@/hooks/useProfiles';
 import { CandidateKanban } from './CandidateKanban';
@@ -41,6 +42,7 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
   const [showAddCandidate, setShowAddCandidate] = useState(false);
   const [selectedApplication, setSelectedApplication] = useState<ApplicationWithRelations | null>(null);
   const [showLinkedInPost, setShowLinkedInPost] = useState(false);
+  const [showClosingDialog, setShowClosingDialog] = useState(false);
   const [generatingShortlist, setGeneratingShortlist] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [advancedFilters, setAdvancedFilters] = useState<AdvancedFilters>(emptyFilters);
@@ -127,6 +129,7 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
   const mapeadoApps = useMemo(() => mapeadoStage ? filteredApplications.filter(a => a.stage_id === mapeadoStage.id) : [], [filteredApplications, mapeadoStage]);
   const nonMapeadoApps = useMemo(() => mapeadoStage ? filteredApplications.filter(a => a.stage_id !== mapeadoStage.id) : filteredApplications, [filteredApplications, mapeadoStage]);
   const updateStatus = useUpdateJobStatus();
+  const updateJob = useUpdateJob();
   const updateAppStage = useUpdateApplicationStage();
   const updateAppStatus = useUpdateApplicationStatus();
   const publishJob = usePublishJob();
@@ -182,11 +185,38 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
   };
 
   const handleStatusChange = async (newStatus: 'open' | 'paused' | 'filled' | 'cancelled') => {
+    if (newStatus === 'filled') {
+      setShowClosingDialog(true);
+      return;
+    }
     try {
       await updateStatus.mutateAsync({ id: job.id, status: newStatus });
       toast.success(`Status atualizado para ${jobStatusLabels[newStatus]}`);
     } catch (error) {
       toast.error('Erro ao atualizar status');
+    }
+  };
+
+  const handleClosingConfirm = async (data: {
+    closingSalary: number | null;
+    closingCandidateId: string | null;
+    admissionDate: string | null;
+    closingNotes: string;
+  }) => {
+    try {
+      // Update job with closing info + status
+      await updateJob.mutateAsync({
+        id: job.id,
+        closing_salary: data.closingSalary,
+        closing_candidate_id: data.closingCandidateId,
+        admission_date: data.admissionDate,
+        closing_notes: data.closingNotes,
+      } as any);
+      await updateStatus.mutateAsync({ id: job.id, status: 'filled' });
+      setShowClosingDialog(false);
+      toast.success('Vaga marcada como preenchida!');
+    } catch {
+      toast.error('Erro ao fechar vaga');
     }
   };
 
@@ -677,6 +707,15 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
         open={showLinkedInPost}
         onOpenChange={setShowLinkedInPost}
         job={job}
+      />
+      {/* Job Closing Dialog */}
+      <JobClosingDialog
+        open={showClosingDialog}
+        onOpenChange={setShowClosingDialog}
+        onConfirm={handleClosingConfirm}
+        applications={applications}
+        stages={stages}
+        isPending={updateJob.isPending || updateStatus.isPending}
       />
     </div>
   );

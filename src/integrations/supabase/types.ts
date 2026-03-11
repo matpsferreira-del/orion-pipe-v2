@@ -625,7 +625,11 @@ export type Database = {
       }
       jobs: {
         Row: {
+          admission_date: string | null
           area: string | null
+          closing_candidate_id: string | null
+          closing_notes: string | null
+          closing_salary: number | null
           company_id: string
           contact_id: string | null
           created_at: string
@@ -650,7 +654,11 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          admission_date?: string | null
           area?: string | null
+          closing_candidate_id?: string | null
+          closing_notes?: string | null
+          closing_salary?: number | null
           company_id: string
           contact_id?: string | null
           created_at?: string
@@ -675,7 +683,11 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          admission_date?: string | null
           area?: string | null
+          closing_candidate_id?: string | null
+          closing_notes?: string | null
+          closing_salary?: number | null
           company_id?: string
           contact_id?: string | null
           created_at?: string
@@ -700,6 +712,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "jobs_closing_candidate_id_fkey"
+            columns: ["closing_candidate_id"]
+            isOneToOne: false
+            referencedRelation: "party"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "jobs_company_id_fkey"
             columns: ["company_id"]
