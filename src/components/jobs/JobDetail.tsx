@@ -255,6 +255,15 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
         job_id: job.id 
       });
       toast.success('Candidato movido com sucesso');
+
+      // Check if moved to Fechamento stage
+      const fechamentoStage = stages.find(s => s.name.toLowerCase() === 'fechamento');
+      if (fechamentoStage && newStageId === fechamentoStage.id) {
+        const movedApp = applications.find(a => a.id === applicationId);
+        if (movedApp) {
+          setOfferLetterApp(movedApp);
+        }
+      }
     } catch (error) {
       toast.error('Erro ao mover candidato');
     }
