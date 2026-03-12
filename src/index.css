@@ -238,6 +238,65 @@
 }
 
 @layer utilities {
+  /* Defensive reset: avoid third-party CSS overriding Tailwind utility classes in production */
+  #root .flex {
+    display: flex !important;
+    justify-content: flex-start !important;
+    align-items: stretch !important;
+  }
+
+  #root .inline-flex {
+    display: inline-flex !important;
+  }
+
+  #root .flex-row {
+    flex-direction: row !important;
+  }
+
+  #root .flex-col {
+    flex-direction: column !important;
+  }
+
+  #root .flex-wrap {
+    flex-wrap: wrap !important;
+  }
+
+  #root .items-start {
+    align-items: flex-start !important;
+  }
+
+  #root .items-center {
+    align-items: center !important;
+  }
+
+  #root .items-end {
+    align-items: flex-end !important;
+  }
+
+  #root .justify-start {
+    justify-content: flex-start !important;
+  }
+
+  #root .justify-center {
+    justify-content: center !important;
+  }
+
+  #root .justify-between {
+    justify-content: space-between !important;
+  }
+
+  #root .justify-end {
+    justify-content: flex-end !important;
+  }
+
+  #root .text-left {
+    text-align: left !important;
+  }
+
+  #root .text-center {
+    text-align: center !important;
+  }
+
   .gradient-primary {
     background: var(--gradient-primary);
   }
