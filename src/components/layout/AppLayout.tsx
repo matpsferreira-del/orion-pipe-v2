@@ -17,7 +17,7 @@ export function AppLayout() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen w-full bg-background">
+    <div className="flex flex-col min-h-screen w-full bg-background text-left">
       <TopNav activeTab={activeTab} onTabChange={setActiveTab} onMenuToggle={() => setSidebarOpen(!sidebarOpen)} />
       <div className="flex flex-1 overflow-hidden relative">
         {/* Mobile backdrop */}
@@ -32,7 +32,7 @@ export function AppLayout() {
           mobileOpen={sidebarOpen}
           onMobileClose={() => setSidebarOpen(false)}
         />
-        <main className="flex-1 overflow-auto">
+        <main className="flex-1 overflow-auto w-full text-left">
           <Outlet />
         </main>
       </div>
