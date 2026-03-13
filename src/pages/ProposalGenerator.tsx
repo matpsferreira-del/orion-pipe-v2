@@ -37,6 +37,9 @@ export default function ProposalGenerator() {
   const [exclusividade, setExclusividade] = useState('com exclusividade no processo');
   const [garantia, setGarantia] = useState('30 dias');
   const [fee, setFee] = useState('100%');
+  const [feeModel, setFeeModel] = useState<'salario_mensal' | 'remuneracao_anual'>('salario_mensal');
+  const [feePercentual, setFeePercentual] = useState('20%');
+  const [contractTypeProposal, setContractTypeProposal] = useState<'CLT' | 'PJ'>('CLT');
   const [paymentModel, setPaymentModel] = useState('sucesso');
   const [retainerType, setRetainerType] = useState('3x');
   const [feeP1, setFeeP1] = useState('30%');
