@@ -309,48 +309,118 @@ export default function ProposalGenerator() {
 
           <div className="space-y-3">
             <div>
-              <label className="text-xs text-slate-400 mb-1 block">Honorário Total (Base)</label>
-              <div className="flex items-center gap-2">
-                <input value={fee} onChange={(e) => setFee(e.target.value)} className="w-24 bg-slate-900 border border-cyan-700/50 rounded-lg p-3 text-white font-bold focus:border-cyan-500 focus:outline-none text-sm text-center shadow-inner" />
-                <span className="text-slate-400 text-xs">da remuneração</span>
-              </div>
-            </div>
-
-            <div>
-              <label className="text-xs text-slate-400 mb-1 block">Modelo de Pagamento</label>
-              <select value={paymentModel} onChange={(e) => setPaymentModel(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-white focus:border-cyan-500 focus:outline-none text-sm cursor-pointer appearance-none shadow-inner">
-                <option value="sucesso">100% no Sucesso</option>
-                <option value="retainer">Retainer (Parcelado)</option>
+              <label className="text-xs text-slate-400 mb-1 block">Modelo de Honorários</label>
+              <select value={feeModel} onChange={(e) => setFeeModel(e.target.value as 'salario_mensal' | 'remuneracao_anual')} className="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-white focus:border-cyan-500 focus:outline-none text-sm cursor-pointer appearance-none shadow-inner">
+                <option value="salario_mensal">Taxa sobre Salário Mensal</option>
+                <option value="remuneracao_anual">Taxa sobre Remuneração Anual</option>
               </select>
             </div>
 
-            {paymentModel === 'retainer' &&
-            <div className="bg-slate-800/50 rounded-lg p-3 space-y-3 border border-slate-700/50">
+            {feeModel === 'salario_mensal' ? (
+              <>
                 <div>
-                  <label className="text-xs text-slate-400 mb-1 block">Qtd. de Parcelas</label>
-                  <select value={retainerType} onChange={(e) => handleRetainerChange(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-md p-2 text-white focus:border-cyan-500 focus:outline-none text-xs appearance-none cursor-pointer">
-                    <option value="3x">3x (Upfront, Shortlist, Sucesso)</option>
-                    <option value="2x">2x (Upfront, Sucesso)</option>
+                  <label className="text-xs text-slate-400 mb-1 block">Honorário Total (Base)</label>
+                  <div className="flex items-center gap-2">
+                    <input value={fee} onChange={(e) => setFee(e.target.value)} className="w-24 bg-slate-900 border border-cyan-700/50 rounded-lg p-3 text-white font-bold focus:border-cyan-500 focus:outline-none text-sm text-center shadow-inner" />
+                    <span className="text-slate-400 text-xs">da remuneração mensal</span>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs text-slate-400 mb-1 block">Modelo de Pagamento</label>
+                  <select value={paymentModel} onChange={(e) => setPaymentModel(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-white focus:border-cyan-500 focus:outline-none text-sm cursor-pointer appearance-none shadow-inner">
+                    <option value="sucesso">100% no Sucesso</option>
+                    <option value="retainer">Retainer (Parcelado)</option>
                   </select>
                 </div>
-                <div className="flex gap-2">
-                  <div className="flex-1">
-                    <label className="text-[10px] text-slate-500 block mb-1">Upfront</label>
-                    <input value={feeP1} onChange={(e) => setFeeP1(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-md p-2 text-cyan-400 text-center text-xs font-bold" />
-                  </div>
-                  {retainerType === '3x' &&
-                <div className="flex-1">
-                      <label className="text-[10px] text-slate-500 block mb-1">Shortlist</label>
-                      <input value={feeP2} onChange={(e) => setFeeP2(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-md p-2 text-cyan-400 text-center text-xs font-bold" />
+
+                {paymentModel === 'retainer' &&
+                <div className="bg-slate-800/50 rounded-lg p-3 space-y-3 border border-slate-700/50">
+                    <div>
+                      <label className="text-xs text-slate-400 mb-1 block">Qtd. de Parcelas</label>
+                      <select value={retainerType} onChange={(e) => handleRetainerChange(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-md p-2 text-white focus:border-cyan-500 focus:outline-none text-xs appearance-none cursor-pointer">
+                        <option value="3x">3x (Upfront, Shortlist, Sucesso)</option>
+                        <option value="2x">2x (Upfront, Sucesso)</option>
+                      </select>
                     </div>
+                    <div className="flex gap-2">
+                      <div className="flex-1">
+                        <label className="text-[10px] text-slate-500 block mb-1">Upfront</label>
+                        <input value={feeP1} onChange={(e) => setFeeP1(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-md p-2 text-cyan-400 text-center text-xs font-bold" />
+                      </div>
+                      {retainerType === '3x' &&
+                    <div className="flex-1">
+                          <label className="text-[10px] text-slate-500 block mb-1">Shortlist</label>
+                          <input value={feeP2} onChange={(e) => setFeeP2(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-md p-2 text-cyan-400 text-center text-xs font-bold" />
+                        </div>
+                    }
+                      <div className="flex-1">
+                        <label className="text-[10px] text-slate-500 block mb-1">Sucesso</label>
+                        <input value={feeP3} onChange={(e) => setFeeP3(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-md p-2 text-cyan-400 text-center text-xs font-bold" />
+                      </div>
+                    </div>
+                  </div>
                 }
-                  <div className="flex-1">
-                    <label className="text-[10px] text-slate-500 block mb-1">Sucesso</label>
-                    <input value={feeP3} onChange={(e) => setFeeP3(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-md p-2 text-cyan-400 text-center text-xs font-bold" />
+              </>
+            ) : (
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs text-slate-400 mb-1 block">Fee (%)</label>
+                  <div className="flex items-center gap-2">
+                    <input value={feePercentual} onChange={(e) => setFeePercentual(e.target.value)} className="w-24 bg-slate-900 border border-cyan-700/50 rounded-lg p-3 text-white font-bold focus:border-cyan-500 focus:outline-none text-sm text-center shadow-inner" />
+                    <span className="text-slate-400 text-xs">da remuneração anual</span>
                   </div>
                 </div>
+                <div>
+                  <label className="text-xs text-slate-400 mb-1 block">Tipo de Contrato</label>
+                  <select value={contractTypeProposal} onChange={(e) => setContractTypeProposal(e.target.value as 'CLT' | 'PJ')} className="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-white focus:border-cyan-500 focus:outline-none text-sm cursor-pointer appearance-none shadow-inner">
+                    <option value="CLT">CLT (13,33 salários)</option>
+                    <option value="PJ">PJ (12 salários)</option>
+                  </select>
+                </div>
+                <div className="bg-slate-800/50 rounded-lg p-3 border border-slate-700/50">
+                  <p className="text-[10px] text-slate-400 leading-relaxed">
+                    <strong className="text-cyan-400">Fórmula:</strong> {feePercentual} × (Remuneração Mensal + Bônus Anual) × {contractTypeProposal === 'CLT' ? '13,33' : '12'}
+                  </p>
+                </div>
+
+                <div>
+                  <label className="text-xs text-slate-400 mb-1 block">Modelo de Pagamento</label>
+                  <select value={paymentModel} onChange={(e) => setPaymentModel(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-white focus:border-cyan-500 focus:outline-none text-sm cursor-pointer appearance-none shadow-inner">
+                    <option value="sucesso">100% no Sucesso</option>
+                    <option value="retainer">Retainer (Parcelado)</option>
+                  </select>
+                </div>
+
+                {paymentModel === 'retainer' &&
+                <div className="bg-slate-800/50 rounded-lg p-3 space-y-3 border border-slate-700/50">
+                    <div>
+                      <label className="text-xs text-slate-400 mb-1 block">Qtd. de Parcelas</label>
+                      <select value={retainerType} onChange={(e) => handleRetainerChange(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-md p-2 text-white focus:border-cyan-500 focus:outline-none text-xs appearance-none cursor-pointer">
+                        <option value="3x">3x (Upfront, Shortlist, Sucesso)</option>
+                        <option value="2x">2x (Upfront, Sucesso)</option>
+                      </select>
+                    </div>
+                    <div className="flex gap-2">
+                      <div className="flex-1">
+                        <label className="text-[10px] text-slate-500 block mb-1">Upfront</label>
+                        <input value={feeP1} onChange={(e) => setFeeP1(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-md p-2 text-cyan-400 text-center text-xs font-bold" />
+                      </div>
+                      {retainerType === '3x' &&
+                    <div className="flex-1">
+                          <label className="text-[10px] text-slate-500 block mb-1">Shortlist</label>
+                          <input value={feeP2} onChange={(e) => setFeeP2(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-md p-2 text-cyan-400 text-center text-xs font-bold" />
+                        </div>
+                    }
+                      <div className="flex-1">
+                        <label className="text-[10px] text-slate-500 block mb-1">Sucesso</label>
+                        <input value={feeP3} onChange={(e) => setFeeP3(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-md p-2 text-cyan-400 text-center text-xs font-bold" />
+                      </div>
+                    </div>
+                  </div>
+                }
               </div>
-            }
+            )}
           </div>
         </div>
 
