@@ -37,6 +37,9 @@ export default function ProposalGenerator() {
   const [exclusividade, setExclusividade] = useState('com exclusividade no processo');
   const [garantia, setGarantia] = useState('30 dias');
   const [fee, setFee] = useState('100%');
+  const [feeModel, setFeeModel] = useState<'salario_mensal' | 'remuneracao_anual'>('salario_mensal');
+  const [feePercentual, setFeePercentual] = useState('20%');
+  const [contractTypeProposal, setContractTypeProposal] = useState<'CLT' | 'PJ'>('CLT');
   const [paymentModel, setPaymentModel] = useState('sucesso');
   const [retainerType, setRetainerType] = useState('3x');
   const [feeP1, setFeeP1] = useState('30%');
@@ -306,48 +309,118 @@ export default function ProposalGenerator() {
 
           <div className="space-y-3">
             <div>
-              <label className="text-xs text-slate-400 mb-1 block">Honorário Total (Base)</label>
-              <div className="flex items-center gap-2">
-                <input value={fee} onChange={(e) => setFee(e.target.value)} className="w-24 bg-slate-900 border border-cyan-700/50 rounded-lg p-3 text-white font-bold focus:border-cyan-500 focus:outline-none text-sm text-center shadow-inner" />
-                <span className="text-slate-400 text-xs">da remuneração</span>
-              </div>
-            </div>
-
-            <div>
-              <label className="text-xs text-slate-400 mb-1 block">Modelo de Pagamento</label>
-              <select value={paymentModel} onChange={(e) => setPaymentModel(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-white focus:border-cyan-500 focus:outline-none text-sm cursor-pointer appearance-none shadow-inner">
-                <option value="sucesso">100% no Sucesso</option>
-                <option value="retainer">Retainer (Parcelado)</option>
+              <label className="text-xs text-slate-400 mb-1 block">Modelo de Honorários</label>
+              <select value={feeModel} onChange={(e) => setFeeModel(e.target.value as 'salario_mensal' | 'remuneracao_anual')} className="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-white focus:border-cyan-500 focus:outline-none text-sm cursor-pointer appearance-none shadow-inner">
+                <option value="salario_mensal">Taxa sobre Salário Mensal</option>
+                <option value="remuneracao_anual">Taxa sobre Remuneração Anual</option>
               </select>
             </div>
 
-            {paymentModel === 'retainer' &&
-            <div className="bg-slate-800/50 rounded-lg p-3 space-y-3 border border-slate-700/50">
+            {feeModel === 'salario_mensal' ? (
+              <>
                 <div>
-                  <label className="text-xs text-slate-400 mb-1 block">Qtd. de Parcelas</label>
-                  <select value={retainerType} onChange={(e) => handleRetainerChange(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-md p-2 text-white focus:border-cyan-500 focus:outline-none text-xs appearance-none cursor-pointer">
-                    <option value="3x">3x (Upfront, Shortlist, Sucesso)</option>
-                    <option value="2x">2x (Upfront, Sucesso)</option>
+                  <label className="text-xs text-slate-400 mb-1 block">Honorário Total (Base)</label>
+                  <div className="flex items-center gap-2">
+                    <input value={fee} onChange={(e) => setFee(e.target.value)} className="w-24 bg-slate-900 border border-cyan-700/50 rounded-lg p-3 text-white font-bold focus:border-cyan-500 focus:outline-none text-sm text-center shadow-inner" />
+                    <span className="text-slate-400 text-xs">da remuneração mensal</span>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs text-slate-400 mb-1 block">Modelo de Pagamento</label>
+                  <select value={paymentModel} onChange={(e) => setPaymentModel(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-white focus:border-cyan-500 focus:outline-none text-sm cursor-pointer appearance-none shadow-inner">
+                    <option value="sucesso">100% no Sucesso</option>
+                    <option value="retainer">Retainer (Parcelado)</option>
                   </select>
                 </div>
-                <div className="flex gap-2">
-                  <div className="flex-1">
-                    <label className="text-[10px] text-slate-500 block mb-1">Upfront</label>
-                    <input value={feeP1} onChange={(e) => setFeeP1(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-md p-2 text-cyan-400 text-center text-xs font-bold" />
-                  </div>
-                  {retainerType === '3x' &&
-                <div className="flex-1">
-                      <label className="text-[10px] text-slate-500 block mb-1">Shortlist</label>
-                      <input value={feeP2} onChange={(e) => setFeeP2(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-md p-2 text-cyan-400 text-center text-xs font-bold" />
+
+                {paymentModel === 'retainer' &&
+                <div className="bg-slate-800/50 rounded-lg p-3 space-y-3 border border-slate-700/50">
+                    <div>
+                      <label className="text-xs text-slate-400 mb-1 block">Qtd. de Parcelas</label>
+                      <select value={retainerType} onChange={(e) => handleRetainerChange(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-md p-2 text-white focus:border-cyan-500 focus:outline-none text-xs appearance-none cursor-pointer">
+                        <option value="3x">3x (Upfront, Shortlist, Sucesso)</option>
+                        <option value="2x">2x (Upfront, Sucesso)</option>
+                      </select>
                     </div>
+                    <div className="flex gap-2">
+                      <div className="flex-1">
+                        <label className="text-[10px] text-slate-500 block mb-1">Upfront</label>
+                        <input value={feeP1} onChange={(e) => setFeeP1(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-md p-2 text-cyan-400 text-center text-xs font-bold" />
+                      </div>
+                      {retainerType === '3x' &&
+                    <div className="flex-1">
+                          <label className="text-[10px] text-slate-500 block mb-1">Shortlist</label>
+                          <input value={feeP2} onChange={(e) => setFeeP2(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-md p-2 text-cyan-400 text-center text-xs font-bold" />
+                        </div>
+                    }
+                      <div className="flex-1">
+                        <label className="text-[10px] text-slate-500 block mb-1">Sucesso</label>
+                        <input value={feeP3} onChange={(e) => setFeeP3(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-md p-2 text-cyan-400 text-center text-xs font-bold" />
+                      </div>
+                    </div>
+                  </div>
                 }
-                  <div className="flex-1">
-                    <label className="text-[10px] text-slate-500 block mb-1">Sucesso</label>
-                    <input value={feeP3} onChange={(e) => setFeeP3(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-md p-2 text-cyan-400 text-center text-xs font-bold" />
+              </>
+            ) : (
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs text-slate-400 mb-1 block">Fee (%)</label>
+                  <div className="flex items-center gap-2">
+                    <input value={feePercentual} onChange={(e) => setFeePercentual(e.target.value)} className="w-24 bg-slate-900 border border-cyan-700/50 rounded-lg p-3 text-white font-bold focus:border-cyan-500 focus:outline-none text-sm text-center shadow-inner" />
+                    <span className="text-slate-400 text-xs">da remuneração anual</span>
                   </div>
                 </div>
+                <div>
+                  <label className="text-xs text-slate-400 mb-1 block">Tipo de Contrato</label>
+                  <select value={contractTypeProposal} onChange={(e) => setContractTypeProposal(e.target.value as 'CLT' | 'PJ')} className="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-white focus:border-cyan-500 focus:outline-none text-sm cursor-pointer appearance-none shadow-inner">
+                    <option value="CLT">CLT (13,33 salários)</option>
+                    <option value="PJ">PJ (12 salários)</option>
+                  </select>
+                </div>
+                <div className="bg-slate-800/50 rounded-lg p-3 border border-slate-700/50">
+                  <p className="text-[10px] text-slate-400 leading-relaxed">
+                    <strong className="text-cyan-400">Fórmula:</strong> {feePercentual} × (Remuneração Mensal + Bônus Anual) × {contractTypeProposal === 'CLT' ? '13,33' : '12'}
+                  </p>
+                </div>
+
+                <div>
+                  <label className="text-xs text-slate-400 mb-1 block">Modelo de Pagamento</label>
+                  <select value={paymentModel} onChange={(e) => setPaymentModel(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-white focus:border-cyan-500 focus:outline-none text-sm cursor-pointer appearance-none shadow-inner">
+                    <option value="sucesso">100% no Sucesso</option>
+                    <option value="retainer">Retainer (Parcelado)</option>
+                  </select>
+                </div>
+
+                {paymentModel === 'retainer' &&
+                <div className="bg-slate-800/50 rounded-lg p-3 space-y-3 border border-slate-700/50">
+                    <div>
+                      <label className="text-xs text-slate-400 mb-1 block">Qtd. de Parcelas</label>
+                      <select value={retainerType} onChange={(e) => handleRetainerChange(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-md p-2 text-white focus:border-cyan-500 focus:outline-none text-xs appearance-none cursor-pointer">
+                        <option value="3x">3x (Upfront, Shortlist, Sucesso)</option>
+                        <option value="2x">2x (Upfront, Sucesso)</option>
+                      </select>
+                    </div>
+                    <div className="flex gap-2">
+                      <div className="flex-1">
+                        <label className="text-[10px] text-slate-500 block mb-1">Upfront</label>
+                        <input value={feeP1} onChange={(e) => setFeeP1(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-md p-2 text-cyan-400 text-center text-xs font-bold" />
+                      </div>
+                      {retainerType === '3x' &&
+                    <div className="flex-1">
+                          <label className="text-[10px] text-slate-500 block mb-1">Shortlist</label>
+                          <input value={feeP2} onChange={(e) => setFeeP2(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-md p-2 text-cyan-400 text-center text-xs font-bold" />
+                        </div>
+                    }
+                      <div className="flex-1">
+                        <label className="text-[10px] text-slate-500 block mb-1">Sucesso</label>
+                        <input value={feeP3} onChange={(e) => setFeeP3(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-md p-2 text-cyan-400 text-center text-xs font-bold" />
+                      </div>
+                    </div>
+                  </div>
+                }
               </div>
-            }
+            )}
           </div>
         </div>
 
@@ -514,48 +587,124 @@ export default function ProposalGenerator() {
                 <span style={{ color: '#06b6d4' }}>Investimento</span>
               </h2>
               <div className="flex-1 flex items-center">
-                {paymentModel === 'sucesso' ?
-                <div className="flex gap-10 w-full items-center highlight-numbers-layout">
-                    <div>
-                      <p className="text-7xl font-black text-cyan-400">{fee}</p>
-                      <p className="text-slate-400 mt-2 text-lg">Honorário no Sucesso</p>
-                    </div>
-                    <div className="flex-1 space-y-4">
-                      <h3 className="text-2xl font-bold text-white">Sem Custos Antecipados</h3>
-                      <p className="text-slate-300 leading-relaxed">Nossa parceria é pautada estritamente no resultado. O investimento ocorre <strong className="text-white">apenas em caso de sucesso</strong> na contratação.</p>
-                      <p className="text-slate-300 leading-relaxed">O valor do honorário é equivalente a <strong className="text-white">{fee} da remuneração mensal bruta</strong> acordada com o profissional escolhido.</p>
-                      <div className="border-t border-slate-700/50 pt-4 mt-4">
-                        <p className="text-slate-400 text-sm">* <strong className="text-slate-300">Garantia de Reposição de {garantia}:</strong> O processo não termina na assinatura. Refazemos todo o trabalho de hunting sem nenhum custo adicional caso haja saída ou desligamento do profissional neste período inicial.</p>
+                {feeModel === 'remuneracao_anual' ? (
+                  /* Annual Remuneration Model */
+                  paymentModel === 'sucesso' ? (
+                    <div className="flex gap-10 w-full items-center highlight-numbers-layout">
+                      <div>
+                        <p className="text-7xl font-black text-cyan-400">{feePercentual}</p>
+                        <p className="text-slate-400 mt-2 text-lg">Fee sobre Remuneração Anual</p>
                       </div>
-                    </div>
-                  </div> :
-
-                <div className="w-full space-y-6">
-                    <h3 className="text-2xl font-bold text-white">Comprometimento Compartilhado</h3>
-                    <div className={`grid ${retainerType === '3x' ? 'grid-cols-3' : 'grid-cols-2'} gap-6`}>
-                      <div className="bg-slate-800/50 p-6 rounded-xl border border-cyan-700/30 text-center">
-                        <p className="text-4xl font-black text-cyan-400">{feeP1}</p>
-                        <p className="text-white font-bold mt-2">Upfront (Kick-off)</p>
-                        <p className="text-slate-400 text-sm mt-2">Faturamento no início do projeto, garantindo a dedicação exclusiva da equipe.</p>
-                      </div>
-                      {retainerType === '3x' &&
-                    <div className="bg-slate-800/50 p-6 rounded-xl border border-slate-700/50 text-center">
-                          <p className="text-4xl font-black text-cyan-400">{feeP2}</p>
-                          <p className="text-white font-bold mt-2">Shortlist</p>
-                          <p className="text-slate-400 text-sm mt-2">Apresentação dos finalistas validados técnica e culturalmente.</p>
+                      <div className="flex-1 space-y-4">
+                        <h3 className="text-2xl font-bold text-white">Taxa sobre Remuneração Anual</h3>
+                        <p className="text-slate-300 leading-relaxed">O honorário é calculado como uma <strong className="text-white">taxa percentual sobre a remuneração anual total</strong> do colaborador contratado.</p>
+                        <div className="bg-slate-800/50 rounded-xl p-5 border border-cyan-700/30">
+                          <p className="text-cyan-400 font-bold text-sm mb-2">📐 Fórmula de Cálculo</p>
+                          <p className="text-white font-mono text-lg">
+                            <span className="text-cyan-400">{feePercentual}</span>
+                            <span className="text-slate-400"> × </span>
+                            (Remuneração Mensal + Bônus Anual)
+                            <span className="text-slate-400"> × </span>
+                            <span className="text-cyan-400">{contractTypeProposal === 'CLT' ? '13,33' : '12'}</span>
+                          </p>
+                          <p className="text-slate-400 text-xs mt-2">
+                            {contractTypeProposal === 'CLT'
+                              ? 'Multiplicador 13,33 contempla 13º salário e férias proporcionais (regime CLT).'
+                              : 'Multiplicador 12 referente aos 12 meses do contrato (regime PJ).'}
+                          </p>
                         </div>
-                    }
-                      <div className="bg-slate-800/50 p-6 rounded-xl border border-slate-700/50 text-center">
-                        <p className="text-4xl font-black text-cyan-400">{feeP3}</p>
-                        <p className="text-white font-bold mt-2">Success Fee</p>
-                        <p className="text-slate-400 text-sm mt-2">Faturamento final apenas na aprovação e contratação do talento.</p>
+                        <div className="border-t border-slate-700/50 pt-4 mt-4">
+                          <p className="text-slate-400 text-sm">* <strong className="text-slate-300">Garantia de Reposição de {garantia}:</strong> Refazemos todo o trabalho de hunting sem custo adicional caso haja saída ou desligamento do profissional neste período.</p>
+                        </div>
                       </div>
                     </div>
-                    <div className="bg-slate-800/50 rounded-lg p-4 text-center border border-slate-700/50">
-                      <p className="text-slate-300 text-sm">Honorário Total: <strong className="text-cyan-400">{fee}</strong> da remuneração | Garantia de Reposição: <strong className="text-cyan-400">{garantia}</strong></p>
+                  ) : (
+                    <div className="w-full space-y-6">
+                      <h3 className="text-2xl font-bold text-white">Comprometimento Compartilhado</h3>
+                      <div className="bg-slate-800/50 rounded-xl p-5 border border-cyan-700/30 mb-4">
+                        <p className="text-cyan-400 font-bold text-sm mb-2">📐 Fórmula de Cálculo do Honorário</p>
+                        <p className="text-white font-mono text-lg">
+                          <span className="text-cyan-400">{feePercentual}</span>
+                          <span className="text-slate-400"> × </span>
+                          (Remuneração Mensal + Bônus Anual)
+                          <span className="text-slate-400"> × </span>
+                          <span className="text-cyan-400">{contractTypeProposal === 'CLT' ? '13,33' : '12'}</span>
+                        </p>
+                        <p className="text-slate-400 text-xs mt-2">
+                          {contractTypeProposal === 'CLT'
+                            ? 'Multiplicador 13,33 contempla 13º salário e férias proporcionais (regime CLT).'
+                            : 'Multiplicador 12 referente aos 12 meses do contrato (regime PJ).'}
+                        </p>
+                      </div>
+                      <div className={`grid ${retainerType === '3x' ? 'grid-cols-3' : 'grid-cols-2'} gap-6`}>
+                        <div className="bg-slate-800/50 p-6 rounded-xl border border-cyan-700/30 text-center">
+                          <p className="text-4xl font-black text-cyan-400">{feeP1}</p>
+                          <p className="text-white font-bold mt-2">Upfront (Kick-off)</p>
+                          <p className="text-slate-400 text-sm mt-2">Faturamento no início do projeto.</p>
+                        </div>
+                        {retainerType === '3x' &&
+                          <div className="bg-slate-800/50 p-6 rounded-xl border border-slate-700/50 text-center">
+                            <p className="text-4xl font-black text-cyan-400">{feeP2}</p>
+                            <p className="text-white font-bold mt-2">Shortlist</p>
+                            <p className="text-slate-400 text-sm mt-2">Apresentação dos finalistas validados.</p>
+                          </div>
+                        }
+                        <div className="bg-slate-800/50 p-6 rounded-xl border border-slate-700/50 text-center">
+                          <p className="text-4xl font-black text-cyan-400">{feeP3}</p>
+                          <p className="text-white font-bold mt-2">Success Fee</p>
+                          <p className="text-slate-400 text-sm mt-2">Faturamento final na contratação.</p>
+                        </div>
+                      </div>
+                      <div className="bg-slate-800/50 rounded-lg p-4 text-center border border-slate-700/50">
+                        <p className="text-slate-300 text-sm">Fee: <strong className="text-cyan-400">{feePercentual}</strong> da remuneração anual ({contractTypeProposal}) | Garantia: <strong className="text-cyan-400">{garantia}</strong></p>
+                      </div>
                     </div>
-                  </div>
-                }
+                  )
+                ) : (
+                  /* Original Monthly Salary Model */
+                  paymentModel === 'sucesso' ?
+                  <div className="flex gap-10 w-full items-center highlight-numbers-layout">
+                      <div>
+                        <p className="text-7xl font-black text-cyan-400">{fee}</p>
+                        <p className="text-slate-400 mt-2 text-lg">Honorário no Sucesso</p>
+                      </div>
+                      <div className="flex-1 space-y-4">
+                        <h3 className="text-2xl font-bold text-white">Sem Custos Antecipados</h3>
+                        <p className="text-slate-300 leading-relaxed">Nossa parceria é pautada estritamente no resultado. O investimento ocorre <strong className="text-white">apenas em caso de sucesso</strong> na contratação.</p>
+                        <p className="text-slate-300 leading-relaxed">O valor do honorário é equivalente a <strong className="text-white">{fee} da remuneração mensal bruta</strong> acordada com o profissional escolhido.</p>
+                        <div className="border-t border-slate-700/50 pt-4 mt-4">
+                          <p className="text-slate-400 text-sm">* <strong className="text-slate-300">Garantia de Reposição de {garantia}:</strong> O processo não termina na assinatura. Refazemos todo o trabalho de hunting sem nenhum custo adicional caso haja saída ou desligamento do profissional neste período inicial.</p>
+                        </div>
+                      </div>
+                    </div> :
+
+                  <div className="w-full space-y-6">
+                      <h3 className="text-2xl font-bold text-white">Comprometimento Compartilhado</h3>
+                      <div className={`grid ${retainerType === '3x' ? 'grid-cols-3' : 'grid-cols-2'} gap-6`}>
+                        <div className="bg-slate-800/50 p-6 rounded-xl border border-cyan-700/30 text-center">
+                          <p className="text-4xl font-black text-cyan-400">{feeP1}</p>
+                          <p className="text-white font-bold mt-2">Upfront (Kick-off)</p>
+                          <p className="text-slate-400 text-sm mt-2">Faturamento no início do projeto, garantindo a dedicação exclusiva da equipe.</p>
+                        </div>
+                        {retainerType === '3x' &&
+                      <div className="bg-slate-800/50 p-6 rounded-xl border border-slate-700/50 text-center">
+                            <p className="text-4xl font-black text-cyan-400">{feeP2}</p>
+                            <p className="text-white font-bold mt-2">Shortlist</p>
+                            <p className="text-slate-400 text-sm mt-2">Apresentação dos finalistas validados técnica e culturalmente.</p>
+                          </div>
+                      }
+                        <div className="bg-slate-800/50 p-6 rounded-xl border border-slate-700/50 text-center">
+                          <p className="text-4xl font-black text-cyan-400">{feeP3}</p>
+                          <p className="text-white font-bold mt-2">Success Fee</p>
+                          <p className="text-slate-400 text-sm mt-2">Faturamento final apenas na aprovação e contratação do talento.</p>
+                        </div>
+                      </div>
+                      <div className="bg-slate-800/50 rounded-lg p-4 text-center border border-slate-700/50">
+                        <p className="text-slate-300 text-sm">Honorário Total: <strong className="text-cyan-400">{fee}</strong> da remuneração | Garantia de Reposição: <strong className="text-cyan-400">{garantia}</strong></p>
+                      </div>
+                    </div>
+                  
+                )}
               </div>
             </div>
 
