@@ -193,6 +193,7 @@ export function BulkActionBar({
         open={emailDialogOpen}
         onOpenChange={setEmailDialogOpen}
         defaultRecipients={bulkRecipients}
+        variables={{ nome_vaga: jobTitle }}
       />
     </>
   );
