@@ -84,7 +84,8 @@ export function InvoiceDialog({ open, onOpenChange, invoice }: InvoiceDialogProp
         },
       });
     } else {
-      createInvoice.mutate(data, {
+      const company = companies.find(c => c.id === companyId);
+      createInvoice.mutate({ ...data, _companyName: company?.nome_fantasia }, {
         onSuccess: () => {
           onOpenChange(false);
           resetForm();
