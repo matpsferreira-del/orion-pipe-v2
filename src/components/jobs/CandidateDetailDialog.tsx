@@ -373,7 +373,7 @@ export function CandidateDetailDialog({
         open={emailDialogOpen}
         onOpenChange={setEmailDialogOpen}
         defaultRecipients={[party.email_raw]}
-        variables={{ nome_candidato: party.full_name }}
+        variables={{ nome_candidato: party.full_name, nome_vaga: jobTitle }}
       />
     )}
     </>

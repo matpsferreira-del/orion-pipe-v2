@@ -712,6 +712,7 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
         application={selectedApplication}
         stages={stages}
         jobId={job.id}
+        jobTitle={job.title}
       />
       {/* LinkedIn Post Generator */}
       <LinkedInPostDialog
