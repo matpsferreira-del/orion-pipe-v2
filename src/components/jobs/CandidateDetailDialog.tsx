@@ -37,7 +37,8 @@ export function CandidateDetailDialog({
   onOpenChange, 
   application, 
   stages,
-  jobId 
+  jobId,
+  jobTitle = '' 
 }: CandidateDetailDialogProps) {
   const [notes, setNotes] = useState('');
   const [rating, setRating] = useState(0);
