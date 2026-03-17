@@ -579,6 +579,7 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
               applications={applications}
               stages={stages}
               jobId={job.id}
+              jobTitle={job.title}
               onClearSelection={handleClearSelection}
             />
           )}
