@@ -38,6 +38,7 @@ export function BulkActionBar({
   onClearSelection,
 }: BulkActionBarProps) {
   const [showRejectConfirm, setShowRejectConfirm] = useState(false);
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [processing, setProcessing] = useState(false);
   const updateStatus = useUpdateApplicationStatus();
   const updateStage = useUpdateApplicationStage();
