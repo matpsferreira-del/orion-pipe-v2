@@ -28,6 +28,7 @@ import { usePartyApplications } from '@/hooks/useApplications';
 import { applicationStatusLabels, sourceLabels } from '@/types/ats';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { ComposeEmailDialog } from '@/components/email/ComposeEmailDialog';
 
 interface PartyDetailDialogProps {
   partyId: string | null;
@@ -40,6 +41,7 @@ const availableRoles: PartyRoleType[] = ['candidate', 'client_contact', 'prospec
 export function PartyDetailDialog({ partyId, open, onOpenChange }: PartyDetailDialogProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState<Record<string, string>>({});
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
 
   const { data: party, isLoading } = useParty(partyId || undefined);
   const { data: partyApplications, isLoading: appsLoading } = usePartyApplications(partyId || undefined);
@@ -109,6 +111,7 @@ export function PartyDetailDialog({ partyId, open, onOpenChange }: PartyDetailDi
   }
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
@@ -262,9 +265,9 @@ export function PartyDetailDialog({ partyId, open, onOpenChange }: PartyDetailDi
                   {party.email_norm && (
                     <div className="flex items-center gap-2">
                       <Mail className="h-4 w-4 text-muted-foreground" />
-                      <a href={`mailto:${party.email_norm}`} className="text-primary hover:underline">
+                      <button onClick={() => setEmailDialogOpen(true)} className="text-primary hover:underline">
                         {party.email_norm}
-                      </a>
+                      </button>
                     </div>
                   )}
                   {party.phone_raw && (
@@ -404,5 +407,15 @@ export function PartyDetailDialog({ partyId, open, onOpenChange }: PartyDetailDi
         </Tabs>
       </DialogContent>
     </Dialog>
+
+    {party?.email_raw && (
+      <ComposeEmailDialog
+        open={emailDialogOpen}
+        onOpenChange={setEmailDialogOpen}
+        defaultRecipients={[party.email_raw]}
+        variables={{ nome_candidato: party.full_name }}
+      />
+    )}
+    </>
   );
 }

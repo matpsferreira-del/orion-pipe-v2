@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { ComposeEmailDialog } from '@/components/email/ComposeEmailDialog';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -37,6 +38,7 @@ export function BulkActionBar({
   onClearSelection,
 }: BulkActionBarProps) {
   const [showRejectConfirm, setShowRejectConfirm] = useState(false);
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [processing, setProcessing] = useState(false);
   const updateStatus = useUpdateApplicationStatus();
   const updateStage = useUpdateApplicationStage();
@@ -65,13 +67,17 @@ export function BulkActionBar({
   const handleEmail = () => {
     const emails = selectedApps
       .map(a => a._party?.email_raw)
-      .filter(Boolean);
+      .filter(Boolean) as string[];
     if (emails.length === 0) {
       toast.error('Nenhum candidato selecionado possui email.');
       return;
     }
-    window.open(`mailto:?bcc=${emails.join(',')}`);
+    setEmailDialogOpen(true);
   };
+
+  const bulkRecipients = selectedApps
+    .map(a => a._party?.email_raw)
+    .filter(Boolean) as string[];
 
   const handleReject = async () => {
     setProcessing(true);
@@ -180,6 +186,12 @@ export function BulkActionBar({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <ComposeEmailDialog
+        open={emailDialogOpen}
+        onOpenChange={setEmailDialogOpen}
+        defaultRecipients={bulkRecipients}
+      />
     </>
   );
 }

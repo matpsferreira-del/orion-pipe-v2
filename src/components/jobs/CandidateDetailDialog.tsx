@@ -21,6 +21,7 @@ import { CandidateCVSection } from './CandidateCVSection';
 import { useUpdateApplication, useUpdateApplicationStatus, useUpdateApplicationStage } from '@/hooks/useApplications';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { ComposeEmailDialog } from '@/components/email/ComposeEmailDialog';
 
 interface CandidateDetailDialogProps {
   open: boolean;
@@ -41,6 +42,7 @@ export function CandidateDetailDialog({
   const [rating, setRating] = useState(0);
   const [salaryExpectation, setSalaryExpectation] = useState('');
   const [phoneInput, setPhoneInput] = useState('');
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
 
   // Reset state when application changes
   useEffect(() => {
@@ -115,6 +117,7 @@ export function CandidateDetailDialog({
   const isFinalStatus = ['hired', 'rejected', 'withdrawn'].includes(application.status);
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
@@ -140,13 +143,13 @@ export function CandidateDetailDialog({
               
               <div className="flex flex-wrap gap-2 mt-2">
                 {party?.email_raw && (
-                  <a 
-                    href={`mailto:${party.email_raw}`}
+                  <button 
+                    onClick={() => setEmailDialogOpen(true)}
                     className="flex items-center gap-1 text-xs text-primary hover:underline"
                   >
                     <Mail className="h-3 w-3" />
                     {party.email_raw}
-                  </a>
+                  </button>
                 )}
                 {party?.phone_raw && (
                   <a 
@@ -362,5 +365,15 @@ export function CandidateDetailDialog({
         </div>
       </DialogContent>
     </Dialog>
+
+    {party?.email_raw && (
+      <ComposeEmailDialog
+        open={emailDialogOpen}
+        onOpenChange={setEmailDialogOpen}
+        defaultRecipients={[party.email_raw]}
+        variables={{ nome_candidato: party.full_name }}
+      />
+    )}
+    </>
   );
 }
