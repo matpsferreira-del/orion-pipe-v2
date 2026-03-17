@@ -186,6 +186,12 @@ export function BulkActionBar({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <ComposeEmailDialog
+        open={emailDialogOpen}
+        onOpenChange={setEmailDialogOpen}
+        defaultRecipients={bulkRecipients}
+      />
     </>
   );
 }

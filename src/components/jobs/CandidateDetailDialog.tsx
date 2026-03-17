@@ -364,5 +364,15 @@ export function CandidateDetailDialog({
         </div>
       </DialogContent>
     </Dialog>
+
+    {party?.email_raw && (
+      <ComposeEmailDialog
+        open={emailDialogOpen}
+        onOpenChange={setEmailDialogOpen}
+        defaultRecipients={[party.email_raw]}
+        variables={{ nome_candidato: party.full_name }}
+      />
+    )}
+    </>
   );
 }
