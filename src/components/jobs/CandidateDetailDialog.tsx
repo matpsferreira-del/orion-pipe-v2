@@ -142,13 +142,13 @@ export function CandidateDetailDialog({
               
               <div className="flex flex-wrap gap-2 mt-2">
                 {party?.email_raw && (
-                  <a 
-                    href={`mailto:${party.email_raw}`}
+                  <button 
+                    onClick={() => setEmailDialogOpen(true)}
                     className="flex items-center gap-1 text-xs text-primary hover:underline"
                   >
                     <Mail className="h-3 w-3" />
                     {party.email_raw}
-                  </a>
+                  </button>
                 )}
                 {party?.phone_raw && (
                   <a 

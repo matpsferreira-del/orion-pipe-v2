@@ -67,13 +67,17 @@ export function BulkActionBar({
   const handleEmail = () => {
     const emails = selectedApps
       .map(a => a._party?.email_raw)
-      .filter(Boolean);
+      .filter(Boolean) as string[];
     if (emails.length === 0) {
       toast.error('Nenhum candidato selecionado possui email.');
       return;
     }
-    window.open(`mailto:?bcc=${emails.join(',')}`);
+    setEmailDialogOpen(true);
   };
+
+  const bulkRecipients = selectedApps
+    .map(a => a._party?.email_raw)
+    .filter(Boolean) as string[];
 
   const handleReject = async () => {
     setProcessing(true);
