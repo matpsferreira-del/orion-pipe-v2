@@ -42,6 +42,7 @@ export function CandidateDetailDialog({
   const [rating, setRating] = useState(0);
   const [salaryExpectation, setSalaryExpectation] = useState('');
   const [phoneInput, setPhoneInput] = useState('');
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
 
   // Reset state when application changes
   useEffect(() => {
