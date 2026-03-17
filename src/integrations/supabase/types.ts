@@ -239,6 +239,36 @@ export type Database = {
         }
         Relationships: []
       }
+      chart_of_accounts: {
+        Row: {
+          ativo: boolean | null
+          conta_contabil: string
+          created_at: string | null
+          id: string
+          ordem: number | null
+          pacote: string
+          tipo: string
+        }
+        Insert: {
+          ativo?: boolean | null
+          conta_contabil: string
+          created_at?: string | null
+          id?: string
+          ordem?: number | null
+          pacote: string
+          tipo: string
+        }
+        Update: {
+          ativo?: boolean | null
+          conta_contabil?: string
+          created_at?: string | null
+          id?: string
+          ordem?: number | null
+          pacote?: string
+          tipo?: string
+        }
+        Relationships: []
+      }
       companies: {
         Row: {
           cidade: string
@@ -577,6 +607,65 @@ export type Database = {
           variables?: Json | null
         }
         Relationships: []
+      }
+      financial_transactions: {
+        Row: {
+          conta_contabil: string
+          created_at: string | null
+          data_referencia: string
+          data_vencimento: string
+          deleted_at: string | null
+          descricao: string | null
+          id: string
+          invoice_id: string | null
+          pacote: string
+          recorrencia_meses: number | null
+          recorrente: boolean | null
+          status: string | null
+          updated_at: string | null
+          valor: number
+        }
+        Insert: {
+          conta_contabil: string
+          created_at?: string | null
+          data_referencia: string
+          data_vencimento: string
+          deleted_at?: string | null
+          descricao?: string | null
+          id?: string
+          invoice_id?: string | null
+          pacote: string
+          recorrencia_meses?: number | null
+          recorrente?: boolean | null
+          status?: string | null
+          updated_at?: string | null
+          valor: number
+        }
+        Update: {
+          conta_contabil?: string
+          created_at?: string | null
+          data_referencia?: string
+          data_vencimento?: string
+          deleted_at?: string | null
+          descricao?: string | null
+          id?: string
+          invoice_id?: string | null
+          pacote?: string
+          recorrencia_meses?: number | null
+          recorrente?: boolean | null
+          status?: string | null
+          updated_at?: string | null
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_transactions_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       gmail_tokens: {
         Row: {
