@@ -264,9 +264,9 @@ export function PartyDetailDialog({ partyId, open, onOpenChange }: PartyDetailDi
                   {party.email_norm && (
                     <div className="flex items-center gap-2">
                       <Mail className="h-4 w-4 text-muted-foreground" />
-                      <a href={`mailto:${party.email_norm}`} className="text-primary hover:underline">
+                      <button onClick={() => setEmailDialogOpen(true)} className="text-primary hover:underline">
                         {party.email_norm}
-                      </a>
+                      </button>
                     </div>
                   )}
                   {party.phone_raw && (
