@@ -29,6 +29,7 @@ interface CandidateDetailDialogProps {
   application: ApplicationWithRelations | null;
   stages: JobPipelineStage[];
   jobId: string;
+  jobTitle?: string;
 }
 
 export function CandidateDetailDialog({ 
