@@ -12,13 +12,6 @@ export function useGmailConnection() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { setLoading(false); return; }
 
-      const { data, error } = await supabase.functions.invoke('gmail-auth', {
-        body: null,
-        headers: { 'Content-Type': 'application/json' },
-      });
-
-      // Use query param approach — invoke with GET-like params via URL
-      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
       const res = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/gmail-auth?action=status`,
         {
