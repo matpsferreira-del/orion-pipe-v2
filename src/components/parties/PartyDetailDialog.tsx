@@ -28,6 +28,7 @@ import { usePartyApplications } from '@/hooks/useApplications';
 import { applicationStatusLabels, sourceLabels } from '@/types/ats';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { ComposeEmailDialog } from '@/components/email/ComposeEmailDialog';
 
 interface PartyDetailDialogProps {
   partyId: string | null;
