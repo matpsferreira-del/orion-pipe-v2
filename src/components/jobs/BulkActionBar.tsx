@@ -36,6 +36,7 @@ export function BulkActionBar({
   applications,
   stages,
   jobId,
+  jobTitle = '',
   onClearSelection,
 }: BulkActionBarProps) {
   const [showRejectConfirm, setShowRejectConfirm] = useState(false);
