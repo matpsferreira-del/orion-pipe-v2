@@ -78,7 +78,6 @@ const tabNavItems = {
     { to: '/oportunidades', icon: Target, label: 'Oportunidades' },
     { to: '/tarefas', icon: CheckSquare, label: 'Tarefas' },
     { to: '/faturamento', icon: Receipt, label: 'Faturamento' },
-    { to: '/financeiro', icon: TrendingUp, label: 'Financeiro' },
     { to: '/relatorios', icon: BarChart3, label: 'Relatórios' },
     { to: '/mapeamento-vagas', icon: Radar, label: 'Mapeamento de Vagas' },
     { to: '/post-generator', icon: Share2, label: 'Gerador de Posts' },
@@ -89,6 +88,10 @@ const tabNavItems = {
     { to: '/vagas', icon: Briefcase, label: 'Vagas' },
     { to: '/formatacao-cv', icon: FileText, label: 'Formatação de CV' },
     { to: '/chrome-extension', icon: Radar, label: 'Extensão Chrome' },
+  ],
+  financeiro: [
+    { to: '/financeiro', icon: TrendingUp, label: 'Painel Financeiro' },
+    { to: '/faturamento', icon: Receipt, label: 'Faturamento' },
   ],
   configuracoes: [
     { to: '/equipe', icon: Users, label: 'Equipe' },
