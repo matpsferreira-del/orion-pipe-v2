@@ -130,9 +130,21 @@ export function useUpdateInvoiceStatus() {
         .eq('id', id);
       
       if (error) throw error;
+
+      // Sync financial transaction status
+      try {
+        const ftStatus = status === 'recebido' ? 'pago' : status === 'cancelado' ? 'cancelado' : 'pendente';
+        await supabase
+          .from('financial_transactions' as any)
+          .update({ status: ftStatus } as any)
+          .eq('invoice_id', id);
+      } catch (e) {
+        console.error('Failed to sync financial transaction status:', e);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['financial_transactions'] });
       toast.success('Status atualizado!');
     },
     onError: (error) => {
