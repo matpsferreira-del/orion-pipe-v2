@@ -4,7 +4,7 @@ import { Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
 
-export type TabType = 'comercial' | 'recrutamento' | 'configuracoes';
+export type TabType = 'comercial' | 'recrutamento' | 'financeiro' | 'configuracoes';
 
 export const tabConfig = {
   comercial: {
@@ -14,6 +14,10 @@ export const tabConfig = {
   recrutamento: {
     label: 'Recrutamento',
     defaultRoute: '/recrutamento',
+  },
+  financeiro: {
+    label: 'Financeiro',
+    defaultRoute: '/financeiro',
   },
   configuracoes: {
     label: 'Configurações',
@@ -31,6 +35,8 @@ export const routeToTab: Record<string, TabType> = {
   '/faturamento': 'comercial',
   '/relatorios': 'comercial',
   '/mapeamento-vagas': 'comercial',
+  '/post-generator': 'comercial',
+  '/financeiro': 'financeiro',
   '/formatacao-cv': 'recrutamento',
   '/chrome-extension': 'recrutamento',
   '/recrutamento': 'recrutamento',
