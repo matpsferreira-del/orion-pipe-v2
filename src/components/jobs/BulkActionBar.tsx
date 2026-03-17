@@ -27,6 +27,7 @@ interface BulkActionBarProps {
   applications: ApplicationWithRelations[];
   stages: JobPipelineStage[];
   jobId: string;
+  jobTitle?: string;
   onClearSelection: () => void;
 }
 
