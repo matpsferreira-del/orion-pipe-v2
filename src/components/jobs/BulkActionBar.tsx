@@ -27,6 +27,7 @@ interface BulkActionBarProps {
   applications: ApplicationWithRelations[];
   stages: JobPipelineStage[];
   jobId: string;
+  jobTitle?: string;
   onClearSelection: () => void;
 }
 
@@ -35,6 +36,7 @@ export function BulkActionBar({
   applications,
   stages,
   jobId,
+  jobTitle = '',
   onClearSelection,
 }: BulkActionBarProps) {
   const [showRejectConfirm, setShowRejectConfirm] = useState(false);
@@ -191,6 +193,7 @@ export function BulkActionBar({
         open={emailDialogOpen}
         onOpenChange={setEmailDialogOpen}
         defaultRecipients={bulkRecipients}
+        variables={{ nome_vaga: jobTitle }}
       />
     </>
   );

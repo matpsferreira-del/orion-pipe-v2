@@ -56,6 +56,16 @@ export function ComposeEmailDialog({
     }
   }, [open, defaultRecipients, defaultSubject, defaultBody]);
 
+  const getSignature = (category: string) => {
+    if (category === 'recrutamento') {
+      return '\n\n--\nEquipe de Recrutamento Orion';
+    }
+    if (category === 'comercial') {
+      return '\n\n--\nEquipe Comercial Orion';
+    }
+    return '';
+  };
+
   const applyTemplate = (templateId: string) => {
     setSelectedTemplateId(templateId);
     if (templateId === 'none') return;
@@ -77,6 +87,17 @@ export function ComposeEmailDialog({
       filledSubject = filledSubject.replace(regex, value);
       filledBody = filledBody.replace(regex, value);
     });
+
+    // Auto-append signature based on category
+    const signature = getSignature(template.category);
+    if (signature) {
+      const isHtml = filledBody.includes('<');
+      if (isHtml) {
+        filledBody += `<br/><br/>--<br/>Equipe de ${template.category === 'recrutamento' ? 'Recrutamento' : 'Comercial'} Orion`;
+      } else {
+        filledBody += signature;
+      }
+    }
 
     setSubject(filledSubject);
     setBody(filledBody);

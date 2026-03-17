@@ -29,6 +29,7 @@ interface CandidateDetailDialogProps {
   application: ApplicationWithRelations | null;
   stages: JobPipelineStage[];
   jobId: string;
+  jobTitle?: string;
 }
 
 export function CandidateDetailDialog({ 
@@ -36,7 +37,8 @@ export function CandidateDetailDialog({
   onOpenChange, 
   application, 
   stages,
-  jobId 
+  jobId,
+  jobTitle = '' 
 }: CandidateDetailDialogProps) {
   const [notes, setNotes] = useState('');
   const [rating, setRating] = useState(0);
@@ -371,7 +373,7 @@ export function CandidateDetailDialog({
         open={emailDialogOpen}
         onOpenChange={setEmailDialogOpen}
         defaultRecipients={[party.email_raw]}
-        variables={{ nome_candidato: party.full_name }}
+        variables={{ nome_candidato: party.full_name, nome_vaga: jobTitle }}
       />
     )}
     </>
