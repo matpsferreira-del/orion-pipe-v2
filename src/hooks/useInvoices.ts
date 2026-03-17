@@ -43,22 +43,74 @@ export function useInvoices() {
   });
 }
 
+async function syncFinancialTransaction(invoiceId: string, invoice: InvoiceInsert, companyName?: string) {
+  try {
+    const descricao = companyName
+      ? `${companyName} - NF ${invoice.numero_nota}`
+      : `NF ${invoice.numero_nota}`;
+
+    // Check if transaction already exists for this invoice
+    const { data: existing } = await supabase
+      .from('financial_transactions' as any)
+      .select('id')
+      .eq('invoice_id', invoiceId)
+      .is('deleted_at', null)
+      .maybeSingle();
+
+    if (existing) {
+      // Update existing
+      await supabase
+        .from('financial_transactions' as any)
+        .update({
+          valor: Math.abs(Number(invoice.valor)),
+          data_referencia: invoice.data_emissao,
+          data_vencimento: invoice.data_vencimento,
+          descricao,
+          status: invoice.status === 'recebido' ? 'pago' : 'pendente',
+        } as any)
+        .eq('id', (existing as any).id);
+    } else {
+      // Create new
+      await supabase
+        .from('financial_transactions' as any)
+        .insert({
+          pacote: 'Receita',
+          conta_contabil: 'Projeto',
+          descricao,
+          valor: Math.abs(Number(invoice.valor)),
+          data_referencia: invoice.data_emissao,
+          data_vencimento: invoice.data_vencimento,
+          status: invoice.status === 'recebido' ? 'pago' : 'pendente',
+          invoice_id: invoiceId,
+        } as any);
+    }
+  } catch (e) {
+    console.error('Failed to sync financial transaction:', e);
+  }
+}
+
 export function useCreateInvoice() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (invoice: InvoiceInsert) => {
+    mutationFn: async (invoice: InvoiceInsert & { _companyName?: string }) => {
+      const { _companyName, ...invoiceData } = invoice;
       const { data, error } = await supabase
         .from('invoices')
-        .insert(invoice)
+        .insert(invoiceData)
         .select()
         .single();
       
       if (error) throw error;
+
+      // Sync to financial_transactions
+      await syncFinancialTransaction(data.id, invoiceData, _companyName);
+
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['financial_transactions'] });
       toast.success('Fatura criada com sucesso!');
     },
     onError: (error) => {
@@ -78,9 +130,21 @@ export function useUpdateInvoiceStatus() {
         .eq('id', id);
       
       if (error) throw error;
+
+      // Sync financial transaction status
+      try {
+        const ftStatus = status === 'recebido' ? 'pago' : status === 'cancelado' ? 'cancelado' : 'pendente';
+        await supabase
+          .from('financial_transactions' as any)
+          .update({ status: ftStatus } as any)
+          .eq('invoice_id', id);
+      } catch (e) {
+        console.error('Failed to sync financial transaction status:', e);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['financial_transactions'] });
       toast.success('Status atualizado!');
     },
     onError: (error) => {

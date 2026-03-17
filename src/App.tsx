@@ -27,6 +27,7 @@ import FormatacaoCV from "./pages/FormatacaoCV";
 import Auth from "./pages/Auth";
 import ChromeExtension from "./pages/ChromeExtension";
 import CartaOferta from "./pages/CartaOferta";
+import Financeiro from "./pages/Financeiro";
 import NotFound from "./pages/NotFound";
 import { Loader2 } from "lucide-react";
 
@@ -114,6 +115,7 @@ const App = () => (
               <Route path="/oportunidades/:id/proposta" element={<ProposalGenerator />} />
               <Route path="/tarefas" element={<Tarefas />} />
               <Route path="/faturamento" element={<Faturamento />} />
+              <Route path="/financeiro" element={<Financeiro />} />
               <Route path="/relatorios" element={<Relatorios />} />
               <Route path="/mapeamento-vagas" element={<MapeamentoVagas />} />
               <Route path="/equipe" element={<Equipe />} />

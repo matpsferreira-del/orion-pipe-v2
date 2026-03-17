@@ -22,6 +22,7 @@ import {
   Radar,
   FileText,
   Share2,
+  TrendingUp,
 } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -77,6 +78,7 @@ const tabNavItems = {
     { to: '/oportunidades', icon: Target, label: 'Oportunidades' },
     { to: '/tarefas', icon: CheckSquare, label: 'Tarefas' },
     { to: '/faturamento', icon: Receipt, label: 'Faturamento' },
+    { to: '/financeiro', icon: TrendingUp, label: 'Financeiro' },
     { to: '/relatorios', icon: BarChart3, label: 'Relatórios' },
     { to: '/mapeamento-vagas', icon: Radar, label: 'Mapeamento de Vagas' },
     { to: '/post-generator', icon: Share2, label: 'Gerador de Posts' },
