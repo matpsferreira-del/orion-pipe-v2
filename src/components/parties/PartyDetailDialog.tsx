@@ -41,6 +41,7 @@ const availableRoles: PartyRoleType[] = ['candidate', 'client_contact', 'prospec
 export function PartyDetailDialog({ partyId, open, onOpenChange }: PartyDetailDialogProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState<Record<string, string>>({});
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
 
   const { data: party, isLoading } = useParty(partyId || undefined);
   const { data: partyApplications, isLoading: appsLoading } = usePartyApplications(partyId || undefined);
