@@ -115,6 +115,7 @@ const App = () => (
               <Route path="/oportunidades/:id/proposta" element={<ProposalGenerator />} />
               <Route path="/tarefas" element={<Tarefas />} />
               <Route path="/faturamento" element={<Faturamento />} />
+              <Route path="/financeiro" element={<Financeiro />} />
               <Route path="/relatorios" element={<Relatorios />} />
               <Route path="/mapeamento-vagas" element={<MapeamentoVagas />} />
               <Route path="/equipe" element={<Equipe />} />
