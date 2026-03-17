@@ -21,6 +21,7 @@ import { CandidateCVSection } from './CandidateCVSection';
 import { useUpdateApplication, useUpdateApplicationStatus, useUpdateApplicationStage } from '@/hooks/useApplications';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { ComposeEmailDialog } from '@/components/email/ComposeEmailDialog';
 
 interface CandidateDetailDialogProps {
   open: boolean;
