@@ -9,6 +9,8 @@ export interface ChartAccount {
   tipo: string;
   ordem: number;
   ativo: boolean;
+  codigo: string | null;
+  sub_pacote: string | null;
 }
 
 export interface FinancialTransaction {
@@ -41,15 +43,18 @@ export interface FinancialTransactionInsert {
   invoice_id?: string;
 }
 
-export function useChartOfAccounts() {
+export function useChartOfAccounts(includeInactive = false) {
   return useQuery({
-    queryKey: ['chart_of_accounts'],
+    queryKey: ['chart_of_accounts', includeInactive],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('chart_of_accounts' as any)
         .select('*')
-        .eq('ativo', true)
         .order('ordem');
+      if (!includeInactive) {
+        query = query.eq('ativo', true);
+      }
+      const { data, error } = await query;
       if (error) throw error;
       return (data as any[]) as ChartAccount[];
     },
