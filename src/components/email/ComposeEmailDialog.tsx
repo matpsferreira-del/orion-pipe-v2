@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2, Send, X, FileText, Eye, Edit } from 'lucide-react';
+import { toast } from 'sonner';
 import { useEmailTemplates } from '@/hooks/useEmailTemplates';
 import { useSendEmail } from '@/hooks/useSendEmail';
 import { useGmailConnection } from '@/hooks/useGmailConnection';
@@ -24,6 +25,7 @@ interface ComposeEmailDialogProps {
   defaultSubject?: string;
   defaultBody?: string;
   variables?: Record<string, string>;
+  recipientVariables?: Record<string, Record<string, string>>;
 }
 
 function replaceVariables(text: string, vars: Record<string, string>): string {
@@ -34,6 +36,10 @@ function replaceVariables(text: string, vars: Record<string, string>): string {
   return result;
 }
 
+function toHtmlBody(text: string): string {
+  return text.includes('<') ? text : `<p>${text.replace(/\n/g, '<br/>')}</p>`;
+}
+
 export function ComposeEmailDialog({
   open,
   onOpenChange,
@@ -41,6 +47,7 @@ export function ComposeEmailDialog({
   defaultSubject = '',
   defaultBody = '',
   variables = {},
+  recipientVariables = {},
 }: ComposeEmailDialogProps) {
   const [recipients, setRecipients] = useState<string[]>(defaultRecipients);
   const [recipientInput, setRecipientInput] = useState('');
@@ -48,16 +55,31 @@ export function ComposeEmailDialog({
   const [body, setBody] = useState(defaultBody);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('none');
   const [activeTab, setActiveTab] = useState<string>('edit');
+  const [previewRecipient, setPreviewRecipient] = useState(defaultRecipients[0] ?? '');
 
   const { data: templates = [] } = useEmailTemplates();
   const sendEmail = useSendEmail();
   const { connected, gmailEmail } = useGmailConnection();
   const { profile } = useAuth();
 
-  const allVars: Record<string, string> = useMemo(() => ({
+  const baseVariables: Record<string, string> = useMemo(() => ({
     nome_recrutador: profile?.name || '',
     ...variables,
   }), [profile?.name, variables]);
+
+  const getVariablesForRecipient = (recipient: string) => ({
+    ...baseVariables,
+    ...(recipientVariables[recipient] ?? {}),
+  });
+
+  const resolveTextForRecipient = (text: string, recipient: string) => (
+    replaceVariables(text, getVariablesForRecipient(recipient))
+  );
+
+  const hasRecipientSpecificVariables = useMemo(
+    () => recipients.some((recipient) => Object.keys(recipientVariables[recipient] ?? {}).length > 0),
+    [recipientVariables, recipients],
+  );
 
   useEffect(() => {
     if (open) {
@@ -67,12 +89,28 @@ export function ComposeEmailDialog({
       setSelectedTemplateId('none');
       setRecipientInput('');
       setActiveTab('edit');
+      setPreviewRecipient(defaultRecipients[0] ?? '');
     }
   }, [open, defaultRecipients, defaultSubject, defaultBody]);
 
-  // Resolved (variables replaced) versions for preview and sending
-  const resolvedSubject = useMemo(() => replaceVariables(subject, allVars), [subject, allVars]);
-  const resolvedBody = useMemo(() => replaceVariables(body, allVars), [body, allVars]);
+  useEffect(() => {
+    if (!recipients.length) {
+      setPreviewRecipient('');
+      return;
+    }
+
+    if (!previewRecipient || !recipients.includes(previewRecipient)) {
+      setPreviewRecipient(recipients[0]);
+    }
+  }, [previewRecipient, recipients]);
+
+  const activePreviewRecipient = previewRecipient || recipients[0] || '';
+  const resolvedSubject = activePreviewRecipient
+    ? resolveTextForRecipient(subject, activePreviewRecipient)
+    : replaceVariables(subject, baseVariables);
+  const resolvedBody = activePreviewRecipient
+    ? resolveTextForRecipient(body, activePreviewRecipient)
+    : replaceVariables(body, baseVariables);
 
   const getSignature = (category: string) => {
     if (category === 'recrutamento') return '\n\n--\nEquipe de Recrutamento Orion';
@@ -84,7 +122,7 @@ export function ComposeEmailDialog({
     setSelectedTemplateId(templateId);
     if (templateId === 'none') return;
 
-    const template = templates.find(t => t.id === templateId);
+    const template = templates.find((t) => t.id === templateId);
     if (!template) return;
 
     let filledBody = template.body;
@@ -111,23 +149,66 @@ export function ComposeEmailDialog({
   };
 
   const removeRecipient = (email: string) => {
-    setRecipients(recipients.filter(r => r !== email));
+    setRecipients(recipients.filter((recipient) => recipient !== email));
   };
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!recipients.length) return;
+
+    if (hasRecipientSpecificVariables) {
+      const payloads = recipients.map((recipient) => {
+        const personalizedSubject = resolveTextForRecipient(subject, recipient);
+        const personalizedBody = resolveTextForRecipient(body, recipient);
+        const plainBody = personalizedBody.replace(/<[^>]*>/g, '').trim();
+
+        return {
+          recipients: [recipient],
+          subject: personalizedSubject,
+          html_body: toHtmlBody(personalizedBody),
+          template_id: selectedTemplateId !== 'none' ? selectedTemplateId : undefined,
+          valid: Boolean(personalizedSubject.trim() && plainBody),
+        };
+      });
+
+      const validPayloads = payloads.filter((payload) => payload.valid);
+      if (!validPayloads.length) return;
+
+      const results = await Promise.allSettled(
+        validPayloads.map(({ valid: _valid, ...payload }) => sendEmail.mutateAsync({ ...payload, silent: true })),
+      );
+
+      const successCount = results.filter((result) => result.status === 'fulfilled').length;
+      const failureCount = results.length - successCount;
+
+      if (successCount > 0 && failureCount === 0) {
+        toast.success(
+          successCount === 1
+            ? 'Email enviado com sucesso!'
+            : `${successCount} emails enviados com sucesso!`,
+        );
+        onOpenChange(false);
+        return;
+      }
+
+      if (successCount > 0) {
+        toast.success(`${successCount} email(s) enviados com sucesso.`);
+      }
+
+      if (failureCount > 0) {
+        toast.error(`${failureCount} email(s) falharam no envio.`);
+      }
+
+      return;
+    }
+
     const plainBody = resolvedBody.replace(/<[^>]*>/g, '').trim();
     if (!resolvedSubject.trim() || !plainBody) return;
-
-    const htmlBody = resolvedBody.includes('<')
-      ? resolvedBody
-      : `<p>${resolvedBody.replace(/\n/g, '<br/>')}</p>`;
 
     sendEmail.mutate(
       {
         recipients,
         subject: resolvedSubject,
-        html_body: htmlBody,
+        html_body: toHtmlBody(resolvedBody),
         template_id: selectedTemplateId !== 'none' ? selectedTemplateId : undefined,
       },
       { onSuccess: () => onOpenChange(false) },
@@ -153,13 +234,8 @@ export function ComposeEmailDialog({
     );
   }
 
-  // Build preview HTML
-  const previewHtml = resolvedBody.includes('<')
-    ? resolvedBody
-    : `<p>${resolvedBody.replace(/\n/g, '<br/>')}</p>`;
-
-  // Check for unresolved variables
-  const unresolvedVars = (resolvedBody.match(/\{[a-z_]+\}/g) || []);
+  const previewHtml = toHtmlBody(resolvedBody);
+  const unresolvedVars = resolvedBody.match(/\{[a-z_]+\}/g) || [];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -172,12 +248,10 @@ export function ComposeEmailDialog({
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Sender info */}
           <div className="text-xs text-muted-foreground">
             Enviando como: <strong>{gmailEmail}</strong>
           </div>
 
-          {/* Template selector */}
           <div className="space-y-1.5">
             <Label className="flex items-center gap-1">
               <FileText className="h-3.5 w-3.5" />
@@ -189,11 +263,11 @@ export function ComposeEmailDialog({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">Sem template</SelectItem>
-                {templates.map(t => (
-                  <SelectItem key={t.id} value={t.id}>
+                {templates.map((template) => (
+                  <SelectItem key={template.id} value={template.id}>
                     <span className="flex items-center gap-2">
-                      {t.name}
-                      <Badge variant="outline" className="text-[10px]">{t.category}</Badge>
+                      {template.name}
+                      <Badge variant="outline" className="text-[10px]">{template.category}</Badge>
                     </span>
                   </SelectItem>
                 ))}
@@ -201,11 +275,10 @@ export function ComposeEmailDialog({
             </Select>
           </div>
 
-          {/* Recipients */}
           <div className="space-y-1.5">
             <Label>Para</Label>
             <div className="flex flex-wrap gap-1 mb-1">
-              {recipients.map(email => (
+              {recipients.map((email) => (
                 <Badge key={email} variant="secondary" className="gap-1">
                   {email}
                   <X className="h-3 w-3 cursor-pointer" onClick={() => removeRecipient(email)} />
@@ -215,20 +288,24 @@ export function ComposeEmailDialog({
             <div className="flex gap-2">
               <Input
                 value={recipientInput}
-                onChange={e => setRecipientInput(e.target.value)}
+                onChange={(event) => setRecipientInput(event.target.value)}
                 placeholder="email@exemplo.com"
-                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addRecipient(); } }}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.preventDefault();
+                    addRecipient();
+                  }
+                }}
               />
               <Button type="button" variant="outline" size="sm" onClick={addRecipient}>Adicionar</Button>
             </div>
           </div>
 
-          {/* Subject */}
           <div className="space-y-1.5">
             <Label>Assunto</Label>
             <Input
               value={subject}
-              onChange={e => setSubject(e.target.value)}
+              onChange={(event) => setSubject(event.target.value)}
               placeholder="Assunto do email"
             />
             {resolvedSubject !== subject && (
@@ -238,9 +315,28 @@ export function ComposeEmailDialog({
             )}
           </div>
 
-          {/* Body with Edit / Preview tabs */}
           <div className="space-y-1.5">
-            <Label>Mensagem</Label>
+            <div className="flex items-center justify-between gap-3">
+              <Label>Mensagem</Label>
+              {hasRecipientSpecificVariables && recipients.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">Prévia de</span>
+                  <Select value={activePreviewRecipient} onValueChange={setPreviewRecipient}>
+                    <SelectTrigger className="w-[220px] h-8">
+                      <SelectValue placeholder="Selecione o destinatário" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {recipients.map((recipient) => (
+                        <SelectItem key={recipient} value={recipient}>
+                          {recipientVariables[recipient]?.nome_candidato || recipient}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="h-8">
                 <TabsTrigger value="edit" className="text-xs gap-1">
@@ -254,25 +350,28 @@ export function ComposeEmailDialog({
               <TabsContent value="edit" className="mt-2">
                 <Textarea
                   value={body}
-                  onChange={e => setBody(e.target.value)}
+                  onChange={(event) => setBody(event.target.value)}
                   placeholder="Escreva sua mensagem..."
                   className="min-h-[200px]"
                 />
                 {unresolvedVars.length > 0 && (
-                  <p className="text-xs text-amber-600 mt-1">
-                    ⚠ Variáveis não resolvidas: {unresolvedVars.join(', ')}
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Variáveis não resolvidas nesta prévia: {unresolvedVars.join(', ')}
                   </p>
                 )}
               </TabsContent>
 
               <TabsContent value="preview" className="mt-2">
                 <div className="border rounded-md bg-background p-4 min-h-[200px]">
-                  {/* Subject preview */}
-                  <div className="border-b pb-2 mb-3">
+                  <div className="border-b pb-2 mb-3 space-y-1">
                     <p className="text-xs text-muted-foreground">Assunto</p>
                     <p className="text-sm font-medium">{resolvedSubject || '(sem assunto)'}</p>
+                    {hasRecipientSpecificVariables && activePreviewRecipient && (
+                      <p className="text-xs text-muted-foreground">
+                        Destinatário: {recipientVariables[activePreviewRecipient]?.nome_candidato || activePreviewRecipient}
+                      </p>
+                    )}
                   </div>
-                  {/* Body preview - rendered HTML */}
                   <div
                     className="prose prose-sm max-w-none text-foreground [&_p]:my-1 [&_br]:leading-relaxed"
                     dangerouslySetInnerHTML={{ __html: previewHtml }}
