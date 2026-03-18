@@ -16,6 +16,7 @@ export default function Financeiro() {
   const currentTab = searchParams.get('tab') || 'dashboard';
   const currentYear = new Date().getFullYear();
   const [selectedYear, setSelectedYear] = useState(currentYear);
+  const [showChartAccounts, setShowChartAccounts] = useState(false);
 
   const years = Array.from({ length: 5 }, (_, i) => currentYear - i);
 
