@@ -6,7 +6,10 @@ import { FinancialDashboard } from '@/components/financial/FinancialDashboard';
 import { FinancialLancamentos } from '@/components/financial/FinancialLancamentos';
 import { FinancialDRE } from '@/components/financial/FinancialDRE';
 import { FinancialFluxoCaixa } from '@/components/financial/FinancialFluxoCaixa';
+import { ChartOfAccountsDialog } from '@/components/financial/ChartOfAccountsDialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
+import { Settings2 } from 'lucide-react';
 
 export default function Financeiro() {
   const [searchParams, setSearchParams] = useSearchParams();
