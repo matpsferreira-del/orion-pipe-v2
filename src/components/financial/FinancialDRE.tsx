@@ -209,7 +209,7 @@ export function FinancialDRE({ year }: { year: number }) {
                       {row.label}
                     </span>
                   </td>
-                  {(row.isGroup && row.values.length === 0) ? (
+                  {row.values.length === 0 ? (
                     <>
                       {MONTHS.map((_, i) => <td key={i} className="p-3"></td>)}
                       <td className="p-3"></td>
