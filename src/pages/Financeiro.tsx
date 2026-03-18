@@ -34,16 +34,21 @@ export default function Financeiro() {
         title="Financeiro"
         description="Controle financeiro completo — Lançamentos, DRE e Fluxo de Caixa"
         actions={
-          <Select value={String(selectedYear)} onValueChange={(v) => setSelectedYear(Number(v))}>
-            <SelectTrigger className="w-[120px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {years.map((y) => (
-                <SelectItem key={y} value={String(y)}>{y}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => setShowChartAccounts(true)}>
+              <Settings2 className="h-4 w-4 mr-1" /> Plano de Contas
+            </Button>
+            <Select value={String(selectedYear)} onValueChange={(v) => setSelectedYear(Number(v))}>
+              <SelectTrigger className="w-[120px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {years.map((y) => (
+                  <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         }
       />
 
