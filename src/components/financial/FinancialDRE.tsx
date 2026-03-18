@@ -43,49 +43,47 @@ export function FinancialDRE({ year }: { year: number }) {
     const rows: DRERow[] = [];
 
     // RECEITA OPERACIONAL BRUTA
-    rows.push({ label: 'RECEITA OPERACIONAL BRUTA', values: [], total: 0, isGroup: true, groupKey: 'rob' });
-    
     const receitaContas = chartAccounts.filter(a => a.tipo === 'receita');
     const receitaValues: number[][] = [];
     receitaContas.forEach(conta => {
       const vals = getMonthlyValues(t => t.pacote === conta.pacote && t.conta_contabil === conta.conta_contabil && t.valor > 0);
       receitaValues.push(vals);
-      rows.push({ label: conta.conta_contabil, values: vals, total: sumArray(vals), indent: 1, groupKey: 'rob' });
     });
     const robValues = addArrays(...receitaValues);
     const robTotal = sumArray(robValues);
-    rows.push({ label: 'Total ROB', values: robValues, total: robTotal, isSummary: true });
+    rows.push({ label: 'RECEITA OPERACIONAL BRUTA', values: robValues, total: robTotal, isGroup: true, groupKey: 'rob' });
+    receitaContas.forEach((conta, i) => {
+      rows.push({ label: conta.conta_contabil, values: receitaValues[i], total: sumArray(receitaValues[i]), indent: 1, groupKey: 'rob' });
+    });
 
     // DEDUÇÕES (Simples Nacional = 7% sobre ROB)
-    rows.push({ label: '(-) DEDUÇÕES', values: [], total: 0, isGroup: true, groupKey: 'deducoes' });
     const simplesValues = robValues.map(v => -(v * 0.07));
-    rows.push({ label: 'Simples Nacional (7%)', values: simplesValues, total: sumArray(simplesValues), indent: 1, groupKey: 'deducoes' });
     const totalDeducoes = simplesValues;
-    rows.push({ label: 'Total Deduções', values: totalDeducoes, total: sumArray(totalDeducoes), isSummary: true });
+    rows.push({ label: '(-) DEDUÇÕES', values: totalDeducoes, total: sumArray(totalDeducoes), isGroup: true, groupKey: 'deducoes' });
+    rows.push({ label: 'Simples Nacional (7%)', values: simplesValues, total: sumArray(simplesValues), indent: 1, groupKey: 'deducoes' });
 
     // ROL
     const rolValues = addArrays(robValues, totalDeducoes);
     rows.push({ label: '= RECEITA OPERACIONAL LÍQUIDA (ROL)', values: rolValues, total: sumArray(rolValues), isSummary: true });
 
     // CUSTOS
-    rows.push({ label: '(-) CUSTOS (CMV)', values: [], total: 0, isGroup: true, groupKey: 'custos' });
     const custoContas = chartAccounts.filter(a => a.tipo === 'custo');
     const custoValues: number[][] = [];
     custoContas.forEach(conta => {
       const vals = getMonthlyValues(t => t.pacote === conta.pacote && t.conta_contabil === conta.conta_contabil);
       custoValues.push(vals);
-      rows.push({ label: conta.conta_contabil, values: vals, total: sumArray(vals), indent: 1, groupKey: 'custos' });
     });
     const totalCustos = addArrays(...custoValues);
-    rows.push({ label: 'Total Custos', values: totalCustos, total: sumArray(totalCustos), isSummary: true });
+    rows.push({ label: '(-) CUSTOS (CMV)', values: totalCustos, total: sumArray(totalCustos), isGroup: true, groupKey: 'custos' });
+    custoContas.forEach((conta, i) => {
+      rows.push({ label: conta.conta_contabil, values: custoValues[i], total: sumArray(custoValues[i]), indent: 1, groupKey: 'custos' });
+    });
 
     // LUCRO BRUTO
     const lucroBrutoValues = addArrays(rolValues, totalCustos);
     rows.push({ label: '= LUCRO BRUTO', values: lucroBrutoValues, total: sumArray(lucroBrutoValues), isSummary: true });
 
     // DESPESAS ADMINISTRATIVAS
-    rows.push({ label: '(-) DESPESAS ADMINISTRATIVAS', values: [], total: 0, isGroup: true, groupKey: 'despesas' });
-    
     const despesaPacotes = [...new Set(chartAccounts.filter(a => a.tipo === 'despesa').map(a => a.pacote))];
     const allDespesaValues: number[][] = [];
 
@@ -93,24 +91,29 @@ export function FinancialDRE({ year }: { year: number }) {
       const pacoteContas = chartAccounts.filter(a => a.tipo === 'despesa' && a.pacote === pacoteNome);
       const pacoteGroupKey = `desp_${pacoteNome}`;
 
-      // Sub-group header
       const subGroupValues: number[][] = [];
       pacoteContas.forEach(conta => {
         const vals = getMonthlyValues(t => t.pacote === conta.pacote && t.conta_contabil === conta.conta_contabil);
         subGroupValues.push(vals);
-        rows.push({ label: conta.conta_contabil, values: vals, total: sumArray(vals), indent: 2, groupKey: pacoteGroupKey });
       });
       const subTotal = addArrays(...subGroupValues);
       allDespesaValues.push(subTotal);
-      // Insert group header before its items
-      const firstItemIdx = rows.findIndex(r => r.groupKey === pacoteGroupKey);
-      if (firstItemIdx >= 0) {
-        rows.splice(firstItemIdx, 0, { label: pacoteNome, values: subTotal, total: sumArray(subTotal), isGroup: true, indent: 1, groupKey: pacoteGroupKey });
-      }
+      // Group header with totals inline
+      rows.push({ label: pacoteNome, values: subTotal, total: sumArray(subTotal), isGroup: true, indent: 1, groupKey: pacoteGroupKey });
+      pacoteContas.forEach((conta, i) => {
+        rows.push({ label: conta.conta_contabil, values: subGroupValues[i], total: sumArray(subGroupValues[i]), indent: 2, groupKey: pacoteGroupKey });
+      });
     });
 
     const totalDespesas = addArrays(...allDespesaValues);
-    rows.push({ label: 'Total Despesas Adm.', values: totalDespesas, total: sumArray(totalDespesas), isSummary: true });
+    rows.push({ label: '(-) DESPESAS ADMINISTRATIVAS', values: totalDespesas, total: sumArray(totalDespesas), isGroup: true, groupKey: 'despesas' });
+    // Move despesas group header before its sub-groups by finding first desp_ item
+    const despHeaderIdx = rows.length - 1;
+    const firstDespIdx = rows.findIndex(r => r.groupKey?.startsWith('desp_'));
+    if (firstDespIdx >= 0 && firstDespIdx < despHeaderIdx) {
+      const [despHeader] = rows.splice(despHeaderIdx, 1);
+      rows.splice(firstDespIdx, 0, despHeader);
+    }
 
     // RESULTADO
     const resultadoValues = addArrays(lucroBrutoValues, totalDespesas);
@@ -206,7 +209,7 @@ export function FinancialDRE({ year }: { year: number }) {
                       {row.label}
                     </span>
                   </td>
-                  {(row.isGroup && row.values.length === 0) ? (
+                  {row.values.length === 0 ? (
                     <>
                       {MONTHS.map((_, i) => <td key={i} className="p-3"></td>)}
                       <td className="p-3"></td>
