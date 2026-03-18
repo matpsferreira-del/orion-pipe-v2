@@ -37,8 +37,76 @@ export function FinancialDRE({ year }: { year: number }) {
     };
 
     const sumArray = (arr: number[]) => arr.reduce((s, v) => s + v, 0);
-    const addArrays = (...arrays: number[][]) => MONTHS.map((_, i) => arrays.reduce((s, a) => s + (a[i] || 0), 0));
-    const negArray = (arr: number[]) => arr.map(v => -v);
+    const addArrays = (...arrays: number[][]) => arrays.length === 0 ? MONTHS.map(() => 0) : MONTHS.map((_, i) => arrays.reduce((s, a) => s + (a[i] || 0), 0));
+
+    // Helper: build hierarchical rows for a tipo (pacote > sub_pacote > conta)
+    const buildHierarchicalRows = (
+      contas: typeof chartAccounts,
+      parentGroupKey: string,
+      baseIndent: number,
+    ): { rows: DRERow[]; allValues: number[][] } => {
+      const rows: DRERow[] = [];
+      const allValues: number[][] = [];
+      const pacotes = [...new Set(contas.map(a => a.pacote))];
+
+      pacotes.forEach(pacoteNome => {
+        const pacoteContas = contas.filter(a => a.pacote === pacoteNome);
+        const pacoteGroupKey = `${parentGroupKey}_p_${pacoteNome}`;
+        const subPacotes = [...new Set(pacoteContas.map(a => a.sub_pacote).filter(Boolean))] as string[];
+        const contasSemSub = pacoteContas.filter(a => !a.sub_pacote);
+
+        // Collect all values for this pacote
+        const pacoteAllValues: number[][] = [];
+
+        // Build sub-pacote rows first to calculate pacote total
+        const subRows: DRERow[] = [];
+
+        subPacotes.forEach(subNome => {
+          const subContas = pacoteContas.filter(a => a.sub_pacote === subNome);
+          const subGroupKey = `${pacoteGroupKey}_s_${subNome}`;
+          const subContaValues: number[][] = [];
+
+          subContas.forEach(conta => {
+            const vals = getMonthlyValues(t => t.pacote === conta.pacote && t.conta_contabil === conta.conta_contabil);
+            subContaValues.push(vals);
+          });
+
+          const subTotal = addArrays(...subContaValues);
+          pacoteAllValues.push(subTotal);
+
+          // Sub-pacote header (collapsible)
+          subRows.push({ label: subNome, values: subTotal, total: sumArray(subTotal), isGroup: true, indent: baseIndent + 1, groupKey: subGroupKey });
+          subContas.forEach((conta, i) => {
+            subRows.push({ label: conta.conta_contabil, values: subContaValues[i], total: sumArray(subContaValues[i]), indent: baseIndent + 2, groupKey: subGroupKey });
+          });
+        });
+
+        // Contas without sub-pacote
+        const semSubRows: DRERow[] = [];
+        contasSemSub.forEach(conta => {
+          const vals = getMonthlyValues(t => t.pacote === conta.pacote && t.conta_contabil === conta.conta_contabil);
+          pacoteAllValues.push(vals);
+          semSubRows.push({ label: conta.conta_contabil, values: vals, total: sumArray(vals), indent: baseIndent + 1, groupKey: pacoteGroupKey });
+        });
+
+        const pacoteTotal = addArrays(...pacoteAllValues);
+        allValues.push(pacoteTotal);
+
+        // Only add pacote group header if there are multiple pacotes or sub-pacotes
+        if (pacotes.length > 1 || subPacotes.length > 0) {
+          rows.push({ label: pacoteNome, values: pacoteTotal, total: sumArray(pacoteTotal), isGroup: true, indent: baseIndent, groupKey: pacoteGroupKey });
+          rows.push(...semSubRows);
+          rows.push(...subRows);
+        } else {
+          // Single pacote, no sub-pacotes: just add contas directly
+          semSubRows.forEach(r => { r.groupKey = parentGroupKey; });
+          rows.push(...semSubRows);
+          rows.push(...subRows);
+        }
+      });
+
+      return { rows, allValues };
+    };
 
     const rows: DRERow[] = [];
 
@@ -56,7 +124,7 @@ export function FinancialDRE({ year }: { year: number }) {
       rows.push({ label: conta.conta_contabil, values: receitaValues[i], total: sumArray(receitaValues[i]), indent: 1, groupKey: 'rob' });
     });
 
-    // DEDUÇÕES (Simples Nacional = 7% sobre ROB)
+    // DEDUÇÕES
     const simplesValues = robValues.map(v => -(v * 0.07));
     const totalDeducoes = simplesValues;
     rows.push({ label: '(-) DEDUÇÕES', values: totalDeducoes, total: sumArray(totalDeducoes), isGroup: true, groupKey: 'deducoes' });
@@ -66,54 +134,23 @@ export function FinancialDRE({ year }: { year: number }) {
     const rolValues = addArrays(robValues, totalDeducoes);
     rows.push({ label: '= RECEITA OPERACIONAL LÍQUIDA (ROL)', values: rolValues, total: sumArray(rolValues), isSummary: true });
 
-    // CUSTOS
+    // CUSTOS (with hierarchy)
     const custoContas = chartAccounts.filter(a => a.tipo === 'custo');
-    const custoValues: number[][] = [];
-    custoContas.forEach(conta => {
-      const vals = getMonthlyValues(t => t.pacote === conta.pacote && t.conta_contabil === conta.conta_contabil);
-      custoValues.push(vals);
-    });
-    const totalCustos = addArrays(...custoValues);
+    const { rows: custoRows, allValues: custoAllValues } = buildHierarchicalRows(custoContas, 'custos', 1);
+    const totalCustos = addArrays(...custoAllValues);
     rows.push({ label: '(-) CUSTOS (CMV)', values: totalCustos, total: sumArray(totalCustos), isGroup: true, groupKey: 'custos' });
-    custoContas.forEach((conta, i) => {
-      rows.push({ label: conta.conta_contabil, values: custoValues[i], total: sumArray(custoValues[i]), indent: 1, groupKey: 'custos' });
-    });
+    rows.push(...custoRows);
 
     // LUCRO BRUTO
     const lucroBrutoValues = addArrays(rolValues, totalCustos);
     rows.push({ label: '= LUCRO BRUTO', values: lucroBrutoValues, total: sumArray(lucroBrutoValues), isSummary: true });
 
-    // DESPESAS ADMINISTRATIVAS
-    const despesaPacotes = [...new Set(chartAccounts.filter(a => a.tipo === 'despesa').map(a => a.pacote))];
-    const allDespesaValues: number[][] = [];
-
-    despesaPacotes.forEach(pacoteNome => {
-      const pacoteContas = chartAccounts.filter(a => a.tipo === 'despesa' && a.pacote === pacoteNome);
-      const pacoteGroupKey = `desp_${pacoteNome}`;
-
-      const subGroupValues: number[][] = [];
-      pacoteContas.forEach(conta => {
-        const vals = getMonthlyValues(t => t.pacote === conta.pacote && t.conta_contabil === conta.conta_contabil);
-        subGroupValues.push(vals);
-      });
-      const subTotal = addArrays(...subGroupValues);
-      allDespesaValues.push(subTotal);
-      // Group header with totals inline
-      rows.push({ label: pacoteNome, values: subTotal, total: sumArray(subTotal), isGroup: true, indent: 1, groupKey: pacoteGroupKey });
-      pacoteContas.forEach((conta, i) => {
-        rows.push({ label: conta.conta_contabil, values: subGroupValues[i], total: sumArray(subGroupValues[i]), indent: 2, groupKey: pacoteGroupKey });
-      });
-    });
-
-    const totalDespesas = addArrays(...allDespesaValues);
+    // DESPESAS (with hierarchy)
+    const despesaContas = chartAccounts.filter(a => a.tipo === 'despesa');
+    const { rows: despesaRows, allValues: despesaAllValues } = buildHierarchicalRows(despesaContas, 'despesas', 1);
+    const totalDespesas = addArrays(...despesaAllValues);
     rows.push({ label: '(-) DESPESAS ADMINISTRATIVAS', values: totalDespesas, total: sumArray(totalDespesas), isGroup: true, groupKey: 'despesas' });
-    // Move despesas group header before its sub-groups by finding first desp_ item
-    const despHeaderIdx = rows.length - 1;
-    const firstDespIdx = rows.findIndex(r => r.groupKey?.startsWith('desp_'));
-    if (firstDespIdx >= 0 && firstDespIdx < despHeaderIdx) {
-      const [despHeader] = rows.splice(despHeaderIdx, 1);
-      rows.splice(firstDespIdx, 0, despHeader);
-    }
+    rows.push(...despesaRows);
 
     // RESULTADO
     const resultadoValues = addArrays(lucroBrutoValues, totalDespesas);
@@ -177,8 +214,23 @@ export function FinancialDRE({ year }: { year: number }) {
           </thead>
           <tbody>
             {dreData.map((row, idx) => {
-              // Hide children of collapsed groups
-              if (row.groupKey && collapsed[row.groupKey] && !row.isGroup) return null;
+              // Hide children of collapsed groups (check all ancestor group keys)
+              if (row.groupKey && !row.isGroup) {
+                // Check if this row's direct group or any parent group is collapsed
+                const isHidden = Object.entries(collapsed).some(([key, isCollapsed]) => {
+                  if (!isCollapsed) return false;
+                  return row.groupKey === key || row.groupKey?.startsWith(key + '_');
+                });
+                if (isHidden) return null;
+              }
+              // Hide sub-group headers when parent is collapsed
+              if (row.isGroup && row.groupKey) {
+                const isHidden = Object.entries(collapsed).some(([key, isCollapsed]) => {
+                  if (!isCollapsed || key === row.groupKey) return false;
+                  return row.groupKey!.startsWith(key + '_');
+                });
+                if (isHidden) return null;
+              }
 
               const isCollapsible = row.isGroup && row.groupKey;
 
