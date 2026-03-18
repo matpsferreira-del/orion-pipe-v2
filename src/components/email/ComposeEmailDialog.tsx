@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog';
@@ -10,8 +10,9 @@ import { Badge } from '@/components/ui/badge';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
-import { Loader2, Send, X, FileText } from 'lucide-react';
-import { useEmailTemplates, EmailTemplate } from '@/hooks/useEmailTemplates';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Loader2, Send, X, FileText, Eye, Edit } from 'lucide-react';
+import { useEmailTemplates } from '@/hooks/useEmailTemplates';
 import { useSendEmail } from '@/hooks/useSendEmail';
 import { useGmailConnection } from '@/hooks/useGmailConnection';
 import { useAuth } from '@/contexts/AuthContext';
@@ -22,8 +23,15 @@ interface ComposeEmailDialogProps {
   defaultRecipients?: string[];
   defaultSubject?: string;
   defaultBody?: string;
-  /** Variables to auto-fill in templates */
   variables?: Record<string, string>;
+}
+
+function replaceVariables(text: string, vars: Record<string, string>): string {
+  let result = text;
+  Object.entries(vars).forEach(([key, value]) => {
+    result = result.replace(new RegExp(`\\{${key}\\}`, 'g'), value);
+  });
+  return result;
 }
 
 export function ComposeEmailDialog({
@@ -39,13 +47,18 @@ export function ComposeEmailDialog({
   const [subject, setSubject] = useState(defaultSubject);
   const [body, setBody] = useState(defaultBody);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('none');
+  const [activeTab, setActiveTab] = useState<string>('edit');
 
   const { data: templates = [] } = useEmailTemplates();
   const sendEmail = useSendEmail();
   const { connected, gmailEmail } = useGmailConnection();
   const { profile } = useAuth();
 
-  // Reset fields when dialog opens
+  const allVars: Record<string, string> = useMemo(() => ({
+    nome_recrutador: profile?.name || '',
+    ...variables,
+  }), [profile?.name, variables]);
+
   useEffect(() => {
     if (open) {
       setRecipients(defaultRecipients);
@@ -53,16 +66,17 @@ export function ComposeEmailDialog({
       setBody(defaultBody);
       setSelectedTemplateId('none');
       setRecipientInput('');
+      setActiveTab('edit');
     }
   }, [open, defaultRecipients, defaultSubject, defaultBody]);
 
+  // Resolved (variables replaced) versions for preview and sending
+  const resolvedSubject = useMemo(() => replaceVariables(subject, allVars), [subject, allVars]);
+  const resolvedBody = useMemo(() => replaceVariables(body, allVars), [body, allVars]);
+
   const getSignature = (category: string) => {
-    if (category === 'recrutamento') {
-      return '\n\n--\nEquipe de Recrutamento Orion';
-    }
-    if (category === 'comercial') {
-      return '\n\n--\nEquipe Comercial Orion';
-    }
+    if (category === 'recrutamento') return '\n\n--\nEquipe de Recrutamento Orion';
+    if (category === 'comercial') return '\n\n--\nEquipe Comercial Orion';
     return '';
   };
 
@@ -73,22 +87,7 @@ export function ComposeEmailDialog({
     const template = templates.find(t => t.id === templateId);
     if (!template) return;
 
-    let filledSubject = template.subject;
     let filledBody = template.body;
-
-    // Auto-fill variables
-    const allVars: Record<string, string> = {
-      nome_recrutador: profile?.name || '',
-      ...variables,
-    };
-
-    Object.entries(allVars).forEach(([key, value]) => {
-      const regex = new RegExp(`\\{${key}\\}`, 'g');
-      filledSubject = filledSubject.replace(regex, value);
-      filledBody = filledBody.replace(regex, value);
-    });
-
-    // Auto-append signature based on category
     const signature = getSignature(template.category);
     if (signature) {
       const isHtml = filledBody.includes('<');
@@ -99,7 +98,7 @@ export function ComposeEmailDialog({
       }
     }
 
-    setSubject(filledSubject);
+    setSubject(template.subject);
     setBody(filledBody);
   };
 
@@ -117,18 +116,21 @@ export function ComposeEmailDialog({
 
   const handleSend = () => {
     if (!recipients.length) return;
-    // Strip HTML tags for plain text check
-    const plainBody = body.replace(/<[^>]*>/g, '').trim();
-    if (!subject.trim() || !plainBody) return;
+    const plainBody = resolvedBody.replace(/<[^>]*>/g, '').trim();
+    if (!resolvedSubject.trim() || !plainBody) return;
+
+    const htmlBody = resolvedBody.includes('<')
+      ? resolvedBody
+      : `<p>${resolvedBody.replace(/\n/g, '<br/>')}</p>`;
 
     sendEmail.mutate(
       {
         recipients,
-        subject,
-        html_body: body.includes('<') ? body : `<p>${body.replace(/\n/g, '<br/>')}</p>`,
+        subject: resolvedSubject,
+        html_body: htmlBody,
         template_id: selectedTemplateId !== 'none' ? selectedTemplateId : undefined,
       },
-      { onSuccess: () => onOpenChange(false) }
+      { onSuccess: () => onOpenChange(false) },
     );
   };
 
@@ -144,14 +146,20 @@ export function ComposeEmailDialog({
             <strong> Configurações → Integrações</strong>.
           </p>
           <DialogFooter>
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
-              Fechar
-            </Button>
+            <Button variant="outline" onClick={() => onOpenChange(false)}>Fechar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     );
   }
+
+  // Build preview HTML
+  const previewHtml = resolvedBody.includes('<')
+    ? resolvedBody
+    : `<p>${resolvedBody.replace(/\n/g, '<br/>')}</p>`;
+
+  // Check for unresolved variables
+  const unresolvedVars = (resolvedBody.match(/\{[a-z_]+\}/g) || []);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -185,9 +193,7 @@ export function ComposeEmailDialog({
                   <SelectItem key={t.id} value={t.id}>
                     <span className="flex items-center gap-2">
                       {t.name}
-                      <Badge variant="outline" className="text-[10px]">
-                        {t.category}
-                      </Badge>
+                      <Badge variant="outline" className="text-[10px]">{t.category}</Badge>
                     </span>
                   </SelectItem>
                 ))}
@@ -202,10 +208,7 @@ export function ComposeEmailDialog({
               {recipients.map(email => (
                 <Badge key={email} variant="secondary" className="gap-1">
                   {email}
-                  <X
-                    className="h-3 w-3 cursor-pointer"
-                    onClick={() => removeRecipient(email)}
-                  />
+                  <X className="h-3 w-3 cursor-pointer" onClick={() => removeRecipient(email)} />
                 </Badge>
               ))}
             </div>
@@ -214,13 +217,9 @@ export function ComposeEmailDialog({
                 value={recipientInput}
                 onChange={e => setRecipientInput(e.target.value)}
                 placeholder="email@exemplo.com"
-                onKeyDown={e => {
-                  if (e.key === 'Enter') { e.preventDefault(); addRecipient(); }
-                }}
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addRecipient(); } }}
               />
-              <Button type="button" variant="outline" size="sm" onClick={addRecipient}>
-                Adicionar
-              </Button>
+              <Button type="button" variant="outline" size="sm" onClick={addRecipient}>Adicionar</Button>
             </div>
           </div>
 
@@ -232,27 +231,63 @@ export function ComposeEmailDialog({
               onChange={e => setSubject(e.target.value)}
               placeholder="Assunto do email"
             />
+            {resolvedSubject !== subject && (
+              <p className="text-xs text-muted-foreground">
+                Pré-visualização: <span className="font-medium">{resolvedSubject}</span>
+              </p>
+            )}
           </div>
 
-          {/* Body */}
+          {/* Body with Edit / Preview tabs */}
           <div className="space-y-1.5">
             <Label>Mensagem</Label>
-            <Textarea
-              value={body}
-              onChange={e => setBody(e.target.value)}
-              placeholder="Escreva sua mensagem..."
-              className="min-h-[200px]"
-            />
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+              <TabsList className="h-8">
+                <TabsTrigger value="edit" className="text-xs gap-1">
+                  <Edit className="h-3 w-3" /> Editar
+                </TabsTrigger>
+                <TabsTrigger value="preview" className="text-xs gap-1">
+                  <Eye className="h-3 w-3" /> Pré-visualizar
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="edit" className="mt-2">
+                <Textarea
+                  value={body}
+                  onChange={e => setBody(e.target.value)}
+                  placeholder="Escreva sua mensagem..."
+                  className="min-h-[200px]"
+                />
+                {unresolvedVars.length > 0 && (
+                  <p className="text-xs text-amber-600 mt-1">
+                    ⚠ Variáveis não resolvidas: {unresolvedVars.join(', ')}
+                  </p>
+                )}
+              </TabsContent>
+
+              <TabsContent value="preview" className="mt-2">
+                <div className="border rounded-md bg-background p-4 min-h-[200px]">
+                  {/* Subject preview */}
+                  <div className="border-b pb-2 mb-3">
+                    <p className="text-xs text-muted-foreground">Assunto</p>
+                    <p className="text-sm font-medium">{resolvedSubject || '(sem assunto)'}</p>
+                  </div>
+                  {/* Body preview - rendered HTML */}
+                  <div
+                    className="prose prose-sm max-w-none text-foreground [&_p]:my-1 [&_br]:leading-relaxed"
+                    dangerouslySetInnerHTML={{ __html: previewHtml }}
+                  />
+                </div>
+              </TabsContent>
+            </Tabs>
           </div>
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancelar
-          </Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
           <Button
             onClick={handleSend}
-            disabled={sendEmail.isPending || !recipients.length || !subject.trim()}
+            disabled={sendEmail.isPending || !recipients.length || !resolvedSubject.trim()}
           >
             {sendEmail.isPending ? (
               <Loader2 className="h-4 w-4 mr-1 animate-spin" />
