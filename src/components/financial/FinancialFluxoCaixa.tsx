@@ -62,7 +62,7 @@ export function FinancialFluxoCaixa({ year }: { year: number }) {
 
     // RESULTADO
     rows.push({ label: '= RESULTADO DO PERÍODO', values: [], isGroup: true });
-    const resultadoPeriodo = MONTHS.map((_, i) => totalEntradas[i] - totalSaidas[i]);
+    const resultadoPeriodo = MONTHS.map((_, i) => totalEntradas[i] + totalSaidas[i]);
     rows.push({ label: 'Resultado do Mês', values: resultadoPeriodo, isSummary: true });
 
     // Saldo acumulado
