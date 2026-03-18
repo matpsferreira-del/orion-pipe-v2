@@ -6,13 +6,17 @@ import { FinancialDashboard } from '@/components/financial/FinancialDashboard';
 import { FinancialLancamentos } from '@/components/financial/FinancialLancamentos';
 import { FinancialDRE } from '@/components/financial/FinancialDRE';
 import { FinancialFluxoCaixa } from '@/components/financial/FinancialFluxoCaixa';
+import { ChartOfAccountsDialog } from '@/components/financial/ChartOfAccountsDialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
+import { Settings2 } from 'lucide-react';
 
 export default function Financeiro() {
   const [searchParams, setSearchParams] = useSearchParams();
   const currentTab = searchParams.get('tab') || 'dashboard';
   const currentYear = new Date().getFullYear();
   const [selectedYear, setSelectedYear] = useState(currentYear);
+  const [showChartAccounts, setShowChartAccounts] = useState(false);
 
   const years = Array.from({ length: 5 }, (_, i) => currentYear - i);
 
@@ -30,16 +34,21 @@ export default function Financeiro() {
         title="Financeiro"
         description="Controle financeiro completo — Lançamentos, DRE e Fluxo de Caixa"
         actions={
-          <Select value={String(selectedYear)} onValueChange={(v) => setSelectedYear(Number(v))}>
-            <SelectTrigger className="w-[120px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {years.map((y) => (
-                <SelectItem key={y} value={String(y)}>{y}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => setShowChartAccounts(true)}>
+              <Settings2 className="h-4 w-4 mr-1" /> Plano de Contas
+            </Button>
+            <Select value={String(selectedYear)} onValueChange={(v) => setSelectedYear(Number(v))}>
+              <SelectTrigger className="w-[120px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {years.map((y) => (
+                  <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         }
       />
 
@@ -64,6 +73,8 @@ export default function Financeiro() {
           <FinancialFluxoCaixa year={selectedYear} />
         </TabsContent>
       </Tabs>
+
+      <ChartOfAccountsDialog open={showChartAccounts} onOpenChange={setShowChartAccounts} />
     </div>
   );
 }

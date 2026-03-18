@@ -52,19 +52,17 @@ export function FinancialFluxoCaixa({ year }: { year: number }) {
     const saidaValues: number[][] = [];
     despesaPacotes.forEach(pacoteNome => {
       const vals = getMonthlyByVencimento(t => t.pacote === pacoteNome && t.valor < 0);
-      const absVals = vals.map(v => Math.abs(v));
-      if (absVals.some(v => v > 0)) {
+      if (vals.some(v => v !== 0)) {
         saidaValues.push(vals);
-        rows.push({ label: pacoteNome, values: absVals, indent: 1 });
+        rows.push({ label: pacoteNome, values: vals, indent: 1 });
       }
     });
-    const totalSaidasRaw = addArrays(...saidaValues);
-    const totalSaidas = totalSaidasRaw.map(v => Math.abs(v));
+    const totalSaidas = addArrays(...saidaValues);
     rows.push({ label: 'Total Saídas', values: totalSaidas, isSummary: true });
 
     // RESULTADO
     rows.push({ label: '= RESULTADO DO PERÍODO', values: [], isGroup: true });
-    const resultadoPeriodo = MONTHS.map((_, i) => totalEntradas[i] - totalSaidas[i]);
+    const resultadoPeriodo = MONTHS.map((_, i) => totalEntradas[i] + totalSaidas[i]);
     rows.push({ label: 'Resultado do Mês', values: resultadoPeriodo, isSummary: true });
 
     // Saldo acumulado
