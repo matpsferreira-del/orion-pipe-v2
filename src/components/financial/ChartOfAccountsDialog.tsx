@@ -35,7 +35,7 @@ function getNextCode(accounts: ChartAccount[], tipo: string): string {
 }
 
 export function ChartOfAccountsDialog({ open, onOpenChange }: Props) {
-  const { data: accounts = [], isLoading } = useChartOfAccounts();
+  const { data: accounts = [], isLoading } = useChartOfAccounts(true);
   const queryClient = useQueryClient();
   const [newPacote, setNewPacote] = useState('');
   const [newSubPacote, setNewSubPacote] = useState('');
