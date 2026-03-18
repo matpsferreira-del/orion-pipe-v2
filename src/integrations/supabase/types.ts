@@ -242,29 +242,35 @@ export type Database = {
       chart_of_accounts: {
         Row: {
           ativo: boolean | null
+          codigo: string | null
           conta_contabil: string
           created_at: string | null
           id: string
           ordem: number | null
           pacote: string
+          sub_pacote: string | null
           tipo: string
         }
         Insert: {
           ativo?: boolean | null
+          codigo?: string | null
           conta_contabil: string
           created_at?: string | null
           id?: string
           ordem?: number | null
           pacote: string
+          sub_pacote?: string | null
           tipo: string
         }
         Update: {
           ativo?: boolean | null
+          codigo?: string | null
           conta_contabil?: string
           created_at?: string | null
           id?: string
           ordem?: number | null
           pacote?: string
+          sub_pacote?: string | null
           tipo?: string
         }
         Relationships: []
