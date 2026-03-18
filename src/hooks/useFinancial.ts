@@ -9,6 +9,8 @@ export interface ChartAccount {
   tipo: string;
   ordem: number;
   ativo: boolean;
+  codigo: string | null;
+  sub_pacote: string | null;
 }
 
 export interface FinancialTransaction {
