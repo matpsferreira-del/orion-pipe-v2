@@ -214,8 +214,23 @@ export function FinancialDRE({ year }: { year: number }) {
           </thead>
           <tbody>
             {dreData.map((row, idx) => {
-              // Hide children of collapsed groups
-              if (row.groupKey && collapsed[row.groupKey] && !row.isGroup) return null;
+              // Hide children of collapsed groups (check all ancestor group keys)
+              if (row.groupKey && !row.isGroup) {
+                // Check if this row's direct group or any parent group is collapsed
+                const isHidden = Object.entries(collapsed).some(([key, isCollapsed]) => {
+                  if (!isCollapsed) return false;
+                  return row.groupKey === key || row.groupKey?.startsWith(key + '_');
+                });
+                if (isHidden) return null;
+              }
+              // Hide sub-group headers when parent is collapsed
+              if (row.isGroup && row.groupKey) {
+                const isHidden = Object.entries(collapsed).some(([key, isCollapsed]) => {
+                  if (!isCollapsed || key === row.groupKey) return false;
+                  return row.groupKey!.startsWith(key + '_');
+                });
+                if (isHidden) return null;
+              }
 
               const isCollapsible = row.isGroup && row.groupKey;
 
