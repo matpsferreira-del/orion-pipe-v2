@@ -77,9 +77,28 @@ export function BulkActionBar({
     setEmailDialogOpen(true);
   };
 
-  const bulkRecipients = selectedApps
-    .map(a => a._party?.email_raw)
-    .filter(Boolean) as string[];
+  const bulkRecipients = Array.from(new Set(
+    selectedApps
+      .map(a => a._party?.email_raw)
+      .filter(Boolean) as string[]
+  ));
+
+  const bulkRecipientVariables = Object.fromEntries(
+    selectedApps
+      .map((app) => {
+        const email = app._party?.email_raw;
+        if (!email) return null;
+
+        return [
+          email,
+          {
+            nome_candidato: app._party?.full_name || '',
+            nome_vaga: jobTitle,
+          },
+        ] as const;
+      })
+      .filter((entry): entry is readonly [string, { nome_candidato: string; nome_vaga: string }] => Boolean(entry))
+  );
 
   const handleReject = async () => {
     setProcessing(true);
