@@ -73,6 +73,8 @@ export default function Financeiro() {
           <FinancialFluxoCaixa year={selectedYear} />
         </TabsContent>
       </Tabs>
+
+      <ChartOfAccountsDialog open={showChartAccounts} onOpenChange={setShowChartAccounts} />
     </div>
   );
 }
