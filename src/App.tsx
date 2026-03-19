@@ -20,6 +20,7 @@ import Vagas from "./pages/Vagas";
 import ProposalGenerator from "./pages/ProposalGenerator";
 import RecrutamentoDashboard from "./pages/RecrutamentoDashboard";
 import MapeamentoVagas from "./pages/MapeamentoVagas";
+import MapComercial from "./pages/MapComercial";
 import ShortlistPresentation from "./pages/ShortlistPresentation";
 import PostGenerator from "./pages/PostGenerator";
 // @ts-ignore
