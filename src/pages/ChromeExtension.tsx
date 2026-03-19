@@ -7,10 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent } from '@/components/ui/card';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CheckCircle, Loader2, Briefcase, User, Link as LinkIcon, Building, BadgeCheck, Crosshair, ArrowRight, Target } from 'lucide-react';
-
-type Mode = 'vaga' | 'comercial';
 
 export default function ChromeExtension() {
   const [searchParams] = useSearchParams();
@@ -20,7 +17,6 @@ export default function ChromeExtension() {
   const [empresaAtual, setEmpresaAtual] = useState('');
   const [selectedJobId, setSelectedJobId] = useState('');
   const [selectedGroupId, setSelectedGroupId] = useState('');
-  const [mode, setMode] = useState<Mode>('vaga');
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
@@ -28,12 +24,10 @@ export default function ChromeExtension() {
     const paramUrl = searchParams.get('url');
     const paramCargo = searchParams.get('cargo');
     const paramEmpresa = searchParams.get('empresa');
-    const paramMode = searchParams.get('mode');
     if (paramNome) setNome(decodeURIComponent(paramNome));
     if (paramUrl) setLinkedinUrl(decodeURIComponent(paramUrl));
     if (paramCargo) setCargo(decodeURIComponent(paramCargo));
     if (paramEmpresa) setEmpresaAtual(decodeURIComponent(paramEmpresa));
-    if (paramMode === 'comercial') setMode('comercial');
   }, [searchParams]);
 
   const { data: jobs = [], isLoading: loadingJobs } = useQuery({
@@ -64,8 +58,7 @@ export default function ChromeExtension() {
   const saveMutation = useMutation({
     mutationFn: async () => {
       if (!nome.trim()) throw new Error('Preencha o nome');
-      if (mode === 'vaga' && !selectedJobId) throw new Error('Selecione uma vaga');
-      if (mode === 'comercial' && !selectedGroupId) throw new Error('Selecione uma estratégia');
+      if (!selectedJobId && !selectedGroupId) throw new Error('Selecione uma vaga ou estratégia');
 
       const { data: partyId, error: partyError } = await supabase.rpc('resolve_party', {
         p_full_name: nome.trim(),
@@ -76,7 +69,8 @@ export default function ChromeExtension() {
       });
       if (partyError) throw partyError;
 
-      if (mode === 'vaga') {
+      // Save to job if selected
+      if (selectedJobId) {
         await supabase.rpc('ensure_party_role', {
           p_party_id: partyId,
           p_role: 'candidate' as const,
@@ -99,7 +93,10 @@ export default function ChromeExtension() {
           status: 'new',
         });
         if (appError) throw appError;
-      } else {
+      }
+
+      // Save to strategy if selected
+      if (selectedGroupId) {
         await supabase.rpc('ensure_party_role', {
           p_party_id: partyId,
           p_role: 'prospect' as const,
@@ -108,10 +105,7 @@ export default function ChromeExtension() {
         const { error: memberError } = await supabase
           .from('commercial_strategy_members')
           .insert({ group_id: selectedGroupId, party_id: partyId });
-        if (memberError) {
-          if (memberError.code === '23505') throw new Error('Perfil já existe nesta estratégia');
-          throw memberError;
-        }
+        if (memberError && memberError.code !== '23505') throw memberError;
       }
     },
     onSuccess: () => setSaved(true),
@@ -125,14 +119,9 @@ export default function ChromeExtension() {
             <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
               <CheckCircle className="h-8 w-8 text-primary" />
             </div>
-            <h2 className="text-xl font-bold text-foreground">
-              {mode === 'vaga' ? 'Candidato mapeado!' : 'Perfil adicionado!'}
-            </h2>
+            <h2 className="text-xl font-bold text-foreground">Perfil salvo!</h2>
             <p className="text-sm text-muted-foreground">
-              <span className="font-semibold text-foreground">{nome}</span>{' '}
-              {mode === 'vaga'
-                ? 'foi adicionado ao pipeline da vaga com sucesso.'
-                : 'foi adicionado à estratégia comercial com sucesso.'}
+              <span className="font-semibold text-foreground">{nome}</span> foi adicionado com sucesso.
             </p>
             <Button
               variant="outline"
@@ -152,7 +141,7 @@ export default function ChromeExtension() {
     );
   }
 
-  const isValid = nome.trim() && (mode === 'vaga' ? selectedJobId : selectedGroupId);
+  const isValid = nome.trim() && (selectedJobId || selectedGroupId);
 
   return (
     <div className="min-h-screen bg-muted/30 flex items-start justify-center p-4 md:p-8">
@@ -170,24 +159,10 @@ export default function ChromeExtension() {
           </div>
         </div>
 
-        {/* Mode Tabs */}
-        <Tabs value={mode} onValueChange={(v) => setMode(v as Mode)}>
-          <TabsList className="w-full grid grid-cols-2">
-            <TabsTrigger value="vaga" className="gap-1.5">
-              <Briefcase className="h-3.5 w-3.5" />
-              Vaga
-            </TabsTrigger>
-            <TabsTrigger value="comercial" className="gap-1.5">
-              <Target className="h-3.5 w-3.5" />
-              Map Comercial
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
-
         {/* Form Card */}
         <Card className="shadow-sm border-border/60">
           <CardContent className="p-5 md:p-6 space-y-5">
-            {/* Candidate Info Section */}
+            {/* Candidate Info */}
             <div>
               <p className="text-[11px] font-bold text-primary uppercase tracking-widest mb-4">Dados do Perfil</p>
               <div className="space-y-4">
@@ -215,7 +190,6 @@ export default function ChromeExtension() {
                     </Label>
                     <Input id="cargo" value={cargo} onChange={(e) => setCargo(e.target.value)} placeholder="Ex: Gerente Financeiro" className="h-10 text-sm" />
                   </div>
-
                   <div className="space-y-1.5">
                     <Label htmlFor="empresa" className="text-xs font-medium flex items-center gap-1.5">
                       <Building className="h-3.5 w-3.5 text-primary/60" />
@@ -227,31 +201,25 @@ export default function ChromeExtension() {
               </div>
             </div>
 
-            {/* Divider */}
             <div className="border-t border-border/60" />
 
-            {/* Destination Section */}
+            {/* Destination: Job */}
             <div>
-              <p className="text-[11px] font-bold text-primary uppercase tracking-widest mb-4">
-                {mode === 'vaga' ? 'Vincular à Vaga' : 'Vincular à Estratégia'}
-              </p>
-              <div className="space-y-1.5">
-                <Label className="text-xs font-medium flex items-center gap-1.5">
-                  {mode === 'vaga' ? (
-                    <><Briefcase className="h-3.5 w-3.5 text-primary/60" /> Vaga Aberta</>
-                  ) : (
-                    <><Target className="h-3.5 w-3.5 text-primary/60" /> Estratégia Comercial</>
-                  )}
-                </Label>
-                {mode === 'vaga' ? (
-                  loadingJobs ? (
+              <p className="text-[11px] font-bold text-primary uppercase tracking-widest mb-4">Vincular a</p>
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium flex items-center gap-1.5">
+                    <Briefcase className="h-3.5 w-3.5 text-primary/60" />
+                    Vaga Aberta
+                  </Label>
+                  {loadingJobs ? (
                     <div className="flex items-center gap-2 text-xs text-muted-foreground py-3">
                       <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
                       Carregando vagas...
                     </div>
                   ) : (
                     <Select value={selectedJobId} onValueChange={setSelectedJobId}>
-                      <SelectTrigger className="h-10 text-sm"><SelectValue placeholder="Selecione uma vaga" /></SelectTrigger>
+                      <SelectTrigger className="h-10 text-sm"><SelectValue placeholder="Selecione uma vaga (opcional)" /></SelectTrigger>
                       <SelectContent>
                         {jobs.map((job) => (
                           <SelectItem key={job.id} value={job.id}>
@@ -263,16 +231,23 @@ export default function ChromeExtension() {
                         )}
                       </SelectContent>
                     </Select>
-                  )
-                ) : (
-                  loadingGroups ? (
+                  )}
+                </div>
+
+                {/* Destination: Strategy */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium flex items-center gap-1.5">
+                    <Target className="h-3.5 w-3.5 text-primary/60" />
+                    Estratégia Comercial
+                  </Label>
+                  {loadingGroups ? (
                     <div className="flex items-center gap-2 text-xs text-muted-foreground py-3">
                       <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
                       Carregando estratégias...
                     </div>
                   ) : (
                     <Select value={selectedGroupId} onValueChange={setSelectedGroupId}>
-                      <SelectTrigger className="h-10 text-sm"><SelectValue placeholder="Selecione uma estratégia" /></SelectTrigger>
+                      <SelectTrigger className="h-10 text-sm"><SelectValue placeholder="Selecione uma estratégia (opcional)" /></SelectTrigger>
                       <SelectContent>
                         {groups.map((g) => (
                           <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
@@ -282,8 +257,8 @@ export default function ChromeExtension() {
                         )}
                       </SelectContent>
                     </Select>
-                  )
-                )}
+                  )}
+                </div>
               </div>
             </div>
           </CardContent>
@@ -298,7 +273,7 @@ export default function ChromeExtension() {
           {saveMutation.isPending ? (
             <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Salvando...</>
           ) : (
-            <><Crosshair className="h-4 w-4 mr-2" />{mode === 'vaga' ? 'Salvar no Mapeamento' : 'Salvar na Estratégia'}</>
+            <><Crosshair className="h-4 w-4 mr-2" />Salvar Mapeamento</>
           )}
         </Button>
 
