@@ -87,10 +87,7 @@ const tabNavItems = {
     { to: '/pessoas', icon: UserCircle, label: 'Banco de Talentos' },
     { to: '/vagas', icon: Briefcase, label: 'Vagas' },
     { to: '/formatacao-cv', icon: FileText, label: 'Formatação de CV' },
-  ],
-  extensao: [
     { to: '/chrome-extension', icon: Radar, label: 'Extensão Chrome' },
-    { to: '/map-comercial', icon: Building2, label: 'Map Comercial' },
   ],
   financeiro: [
     { to: '/financeiro', icon: TrendingUp, label: 'Painel Financeiro' },
