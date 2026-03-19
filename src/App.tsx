@@ -123,6 +123,7 @@ const App = () => (
               <Route path="/post-generator" element={<PostGenerator />} />
               <Route path="/carta-oferta" element={<CartaOferta />} />
               <Route path="/configuracoes" element={<Configuracoes />} />
+              <Route path="/map-comercial" element={<MapComercial />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
