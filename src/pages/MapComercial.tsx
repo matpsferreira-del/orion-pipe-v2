@@ -122,7 +122,7 @@ export default function MapComercial() {
       } else {
         const { error } = await supabase
           .from('commercial_strategy_groups')
-          .insert({ name: groupName.trim(), description: groupDescription.trim() || null, created_by: user?.id || null });
+          .insert({ name: groupName.trim(), description: groupDescription.trim() || null, created_by: authProfile?.id || null });
         if (error) throw error;
       }
     },
