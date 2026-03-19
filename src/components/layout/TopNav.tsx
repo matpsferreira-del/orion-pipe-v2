@@ -16,7 +16,7 @@ export const tabConfig = {
     defaultRoute: '/recrutamento',
   },
   extensao: {
-    label: 'Extensão Chrome',
+    label: 'Extensões',
     defaultRoute: '/chrome-extension',
   },
   financeiro: {
