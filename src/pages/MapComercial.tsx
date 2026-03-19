@@ -49,7 +49,7 @@ interface StrategyMember {
 }
 
 export default function MapComercial() {
-  const { user } = useAuth();
+  const { user, profile: authProfile } = useAuth();
   const queryClient = useQueryClient();
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
