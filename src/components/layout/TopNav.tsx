@@ -42,10 +42,11 @@ export const routeToTab: Record<string, TabType> = {
   '/post-generator': 'comercial',
   '/financeiro': 'financeiro',
   '/formatacao-cv': 'recrutamento',
-  '/chrome-extension': 'recrutamento',
   '/recrutamento': 'recrutamento',
   '/pessoas': 'recrutamento',
   '/vagas': 'recrutamento',
+  '/chrome-extension': 'extensao',
+  '/map-comercial': 'extensao',
   '/equipe': 'configuracoes',
   '/configuracoes': 'configuracoes',
 };
