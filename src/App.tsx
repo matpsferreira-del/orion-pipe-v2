@@ -20,6 +20,7 @@ import Vagas from "./pages/Vagas";
 import ProposalGenerator from "./pages/ProposalGenerator";
 import RecrutamentoDashboard from "./pages/RecrutamentoDashboard";
 import MapeamentoVagas from "./pages/MapeamentoVagas";
+import MapComercial from "./pages/MapComercial";
 import ShortlistPresentation from "./pages/ShortlistPresentation";
 import PostGenerator from "./pages/PostGenerator";
 // @ts-ignore
@@ -118,6 +119,7 @@ const App = () => (
               <Route path="/financeiro" element={<Financeiro />} />
               <Route path="/relatorios" element={<Relatorios />} />
               <Route path="/mapeamento-vagas" element={<MapeamentoVagas />} />
+              <Route path="/map-comercial" element={<MapComercial />} />
               <Route path="/equipe" element={<Equipe />} />
               <Route path="/post-generator" element={<PostGenerator />} />
               <Route path="/carta-oferta" element={<CartaOferta />} />

@@ -79,6 +79,7 @@ const tabNavItems = {
     { to: '/tarefas', icon: CheckSquare, label: 'Tarefas' },
     { to: '/faturamento', icon: Receipt, label: 'Faturamento' },
     { to: '/relatorios', icon: BarChart3, label: 'Relatórios' },
+    { to: '/map-comercial', icon: Radar, label: 'Map Comercial' },
     { to: '/mapeamento-vagas', icon: Radar, label: 'Mapeamento de Vagas' },
     { to: '/post-generator', icon: Share2, label: 'Gerador de Posts' },
   ],
