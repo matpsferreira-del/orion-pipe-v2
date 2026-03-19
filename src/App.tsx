@@ -28,6 +28,7 @@ import Auth from "./pages/Auth";
 import ChromeExtension from "./pages/ChromeExtension";
 import CartaOferta from "./pages/CartaOferta";
 import Financeiro from "./pages/Financeiro";
+import MapComercial from "./pages/MapComercial";
 import NotFound from "./pages/NotFound";
 import { Loader2 } from "lucide-react";
 
@@ -122,6 +123,7 @@ const App = () => (
               <Route path="/post-generator" element={<PostGenerator />} />
               <Route path="/carta-oferta" element={<CartaOferta />} />
               <Route path="/configuracoes" element={<Configuracoes />} />
+              <Route path="/map-comercial" element={<MapComercial />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
