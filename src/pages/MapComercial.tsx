@@ -14,8 +14,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
   Plus, Search, Users, Trash2, Loader2, ExternalLink, FolderOpen, ChevronRight,
-  Building, BadgeCheck, ArrowLeft, UserPlus, MoreHorizontal,
+  Building, BadgeCheck, ArrowLeft, UserPlus, MoreHorizontal, Upload,
 } from 'lucide-react';
+import { ImportStrategyMembersDialog } from '@/components/commercial/ImportStrategyMembersDialog';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
@@ -59,6 +60,7 @@ export default function MapComercial() {
   const [groupDescription, setGroupDescription] = useState('');
   const [deleteGroupId, setDeleteGroupId] = useState<string | null>(null);
   const [showAddMemberDialog, setShowAddMemberDialog] = useState(false);
+  const [showImportDialog, setShowImportDialog] = useState(false);
   const [memberSearch, setMemberSearch] = useState('');
 
   // Fetch groups
@@ -225,6 +227,10 @@ export default function MapComercial() {
                 <p className="text-sm text-muted-foreground mt-0.5">{selectedGroup.description}</p>
               )}
             </div>
+            <Button size="sm" variant="outline" onClick={() => setShowImportDialog(true)} className="gap-1.5">
+              <Upload className="h-4 w-4" />
+              Importar
+            </Button>
             <Button size="sm" onClick={() => setShowAddMemberDialog(true)} className="gap-1.5">
               <UserPlus className="h-4 w-4" />
               Adicionar Perfil
