@@ -375,6 +375,12 @@ export default function MapComercial() {
               </div>
             </DialogContent>
           </Dialog>
+
+          <ImportLeadsDialog
+            open={showImportDialog}
+            onOpenChange={setShowImportDialog}
+            groupId={selectedGroupId!}
+          />
         </div>
       </div>
     );
