@@ -50,6 +50,7 @@ interface StrategyMember {
     city: string | null;
     state: string | null;
   } | null;
+}
 
 export default function MapComercial() {
   const { user, profile: authProfile } = useAuth();
