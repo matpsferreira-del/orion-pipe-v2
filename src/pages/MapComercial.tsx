@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
   Plus, Search, Users, Trash2, Loader2, ExternalLink, FolderOpen, ChevronRight,
-  Building, BadgeCheck, ArrowLeft, UserPlus, MoreHorizontal,
+  Building, BadgeCheck, ArrowLeft, UserPlus, MoreHorizontal, Upload, Download,
 } from 'lucide-react';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
@@ -23,6 +23,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { ImportLeadsDialog } from '@/components/commercial/ImportLeadsDialog';
 
 interface StrategyGroup {
   id: string;
@@ -45,8 +46,10 @@ interface StrategyMember {
     current_company: string | null;
     linkedin_url: string | null;
     email_raw: string | null;
+    phone_raw: string | null;
+    city: string | null;
+    state: string | null;
   } | null;
-}
 
 export default function MapComercial() {
   const { user, profile: authProfile } = useAuth();
