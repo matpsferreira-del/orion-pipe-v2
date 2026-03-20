@@ -63,6 +63,7 @@ export default function MapComercial() {
   const [groupDescription, setGroupDescription] = useState('');
   const [deleteGroupId, setDeleteGroupId] = useState<string | null>(null);
   const [showAddMemberDialog, setShowAddMemberDialog] = useState(false);
+  const [showImportDialog, setShowImportDialog] = useState(false);
   const [memberSearch, setMemberSearch] = useState('');
 
   // Fetch groups
@@ -87,7 +88,7 @@ export default function MapComercial() {
       if (!selectedGroupId) return [];
       const { data, error } = await supabase
         .from('commercial_strategy_members')
-        .select('*, party:party_id(id, full_name, current_title, current_company, linkedin_url, email_raw)')
+        .select('*, party:party_id(id, full_name, current_title, current_company, linkedin_url, email_raw, phone_raw, city, state)')
         .eq('group_id', selectedGroupId)
         .order('created_at', { ascending: false });
       if (error) throw error;
@@ -229,10 +230,16 @@ export default function MapComercial() {
                 <p className="text-sm text-muted-foreground mt-0.5">{selectedGroup.description}</p>
               )}
             </div>
-            <Button size="sm" onClick={() => setShowAddMemberDialog(true)} className="gap-1.5">
-              <UserPlus className="h-4 w-4" />
-              Adicionar Perfil
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="outline" onClick={() => setShowImportDialog(true)} className="gap-1.5">
+                <Upload className="h-4 w-4" />
+                Importar
+              </Button>
+              <Button size="sm" onClick={() => setShowAddMemberDialog(true)} className="gap-1.5">
+                <UserPlus className="h-4 w-4" />
+                Adicionar Perfil
+              </Button>
+            </div>
           </div>
 
           {/* Search */}
@@ -254,34 +261,51 @@ export default function MapComercial() {
               <p className="text-sm mt-1">{search ? 'Ajuste a busca' : 'Adicione perfis do banco de talentos ou via extensão Chrome'}</p>
             </div>
           ) : (
-            <div className="border border-border rounded-lg overflow-hidden bg-card">
+            <div className="border border-border rounded-lg overflow-x-auto bg-card">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Nome</TableHead>
-                    <TableHead className="hidden sm:table-cell">Cargo Atual</TableHead>
-                    <TableHead className="hidden sm:table-cell">Empresa Atual</TableHead>
-                    <TableHead className="w-[80px]" />
+                    <TableHead>Nome Completo</TableHead>
+                    <TableHead className="hidden md:table-cell">Cargo</TableHead>
+                    <TableHead className="hidden md:table-cell">Nome da Empresa</TableHead>
+                    <TableHead className="hidden lg:table-cell">LinkedIn</TableHead>
+                    <TableHead className="hidden lg:table-cell">E-mail</TableHead>
+                    <TableHead className="hidden xl:table-cell">Contato Empresa</TableHead>
+                    <TableHead className="hidden xl:table-cell">Cidade</TableHead>
+                    <TableHead className="hidden xl:table-cell">Estado</TableHead>
+                    <TableHead className="w-[60px]" />
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredMembers.map(member => (
                     <TableRow key={member.id}>
                       <TableCell>
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">{member.party?.full_name || '—'}</span>
-                          {member.party?.linkedin_url && (
-                            <a href={member.party.linkedin_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary/80">
-                              <ExternalLink className="h-3.5 w-3.5" />
-                            </a>
-                          )}
-                        </div>
+                        <span className="font-medium whitespace-nowrap">{member.party?.full_name || '—'}</span>
                       </TableCell>
-                      <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">
+                      <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
                         {member.party?.current_title || '—'}
                       </TableCell>
-                      <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">
+                      <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
                         {member.party?.current_company || '—'}
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell">
+                        {member.party?.linkedin_url ? (
+                          <a href={member.party.linkedin_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary/80">
+                            <ExternalLink className="h-3.5 w-3.5" />
+                          </a>
+                        ) : '—'}
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">
+                        {member.party?.email_raw || '—'}
+                      </TableCell>
+                      <TableCell className="hidden xl:table-cell text-sm text-muted-foreground">
+                        {member.party?.phone_raw || '—'}
+                      </TableCell>
+                      <TableCell className="hidden xl:table-cell text-sm text-muted-foreground">
+                        {member.party?.city || '—'}
+                      </TableCell>
+                      <TableCell className="hidden xl:table-cell text-sm text-muted-foreground">
+                        {member.party?.state || '—'}
                       </TableCell>
                       <TableCell>
                         <Button
