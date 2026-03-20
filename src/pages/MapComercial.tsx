@@ -353,6 +353,13 @@ export default function MapComercial() {
               </div>
             </DialogContent>
           </Dialog>
+
+          <ImportStrategyMembersDialog
+            open={showImportDialog}
+            onOpenChange={setShowImportDialog}
+            groupId={selectedGroup.id}
+            groupName={selectedGroup.name}
+          />
         </div>
       </div>
     );
