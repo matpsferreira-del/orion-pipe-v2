@@ -435,6 +435,62 @@ export default function MapComercial() {
             onOpenChange={setShowImportDialog}
             groupId={selectedGroupId!}
           />
+
+          {/* Edit Member Dialog */}
+          <Dialog open={!!editingMember} onOpenChange={(open) => { if (!open) setEditingMember(null); }}>
+            <DialogContent className="sm:max-w-lg">
+              <DialogHeader>
+                <DialogTitle>Editar Perfil</DialogTitle>
+              </DialogHeader>
+              <div className="grid gap-4">
+                <div className="space-y-1.5">
+                  <Label>Nome Completo</Label>
+                  <Input value={editMemberData.full_name} onChange={e => setEditMemberData(d => ({ ...d, full_name: e.target.value }))} />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label>Cargo</Label>
+                    <Input value={editMemberData.current_title} onChange={e => setEditMemberData(d => ({ ...d, current_title: e.target.value }))} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Empresa</Label>
+                    <Input value={editMemberData.current_company} onChange={e => setEditMemberData(d => ({ ...d, current_company: e.target.value }))} />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>LinkedIn</Label>
+                  <Input value={editMemberData.linkedin_url} onChange={e => setEditMemberData(d => ({ ...d, linkedin_url: e.target.value }))} placeholder="https://linkedin.com/in/..." />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label>E-mail</Label>
+                    <Input type="email" value={editMemberData.email_raw} onChange={e => setEditMemberData(d => ({ ...d, email_raw: e.target.value }))} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Telefone</Label>
+                    <Input value={editMemberData.phone_raw} onChange={e => setEditMemberData(d => ({ ...d, phone_raw: e.target.value }))} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label>Cidade</Label>
+                    <Input value={editMemberData.city} onChange={e => setEditMemberData(d => ({ ...d, city: e.target.value }))} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Estado</Label>
+                    <Input value={editMemberData.state} onChange={e => setEditMemberData(d => ({ ...d, state: e.target.value }))} />
+                  </div>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setEditingMember(null)}>Cancelar</Button>
+                <Button onClick={() => updateMemberMutation.mutate()} disabled={!editMemberData.full_name.trim() || updateMemberMutation.isPending}>
+                  {updateMemberMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                  Salvar
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
     );
