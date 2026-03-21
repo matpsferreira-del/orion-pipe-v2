@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
   Plus, Search, Users, Trash2, Loader2, ExternalLink, FolderOpen, ChevronRight,
-  Building, BadgeCheck, ArrowLeft, UserPlus, MoreHorizontal, Upload, Download,
+  Building, BadgeCheck, ArrowLeft, UserPlus, MoreHorizontal, Upload, Download, Pencil,
 } from 'lucide-react';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
@@ -65,6 +65,10 @@ export default function MapComercial() {
   const [showAddMemberDialog, setShowAddMemberDialog] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [memberSearch, setMemberSearch] = useState('');
+  const [editingMember, setEditingMember] = useState<StrategyMember | null>(null);
+  const [editMemberData, setEditMemberData] = useState({
+    full_name: '', current_title: '', current_company: '', linkedin_url: '', email_raw: '', phone_raw: '', city: '', state: '',
+  });
 
   // Fetch groups
   const { data: groups = [], isLoading: loadingGroups } = useQuery({
@@ -189,6 +193,46 @@ export default function MapComercial() {
     },
   });
 
+  const updateMemberMutation = useMutation({
+    mutationFn: async () => {
+      if (!editingMember?.party_id) return;
+      const { error } = await supabase
+        .from('party')
+        .update({
+          full_name: editMemberData.full_name.trim(),
+          current_title: editMemberData.current_title.trim() || null,
+          current_company: editMemberData.current_company.trim() || null,
+          linkedin_url: editMemberData.linkedin_url.trim() || null,
+          email_raw: editMemberData.email_raw.trim() || null,
+          phone_raw: editMemberData.phone_raw.trim() || null,
+          city: editMemberData.city.trim() || null,
+          state: editMemberData.state.trim() || null,
+        })
+        .eq('id', editingMember.party_id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['commercial-strategy-members', selectedGroupId] });
+      toast.success('Perfil atualizado!');
+      setEditingMember(null);
+    },
+    onError: () => toast.error('Erro ao atualizar perfil'),
+  });
+
+  const openEditMember = (member: StrategyMember) => {
+    setEditingMember(member);
+    setEditMemberData({
+      full_name: member.party?.full_name || '',
+      current_title: member.party?.current_title || '',
+      current_company: member.party?.current_company || '',
+      linkedin_url: member.party?.linkedin_url || '',
+      email_raw: member.party?.email_raw || '',
+      phone_raw: member.party?.phone_raw || '',
+      city: member.party?.city || '',
+      state: member.party?.state || '',
+    });
+  };
+
   const closeGroupDialog = () => {
     setShowGroupDialog(false);
     setEditingGroup(null);
@@ -308,14 +352,24 @@ export default function MapComercial() {
                         {member.party?.state || '—'}
                       </TableCell>
                       <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                          onClick={() => removeMemberMutation.mutate(member.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-primary"
+                            onClick={() => openEditMember(member)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                            onClick={() => removeMemberMutation.mutate(member.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -381,6 +435,62 @@ export default function MapComercial() {
             onOpenChange={setShowImportDialog}
             groupId={selectedGroupId!}
           />
+
+          {/* Edit Member Dialog */}
+          <Dialog open={!!editingMember} onOpenChange={(open) => { if (!open) setEditingMember(null); }}>
+            <DialogContent className="sm:max-w-lg">
+              <DialogHeader>
+                <DialogTitle>Editar Perfil</DialogTitle>
+              </DialogHeader>
+              <div className="grid gap-4">
+                <div className="space-y-1.5">
+                  <Label>Nome Completo</Label>
+                  <Input value={editMemberData.full_name} onChange={e => setEditMemberData(d => ({ ...d, full_name: e.target.value }))} />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label>Cargo</Label>
+                    <Input value={editMemberData.current_title} onChange={e => setEditMemberData(d => ({ ...d, current_title: e.target.value }))} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Empresa</Label>
+                    <Input value={editMemberData.current_company} onChange={e => setEditMemberData(d => ({ ...d, current_company: e.target.value }))} />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>LinkedIn</Label>
+                  <Input value={editMemberData.linkedin_url} onChange={e => setEditMemberData(d => ({ ...d, linkedin_url: e.target.value }))} placeholder="https://linkedin.com/in/..." />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label>E-mail</Label>
+                    <Input type="email" value={editMemberData.email_raw} onChange={e => setEditMemberData(d => ({ ...d, email_raw: e.target.value }))} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Telefone</Label>
+                    <Input value={editMemberData.phone_raw} onChange={e => setEditMemberData(d => ({ ...d, phone_raw: e.target.value }))} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label>Cidade</Label>
+                    <Input value={editMemberData.city} onChange={e => setEditMemberData(d => ({ ...d, city: e.target.value }))} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Estado</Label>
+                    <Input value={editMemberData.state} onChange={e => setEditMemberData(d => ({ ...d, state: e.target.value }))} />
+                  </div>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setEditingMember(null)}>Cancelar</Button>
+                <Button onClick={() => updateMemberMutation.mutate()} disabled={!editMemberData.full_name.trim() || updateMemberMutation.isPending}>
+                  {updateMemberMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                  Salvar
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
     );
