@@ -193,6 +193,46 @@ export default function MapComercial() {
     },
   });
 
+  const updateMemberMutation = useMutation({
+    mutationFn: async () => {
+      if (!editingMember?.party_id) return;
+      const { error } = await supabase
+        .from('party')
+        .update({
+          full_name: editMemberData.full_name.trim(),
+          current_title: editMemberData.current_title.trim() || null,
+          current_company: editMemberData.current_company.trim() || null,
+          linkedin_url: editMemberData.linkedin_url.trim() || null,
+          email_raw: editMemberData.email_raw.trim() || null,
+          phone_raw: editMemberData.phone_raw.trim() || null,
+          city: editMemberData.city.trim() || null,
+          state: editMemberData.state.trim() || null,
+        })
+        .eq('id', editingMember.party_id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['commercial-strategy-members', selectedGroupId] });
+      toast.success('Perfil atualizado!');
+      setEditingMember(null);
+    },
+    onError: () => toast.error('Erro ao atualizar perfil'),
+  });
+
+  const openEditMember = (member: StrategyMember) => {
+    setEditingMember(member);
+    setEditMemberData({
+      full_name: member.party?.full_name || '',
+      current_title: member.party?.current_title || '',
+      current_company: member.party?.current_company || '',
+      linkedin_url: member.party?.linkedin_url || '',
+      email_raw: member.party?.email_raw || '',
+      phone_raw: member.party?.phone_raw || '',
+      city: member.party?.city || '',
+      state: member.party?.state || '',
+    });
+  };
+
   const closeGroupDialog = () => {
     setShowGroupDialog(false);
     setEditingGroup(null);
