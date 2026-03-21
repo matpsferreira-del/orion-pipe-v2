@@ -65,6 +65,10 @@ export default function MapComercial() {
   const [showAddMemberDialog, setShowAddMemberDialog] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [memberSearch, setMemberSearch] = useState('');
+  const [editingMember, setEditingMember] = useState<StrategyMember | null>(null);
+  const [editMemberData, setEditMemberData] = useState({
+    full_name: '', current_title: '', current_company: '', linkedin_url: '', email_raw: '', phone_raw: '', city: '', state: '',
+  });
 
   // Fetch groups
   const { data: groups = [], isLoading: loadingGroups } = useQuery({
