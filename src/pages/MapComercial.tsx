@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
   Plus, Search, Users, Trash2, Loader2, ExternalLink, FolderOpen, ChevronRight,
-  Building, BadgeCheck, ArrowLeft, UserPlus, MoreHorizontal, Upload, Download,
+  Building, BadgeCheck, ArrowLeft, UserPlus, MoreHorizontal, Upload, Download, Pencil,
 } from 'lucide-react';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
