@@ -366,10 +366,15 @@ export function OpportunityDetail({ opportunity }: OpportunityDetailProps) {
       <JobDialog
         open={showJobDialog}
         onOpenChange={setShowJobDialog}
-        preSelectedCompanyId={opportunity.company_id}
-        preSelectedContactId={opportunity.contact_id}
+        preSelectedCompanyId={opportunity.company_id || undefined}
+        preSelectedContactId={opportunity.contact_id || undefined}
         preSelectedResponsavelId={opportunity.responsavel_id}
         preSelectedOpportunityId={opportunity.id}
+        isOutplacementProject={isOutplacement}
+        outplacementClientName={isOutplacement && !opportunity.company_id
+          ? (opportunity.observacoes?.match(/\[PF: (.+?)\]/)?.[1] || '')
+          : undefined
+        }
       />
     </div>
   );
