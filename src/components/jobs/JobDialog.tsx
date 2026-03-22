@@ -23,6 +23,8 @@ interface JobDialogProps {
   preSelectedContactId?: string;
   preSelectedResponsavelId?: string;
   preSelectedOpportunityId?: string;
+  isOutplacementProject?: boolean;
+  outplacementClientName?: string;
 }
 
 // Parse a stored location string back into its parts
