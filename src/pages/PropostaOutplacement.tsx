@@ -2,6 +2,8 @@ import { useState, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useOpportunities } from "@/hooks/useOpportunities";
 import { ArrowLeft, Loader2 } from "lucide-react";
+import { toPng } from "html-to-image";
+import jsPDF from "jspdf";
 import { Button } from "@/components/ui/button";
 
 const DELIVERABLES_DEFAULT = [
