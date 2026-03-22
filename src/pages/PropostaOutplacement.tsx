@@ -607,17 +607,40 @@ export default function PropostaOutplacement() {
     setInitialized(true);
   }
 
-  const handleExport = useCallback((format: string) => {
-    const htmlStr = buildExportHTML(config, deliverables);
-    if (format === "html") {
-      const w = window.open("", "_blank");
-      if (w) {
-        w.document.write(htmlStr);
-        w.document.close();
-        setExportMsg("Aberto em nova aba! Use o botão 'Imprimir / Salvar PDF' na página.");
-      } else {
-        setExportMsg("Pop-up bloqueado. Permita pop-ups e tente novamente.");
-      }
+  const handleExport = useCallback(async () => {
+    if (!previewRef.current) return;
+    setExportMsg("Gerando PDF...");
+    try {
+      // Capture the preview as a high-res PNG
+      const dataUrl = await toPng(previewRef.current, {
+        quality: 1,
+        pixelRatio: 2,
+        backgroundColor: '#0a1628',
+      });
+
+      const img = new Image();
+      img.src = dataUrl;
+      await new Promise<void>((resolve) => { img.onload = () => resolve(); });
+
+      const imgW = img.width;
+      const imgH = img.height;
+
+      // A4 dimensions in mm
+      const pdfW = 210;
+      const pdfH = (imgH * pdfW) / imgW;
+
+      const pdf = new jsPDF({
+        orientation: pdfH > pdfW * 1.5 ? 'portrait' : 'portrait',
+        unit: 'mm',
+        format: [pdfW, pdfH],
+      });
+
+      pdf.addImage(dataUrl, 'PNG', 0, 0, pdfW, pdfH);
+      pdf.save(`Proposta_Orion_${config.nome || 'Outplacement'}.pdf`);
+      setExportMsg("PDF baixado com sucesso!");
+    } catch (err) {
+      console.error('PDF export error:', err);
+      setExportMsg("Erro ao gerar PDF. Tente novamente.");
     }
     setTimeout(() => setExportMsg(""), 4000);
   }, [config, deliverables]);
