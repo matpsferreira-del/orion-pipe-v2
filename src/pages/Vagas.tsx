@@ -79,13 +79,14 @@ export default function Vagas() {
       : "flex flex-col gap-2"
     }>
       {jobsList.map((job) => {
-        const company = companies.find(c => c.id === job.company_id);
+        const company = job.company_id ? companies.find(c => c.id === job.company_id) : null;
         const responsavel = profiles.find(p => p.id === job.responsavel_id);
+        const displayCompanyName = company?.nome_fantasia || (!job.company_id ? 'Pessoa Física' : undefined);
         return (
           <JobCard
             key={job.id}
             job={job}
-            companyName={company?.nome_fantasia}
+            companyName={displayCompanyName}
             responsavelName={responsavel?.name}
             applicationsCount={applicationCounts[job.id] || 0}
             onClick={() => setSelectedJob(job)}

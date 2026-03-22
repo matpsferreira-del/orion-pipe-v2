@@ -23,6 +23,8 @@ interface JobDialogProps {
   preSelectedContactId?: string;
   preSelectedResponsavelId?: string;
   preSelectedOpportunityId?: string;
+  isOutplacementProject?: boolean;
+  outplacementClientName?: string;
 }
 
 // Parse a stored location string back into its parts
@@ -68,7 +70,7 @@ const WORK_MODELS = [
   { value: 'Remoto', label: 'Remoto' },
 ];
 
-export function JobDialog({ open, onOpenChange, job, preSelectedCompanyId, preSelectedContactId, preSelectedResponsavelId, preSelectedOpportunityId }: JobDialogProps) {
+export function JobDialog({ open, onOpenChange, job, preSelectedCompanyId, preSelectedContactId, preSelectedResponsavelId, preSelectedOpportunityId, isOutplacementProject, outplacementClientName }: JobDialogProps) {
   const [formData, setFormData] = useState({
     company_id: '',
     contact_id: '',
@@ -133,7 +135,9 @@ export function JobDialog({ open, onOpenChange, job, preSelectedCompanyId, preSe
         company_id: preSelectedCompanyId || '',
         contact_id: preSelectedContactId || '',
         responsavel_id: preSelectedResponsavelId || '',
-        title: '',
+        title: isOutplacementProject && outplacementClientName
+          ? `Outplacement - ${outplacementClientName}`
+          : '',
         description: '',
         requirements: '',
         salary_min: '',
@@ -175,8 +179,12 @@ export function JobDialog({ open, onOpenChange, job, preSelectedCompanyId, preSe
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.company_id || !formData.title) {
+    if (!isOutplacementProject && !formData.company_id) {
       toast.error('Preencha os campos obrigatórios');
+      return;
+    }
+    if (!formData.title) {
+      toast.error('Preencha o título');
       return;
     }
 
@@ -187,7 +195,7 @@ export function JobDialog({ open, onOpenChange, job, preSelectedCompanyId, preSe
 
     try {
       const payload = {
-        company_id: formData.company_id,
+        company_id: isOutplacementProject ? (formData.company_id || null) : formData.company_id,
         contact_id: formData.contact_id || null,
         responsavel_id: formData.responsavel_id || null,
         title: formData.title,
@@ -205,10 +213,10 @@ export function JobDialog({ open, onOpenChange, job, preSelectedCompanyId, preSe
 
       if (isEditing && job) {
         await updateJob.mutateAsync({ id: job.id, ...payload });
-        toast.success('Vaga atualizada com sucesso!');
+        toast.success(isOutplacementProject ? 'Projeto atualizado com sucesso!' : 'Vaga atualizada com sucesso!');
       } else {
         await createJob.mutateAsync(payload);
-        toast.success('Vaga criada com sucesso!');
+        toast.success(isOutplacementProject ? 'Projeto criado com sucesso!' : 'Vaga criada com sucesso!');
       }
       onOpenChange(false);
     } catch (error) {
@@ -221,33 +229,34 @@ export function JobDialog({ open, onOpenChange, job, preSelectedCompanyId, preSe
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{isEditing ? 'Editar Vaga' : 'Nova Vaga'}</DialogTitle>
+          <DialogTitle>{isEditing ? (isOutplacementProject ? 'Editar Projeto' : 'Editar Vaga') : (isOutplacementProject ? 'Novo Projeto de Outplacement' : 'Nova Vaga')}</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             {/* Title */}
             <div className="col-span-2">
-              <Label htmlFor="title">Título da Vaga *</Label>
+              <Label htmlFor="title">{isOutplacementProject ? 'Nome do Projeto *' : 'Título da Vaga *'}</Label>
               <Input
                 id="title"
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                placeholder="Ex: Desenvolvedor Full Stack Senior"
+                placeholder={isOutplacementProject ? 'Ex: Outplacement - João Silva' : 'Ex: Desenvolvedor Full Stack Senior'}
               />
             </div>
 
             {/* Company */}
             <div>
-              <Label htmlFor="company_id">Empresa *</Label>
+              <Label htmlFor="company_id">Empresa {isOutplacementProject ? '' : '*'}</Label>
               <Select
-                value={formData.company_id}
-                onValueChange={(value) => setFormData({ ...formData, company_id: value, contact_id: '' })}
+                value={formData.company_id || 'none'}
+                onValueChange={(value) => setFormData({ ...formData, company_id: value === 'none' ? '' : value, contact_id: '' })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione a empresa" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="none">{isOutplacementProject ? 'Nenhuma' : 'Selecione a empresa'}</SelectItem>
                   {companies.map((company) => (
                     <SelectItem key={company.id} value={company.id}>
                       {company.nome_fantasia}
