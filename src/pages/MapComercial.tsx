@@ -260,6 +260,16 @@ export default function MapComercial() {
 
   const existingPartyIds = new Set(members.map(m => m.party_id));
 
+  const handleDownloadTemplate = useCallback(() => {
+    const headers = ['Nome Completo', 'Cargo', 'Nome da Empresa', 'LinkedIn (Pessoa)', 'E-mail', 'Contato', 'Empresa', 'Cidade', 'Estado'];
+    const example = ['João da Silva', 'Diretor Jurídico', 'Empresa XPTO', 'https://linkedin.com/in/joaosilva', 'joao@empresa.com', '(11) 99999-0000', 'Empresa XPTO', 'São Paulo', 'SP'];
+    const ws = XLSX.utils.aoa_to_sheet([headers, example]);
+    ws['!cols'] = headers.map(() => ({ wch: 22 }));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Modelo');
+    XLSX.writeFile(wb, 'modelo_importacao_leads.xlsx');
+  }, []);
+
   // ---- DETAIL VIEW ----
   if (selectedGroup) {
     return (
