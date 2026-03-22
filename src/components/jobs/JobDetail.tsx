@@ -138,6 +138,7 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
 
   const company = companies.find(c => c.id === job.company_id);
   const responsavel = profiles.find(p => p.id === job.responsavel_id);
+  const isOutplacementProject = !job.company_id;
 
   // Campos extras que vêm do banco mas não estão no tipo antigo
   const jobPublished = (job as any).published as boolean | undefined;
@@ -408,23 +409,27 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
         </div>
 
         <div className="flex gap-2 flex-wrap">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleGenerateShortlist}
-            disabled={generatingShortlist}
-          >
-            {generatingShortlist ? (
-              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-            ) : (
-              <FileText className="h-4 w-4 mr-1" />
-            )}
-            {generatingShortlist ? 'Processando...' : 'Gerar Shortlist'}
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setShowLinkedInPost(true)}>
-            <Image className="h-4 w-4 mr-1" />
-            Gerar Post
-          </Button>
+          {!isOutplacementProject && (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleGenerateShortlist}
+                disabled={generatingShortlist}
+              >
+                {generatingShortlist ? (
+                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                ) : (
+                  <FileText className="h-4 w-4 mr-1" />
+                )}
+                {generatingShortlist ? 'Processando...' : 'Gerar Shortlist'}
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setShowLinkedInPost(true)}>
+                <Image className="h-4 w-4 mr-1" />
+                Gerar Post
+              </Button>
+            </>
+          )}
           <Button variant="outline" size="sm" onClick={onEdit}>
             <Edit className="h-4 w-4 mr-1" />
             Editar
@@ -432,8 +437,8 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
         </div>
       </div>
 
-      {/* Portal publish controls */}
-      {job.status === 'open' && (
+      {/* Portal publish controls — hide for outplacement projects */}
+      {job.status === 'open' && !isOutplacementProject && (
         <div className="flex flex-wrap items-center gap-2 p-3 rounded-lg bg-muted/50 border border-border">
           {jobPublished ? (
             <>
