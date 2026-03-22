@@ -234,12 +234,12 @@ export function JobDialog({ open, onOpenChange, job, preSelectedCompanyId, preSe
           <div className="grid grid-cols-2 gap-4">
             {/* Title */}
             <div className="col-span-2">
-              <Label htmlFor="title">Título da Vaga *</Label>
+              <Label htmlFor="title">{isOutplacementProject ? 'Nome do Projeto *' : 'Título da Vaga *'}</Label>
               <Input
                 id="title"
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                placeholder="Ex: Desenvolvedor Full Stack Senior"
+                placeholder={isOutplacementProject ? 'Ex: Outplacement - João Silva' : 'Ex: Desenvolvedor Full Stack Senior'}
               />
             </div>
 
