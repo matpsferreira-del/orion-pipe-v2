@@ -177,8 +177,12 @@ export function JobDialog({ open, onOpenChange, job, preSelectedCompanyId, preSe
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.company_id || !formData.title) {
+    if (!isOutplacementProject && !formData.company_id) {
       toast.error('Preencha os campos obrigatórios');
+      return;
+    }
+    if (!formData.title) {
+      toast.error('Preencha o título');
       return;
     }
 
