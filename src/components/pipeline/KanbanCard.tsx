@@ -4,8 +4,8 @@ import { cn } from '@/lib/utils';
 
 interface ExtendedOpportunity {
   id: string;
-  companyId: string;
-  contactId: string;
+  companyId: string | null;
+  contactId: string | null;
   responsavelId: string;
   stage: string;
   valorPotencial: number;
