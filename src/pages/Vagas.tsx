@@ -79,9 +79,9 @@ export default function Vagas() {
       : "flex flex-col gap-2"
     }>
       {jobsList.map((job) => {
-        const company = companies.find(c => c.id === job.company_id);
+        const company = job.company_id ? companies.find(c => c.id === job.company_id) : null;
         const responsavel = profiles.find(p => p.id === job.responsavel_id);
-        return (
+        const displayCompanyName = company?.nome_fantasia || (job.company_id ? undefined : 'Pessoa Física');
           <JobCard
             key={job.id}
             job={job}
