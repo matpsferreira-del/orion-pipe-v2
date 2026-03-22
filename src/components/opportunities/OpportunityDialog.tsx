@@ -27,13 +27,14 @@ const serviceOptions = [
   { value: 'rpo', label: 'RPO' },
   { value: 'hunting', label: 'Hunting' },
   { value: 'consultoria', label: 'Consultoria' },
+  { value: 'outplacement', label: 'Outplacement' },
 ];
 
 interface OpportunityDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   defaultCompanyId?: string;
-  opportunity?: OpportunityRow; // when set, dialog is in edit mode
+  opportunity?: OpportunityRow;
 }
 
 export function OpportunityDialog({ open, onOpenChange, defaultCompanyId, opportunity }: OpportunityDialogProps) {
@@ -48,6 +49,9 @@ export function OpportunityDialog({ open, onOpenChange, defaultCompanyId, opport
   const [origemLead, setOrigemLead] = useState('outro');
   const [tipoServico, setTipoServico] = useState('recrutamento_pontual');
   const [observacoes, setObservacoes] = useState('');
+  const [nomeClientePF, setNomeClientePF] = useState('');
+
+  const isOutplacement = tipoServico === 'outplacement';
 
   const { profile } = useAuth();
   const { data: companies = [] } = useCompanies();
@@ -56,11 +60,10 @@ export function OpportunityDialog({ open, onOpenChange, defaultCompanyId, opport
   const createOpportunity = useCreateOpportunity();
   const updateOpportunity = useUpdateOpportunity();
 
-  // Populate fields when editing
   useEffect(() => {
     if (opportunity) {
-      setCompanyId(opportunity.company_id);
-      setContactId(opportunity.contact_id);
+      setCompanyId(opportunity.company_id ?? '');
+      setContactId(opportunity.contact_id ?? '');
       setResponsavelId(opportunity.responsavel_id);
       setValorPotencial(String(opportunity.valor_potencial));
       setProbabilidade(String(opportunity.probabilidade));
@@ -68,6 +71,11 @@ export function OpportunityDialog({ open, onOpenChange, defaultCompanyId, opport
       setOrigemLead(opportunity.origem_lead);
       setTipoServico(opportunity.tipo_servico);
       setObservacoes(opportunity.observacoes ?? '');
+      // For outplacement without company, extract name from observacoes if stored
+      if (opportunity.tipo_servico === 'outplacement' && !opportunity.company_id) {
+        const match = opportunity.observacoes?.match(/\[PF: (.+?)\]/);
+        if (match) setNomeClientePF(match[1]);
+      }
     } else {
       resetForm();
     }
@@ -92,19 +100,35 @@ export function OpportunityDialog({ open, onOpenChange, defaultCompanyId, opport
     }
   }, [companyId, isEditing]);
 
+  // Clear company/contact when switching to outplacement
+  useEffect(() => {
+    if (isOutplacement && !isEditing) {
+      setCompanyId('');
+      setContactId('');
+    }
+  }, [tipoServico]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    const data = {
-      company_id: companyId,
-      contact_id: contactId,
+    // Build observacoes with PF name tag for outplacement
+    let finalObs = observacoes || '';
+    if (isOutplacement && nomeClientePF) {
+      // Remove old PF tag if present
+      finalObs = finalObs.replace(/\[PF: .+?\]\s*/g, '').trim();
+      finalObs = `[PF: ${nomeClientePF}] ${finalObs}`.trim();
+    }
+
+    const data: any = {
+      company_id: isOutplacement ? null : (companyId || null),
+      contact_id: isOutplacement ? null : (contactId || null),
       responsavel_id: responsavelId,
       valor_potencial: parseFloat(valorPotencial) || 0,
       probabilidade: parseInt(probabilidade) || 0,
       data_previsao_fechamento: dataPrevisao,
       origem_lead: origemLead,
       tipo_servico: tipoServico,
-      observacoes: observacoes || undefined,
+      observacoes: finalObs || undefined,
     };
 
     if (isEditing) {
@@ -130,6 +154,7 @@ export function OpportunityDialog({ open, onOpenChange, defaultCompanyId, opport
     setOrigemLead('outro');
     setTipoServico('recrutamento_pontual');
     setObservacoes('');
+    setNomeClientePF('');
   };
 
   const isPending = createOpportunity.isPending || updateOpportunity.isPending;
@@ -141,17 +166,18 @@ export function OpportunityDialog({ open, onOpenChange, defaultCompanyId, opport
           <DialogTitle>{isEditing ? 'Editar Oportunidade' : 'Nova Oportunidade'}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Tipo de Serviço first so it controls visibility */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="company">Empresa *</Label>
-              <Select value={companyId} onValueChange={setCompanyId} required disabled={!!defaultCompanyId && !isEditing}>
+              <Label htmlFor="servico">Tipo de Serviço *</Label>
+              <Select value={tipoServico} onValueChange={setTipoServico}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecione..." />
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {companies.map((company) => (
-                    <SelectItem key={company.id} value={company.id}>
-                      {company.nome_fantasia}
+                  {serviceOptions.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -159,21 +185,72 @@ export function OpportunityDialog({ open, onOpenChange, defaultCompanyId, opport
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="contact">Contato *</Label>
-              <Select value={contactId} onValueChange={setContactId} required disabled={!companyId}>
+              <Label htmlFor="origem">Origem do Lead *</Label>
+              <Select value={origemLead} onValueChange={setOrigemLead}>
                 <SelectTrigger>
-                  <SelectValue placeholder={companyId ? "Selecione..." : "Selecione empresa primeiro"} />
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {contacts.map((contact) => (
-                    <SelectItem key={contact.id} value={contact.id}>
-                      {contact.nome} - {contact.cargo}
+                  {sourceOptions.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
           </div>
+
+          {/* Outplacement: Nome da Pessoa Física */}
+          {isOutplacement && (
+            <div className="space-y-2">
+              <Label htmlFor="nomeClientePF">Nome do Cliente (Pessoa Física) *</Label>
+              <Input
+                id="nomeClientePF"
+                placeholder="Nome completo do profissional"
+                value={nomeClientePF}
+                onChange={(e) => setNomeClientePF(e.target.value)}
+                required
+              />
+            </div>
+          )}
+
+          {/* Company & Contact - hidden for outplacement */}
+          {!isOutplacement && (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="company">Empresa *</Label>
+                <Select value={companyId} onValueChange={setCompanyId} required disabled={!!defaultCompanyId && !isEditing}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {companies.map((company) => (
+                      <SelectItem key={company.id} value={company.id}>
+                        {company.nome_fantasia}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="contact">Contato *</Label>
+                <Select value={contactId} onValueChange={setContactId} required disabled={!companyId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={companyId ? "Selecione..." : "Selecione empresa primeiro"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {contacts.map((contact) => (
+                      <SelectItem key={contact.id} value={contact.id}>
+                        {contact.nome} - {contact.cargo}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -224,40 +301,6 @@ export function OpportunityDialog({ open, onOpenChange, defaultCompanyId, opport
                   {profiles.map((p) => (
                     <SelectItem key={p.id} value={p.id}>
                       {p.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="origem">Origem do Lead *</Label>
-              <Select value={origemLead} onValueChange={setOrigemLead}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {sourceOptions.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="servico">Tipo de Serviço *</Label>
-              <Select value={tipoServico} onValueChange={setTipoServico}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {serviceOptions.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
