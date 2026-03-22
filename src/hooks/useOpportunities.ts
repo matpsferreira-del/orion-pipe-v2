@@ -5,8 +5,8 @@ import { fetchAllRows } from '@/lib/fetchAllRows';
 
 export interface OpportunityRow {
   id: string;
-  company_id: string;
-  contact_id: string;
+  company_id: string | null;
+  contact_id: string | null;
   responsavel_id: string;
   stage: string;
   valor_potencial: number;
@@ -28,8 +28,8 @@ export interface OpportunityRow {
 }
 
 export interface OpportunityInsert {
-  company_id: string;
-  contact_id: string;
+  company_id?: string | null;
+  contact_id?: string | null;
   responsavel_id: string;
   stage?: string;
   valor_potencial: number;
@@ -98,8 +98,8 @@ export function useCreateOpportunity() {
 }
 
 export interface OpportunityUpdate {
-  company_id?: string;
-  contact_id?: string;
+  company_id?: string | null;
+  contact_id?: string | null;
   responsavel_id?: string;
   stage?: string;
   valor_potencial?: number;
