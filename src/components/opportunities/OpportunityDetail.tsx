@@ -37,6 +37,7 @@ const serviceLabels: Record<string, string> = {
   rpo: 'RPO',
   hunting: 'Hunting',
   consultoria: 'Consultoria',
+  outplacement: 'Outplacement',
 };
 
 const activityTypeLabels: Record<string, string> = {
@@ -84,8 +85,16 @@ export function OpportunityDetail({ opportunity }: OpportunityDetailProps) {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h3 className="text-xl font-semibold text-foreground">{company?.nome_fantasia || 'N/A'}</h3>
-          <p className="text-sm text-muted-foreground">{company?.razao_social}</p>
+          <h3 className="text-xl font-semibold text-foreground">
+            {opportunity.tipo_servico === 'outplacement' && !opportunity.company_id
+              ? (opportunity.observacoes?.match(/\[PF: (.+?)\]/)?.[1] || 'Outplacement - Pessoa Física')
+              : (company?.nome_fantasia || 'N/A')}
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            {opportunity.tipo_servico === 'outplacement' && !opportunity.company_id
+              ? 'Outplacement - Pessoa Física'
+              : company?.razao_social}
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <Button
