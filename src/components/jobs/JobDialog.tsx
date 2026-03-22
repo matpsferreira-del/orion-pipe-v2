@@ -193,7 +193,7 @@ export function JobDialog({ open, onOpenChange, job, preSelectedCompanyId, preSe
 
     try {
       const payload = {
-        company_id: formData.company_id,
+        company_id: isOutplacementProject ? (formData.company_id || null) : formData.company_id,
         contact_id: formData.contact_id || null,
         responsavel_id: formData.responsavel_id || null,
         title: formData.title,
@@ -211,10 +211,10 @@ export function JobDialog({ open, onOpenChange, job, preSelectedCompanyId, preSe
 
       if (isEditing && job) {
         await updateJob.mutateAsync({ id: job.id, ...payload });
-        toast.success('Vaga atualizada com sucesso!');
+        toast.success(isOutplacementProject ? 'Projeto atualizado com sucesso!' : 'Vaga atualizada com sucesso!');
       } else {
         await createJob.mutateAsync(payload);
-        toast.success('Vaga criada com sucesso!');
+        toast.success(isOutplacementProject ? 'Projeto criado com sucesso!' : 'Vaga criada com sucesso!');
       }
       onOpenChange(false);
     } catch (error) {
