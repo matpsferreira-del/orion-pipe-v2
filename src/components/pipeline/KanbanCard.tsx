@@ -4,8 +4,8 @@ import { cn } from '@/lib/utils';
 
 interface ExtendedOpportunity {
   id: string;
-  companyId: string;
-  contactId: string;
+  companyId: string | null;
+  contactId: string | null;
   responsavelId: string;
   stage: string;
   valorPotencial: number;
@@ -79,7 +79,9 @@ export function KanbanCard({ opportunity, onClick }: KanbanCardProps) {
     >
       <div className="flex items-start justify-between mb-2">
         <h4 className="font-medium text-sm text-foreground truncate flex-1">
-          {company?.nome_fantasia || 'Empresa não encontrada'}
+          {opportunity.tipoServico === 'outplacement' && !opportunity.companyId
+            ? (opportunity.observacoes?.match(/\[PF: (.+?)\]/)?.[1] || 'Outplacement')
+            : (company?.nome_fantasia || 'Empresa não encontrada')}
         </h4>
         <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
           {opportunity.probabilidade}%

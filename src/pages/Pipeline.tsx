@@ -32,9 +32,12 @@ export default function Pipeline() {
   const filteredOpportunities = useMemo(() => {
     return opportunities.filter(opp => {
       const company = companies.find(c => c.id === opp.company_id);
+      const pfName = opp.observacoes?.match(/\[PF: (.+?)\]/)?.[1];
+      const displayName = opp.tipo_servico === 'outplacement' && !opp.company_id
+        ? (pfName || 'Pessoa Física') : (company?.nome_fantasia || '');
       const matchesSearch = searchTerm === '' || 
         opp.observacoes?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        company?.nome_fantasia.toLowerCase().includes(searchTerm.toLowerCase());
+        displayName.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesResponsavel = filterResponsavel === 'all' || 
         opp.responsavel_id === filterResponsavel;
       return matchesSearch && matchesResponsavel;

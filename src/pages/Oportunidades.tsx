@@ -33,6 +33,16 @@ const serviceLabels: Record<string, string> = {
   rpo: 'RPO',
   hunting: 'Hunting',
   consultoria: 'Consultoria',
+  outplacement: 'Outplacement',
+};
+
+// Helper to extract PF name from observacoes for outplacement
+const getDisplayName = (opp: OpportunityRow, companyName?: string) => {
+  if (opp.tipo_servico === 'outplacement' && !opp.company_id) {
+    const match = opp.observacoes?.match(/\[PF: (.+?)\]/);
+    return match ? match[1] : 'Pessoa Física';
+  }
+  return companyName || 'N/A';
 };
 
 
@@ -193,7 +203,7 @@ export default function Oportunidades() {
                         <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
                           <Target className="h-4 w-4 text-primary" />
                         </div>
-                        <span className="font-medium truncate">{company?.nome_fantasia || 'N/A'}</span>
+                        <span className="font-medium truncate">{getDisplayName(opp, company?.nome_fantasia)}</span>
                       </div>
                     </TableCell>
                     <TableCell className="hidden lg:table-cell">

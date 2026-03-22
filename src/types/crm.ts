@@ -55,7 +55,7 @@ export type PipelineStage =
   | 'pos_venda';
 
 export type LeadSource = 'indicacao' | 'inbound' | 'outbound' | 'evento' | 'linkedin' | 'outro';
-export type ServiceType = 'recrutamento_pontual' | 'programa_recorrente' | 'rpo' | 'hunting' | 'consultoria';
+export type ServiceType = 'recrutamento_pontual' | 'programa_recorrente' | 'rpo' | 'hunting' | 'consultoria' | 'outplacement';
 
 export interface SpinSelling {
   situacao: {

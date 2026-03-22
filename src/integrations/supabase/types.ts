@@ -1067,8 +1067,8 @@ export type Database = {
       }
       opportunities: {
         Row: {
-          company_id: string
-          contact_id: string
+          company_id: string | null
+          contact_id: string | null
           created_at: string
           data_previsao_fechamento: string
           id: string
@@ -1099,8 +1099,8 @@ export type Database = {
           valor_potencial: number
         }
         Insert: {
-          company_id: string
-          contact_id: string
+          company_id?: string | null
+          contact_id?: string | null
           created_at?: string
           data_previsao_fechamento: string
           id?: string
@@ -1131,8 +1131,8 @@ export type Database = {
           valor_potencial?: number
         }
         Update: {
-          company_id?: string
-          contact_id?: string
+          company_id?: string | null
+          contact_id?: string | null
           created_at?: string
           data_previsao_fechamento?: string
           id?: string
