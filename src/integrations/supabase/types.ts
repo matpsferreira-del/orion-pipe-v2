@@ -925,7 +925,7 @@ export type Database = {
           closing_candidate_id: string | null
           closing_notes: string | null
           closing_salary: number | null
-          company_id: string
+          company_id: string | null
           contact_id: string | null
           created_at: string
           created_by: string
@@ -954,7 +954,7 @@ export type Database = {
           closing_candidate_id?: string | null
           closing_notes?: string | null
           closing_salary?: number | null
-          company_id: string
+          company_id?: string | null
           contact_id?: string | null
           created_at?: string
           created_by: string
@@ -983,7 +983,7 @@ export type Database = {
           closing_candidate_id?: string | null
           closing_notes?: string | null
           closing_salary?: number | null
-          company_id?: string
+          company_id?: string | null
           contact_id?: string | null
           created_at?: string
           created_by?: string
