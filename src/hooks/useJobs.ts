@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 
 export type JobRow = Job;
 export type JobInsert = {
-  company_id: string;
+  company_id?: string | null;
   contact_id?: string | null;
   responsavel_id?: string | null;
   opportunity_id?: string | null;
