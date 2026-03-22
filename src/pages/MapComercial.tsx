@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
+import * as XLSX from 'xlsx';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -259,6 +260,16 @@ export default function MapComercial() {
 
   const existingPartyIds = new Set(members.map(m => m.party_id));
 
+  const handleDownloadTemplate = useCallback(() => {
+    const headers = ['Nome Completo', 'Cargo', 'Nome da Empresa', 'LinkedIn (Pessoa)', 'E-mail', 'Contato', 'Empresa', 'Cidade', 'Estado'];
+    const example = ['João da Silva', 'Diretor Jurídico', 'Empresa XPTO', 'https://linkedin.com/in/joaosilva', 'joao@empresa.com', '(11) 99999-0000', 'Empresa XPTO', 'São Paulo', 'SP'];
+    const ws = XLSX.utils.aoa_to_sheet([headers, example]);
+    ws['!cols'] = headers.map(() => ({ wch: 22 }));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Modelo');
+    XLSX.writeFile(wb, 'modelo_importacao_leads.xlsx');
+  }, []);
+
   // ---- DETAIL VIEW ----
   if (selectedGroup) {
     return (
@@ -275,6 +286,10 @@ export default function MapComercial() {
               )}
             </div>
             <div className="flex items-center gap-2">
+              <Button size="sm" variant="ghost" onClick={handleDownloadTemplate} className="gap-1.5 text-muted-foreground">
+                <Download className="h-4 w-4" />
+                Baixar Modelo
+              </Button>
               <Button size="sm" variant="outline" onClick={() => setShowImportDialog(true)} className="gap-1.5">
                 <Upload className="h-4 w-4" />
                 Importar
