@@ -53,6 +53,7 @@ export function OpportunityDetail({ opportunity }: OpportunityDetailProps) {
   const [showActivityDialog, setShowActivityDialog] = useState(false);
   const [showJobDialog, setShowJobDialog] = useState(false);
   const navigate = useNavigate();
+  const isOutplacement = opportunity.tipo_servico === 'outplacement';
   
   const { data: companies = [] } = useCompanies();
   const { data: contacts = [] } = useContacts();
@@ -103,7 +104,7 @@ export function OpportunityDetail({ opportunity }: OpportunityDetailProps) {
             onClick={() => setShowJobDialog(true)}
           >
             <Briefcase className="h-4 w-4 mr-1" />
-            Criar Vaga
+            {isOutplacement ? 'Criar Projeto' : 'Criar Vaga'}
           </Button>
           <Button
             variant="outline"
