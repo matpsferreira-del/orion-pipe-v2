@@ -275,6 +275,10 @@ export default function MapComercial() {
               )}
             </div>
             <div className="flex items-center gap-2">
+              <Button size="sm" variant="ghost" onClick={handleDownloadTemplate} className="gap-1.5 text-muted-foreground">
+                <Download className="h-4 w-4" />
+                Baixar Modelo
+              </Button>
               <Button size="sm" variant="outline" onClick={() => setShowImportDialog(true)} className="gap-1.5">
                 <Upload className="h-4 w-4" />
                 Importar
