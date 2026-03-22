@@ -70,7 +70,7 @@ const WORK_MODELS = [
   { value: 'Remoto', label: 'Remoto' },
 ];
 
-export function JobDialog({ open, onOpenChange, job, preSelectedCompanyId, preSelectedContactId, preSelectedResponsavelId, preSelectedOpportunityId }: JobDialogProps) {
+export function JobDialog({ open, onOpenChange, job, preSelectedCompanyId, preSelectedContactId, preSelectedResponsavelId, preSelectedOpportunityId, isOutplacementProject, outplacementClientName }: JobDialogProps) {
   const [formData, setFormData] = useState({
     company_id: '',
     contact_id: '',
