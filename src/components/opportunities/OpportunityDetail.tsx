@@ -109,7 +109,11 @@ export function OpportunityDetail({ opportunity }: OpportunityDetailProps) {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => navigate(`/oportunidades/${opportunity.id}/proposta`)}
+            onClick={() => navigate(
+              isOutplacement 
+                ? `/oportunidades/${opportunity.id}/proposta-outplacement`
+                : `/oportunidades/${opportunity.id}/proposta`
+            )}
           >
             <FileText className="h-4 w-4 mr-1" />
             Gerar Proposta
