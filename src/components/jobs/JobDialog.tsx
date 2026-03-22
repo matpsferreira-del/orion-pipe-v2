@@ -245,15 +245,16 @@ export function JobDialog({ open, onOpenChange, job, preSelectedCompanyId, preSe
 
             {/* Company */}
             <div>
-              <Label htmlFor="company_id">Empresa *</Label>
+              <Label htmlFor="company_id">Empresa {isOutplacementProject ? '' : '*'}</Label>
               <Select
-                value={formData.company_id}
-                onValueChange={(value) => setFormData({ ...formData, company_id: value, contact_id: '' })}
+                value={formData.company_id || 'none'}
+                onValueChange={(value) => setFormData({ ...formData, company_id: value === 'none' ? '' : value, contact_id: '' })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione a empresa" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="none">{isOutplacementProject ? 'Nenhuma' : 'Selecione a empresa'}</SelectItem>
                   {companies.map((company) => (
                     <SelectItem key={company.id} value={company.id}>
                       {company.nome_fantasia}
