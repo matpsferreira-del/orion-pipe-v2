@@ -135,7 +135,9 @@ export function JobDialog({ open, onOpenChange, job, preSelectedCompanyId, preSe
         company_id: preSelectedCompanyId || '',
         contact_id: preSelectedContactId || '',
         responsavel_id: preSelectedResponsavelId || '',
-        title: '',
+        title: isOutplacementProject && outplacementClientName
+          ? `Outplacement - ${outplacementClientName}`
+          : '',
         description: '',
         requirements: '',
         salary_min: '',
