@@ -2,6 +2,8 @@ import { useState, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useOpportunities } from "@/hooks/useOpportunities";
 import { ArrowLeft, Loader2 } from "lucide-react";
+import { toPng } from "html-to-image";
+import jsPDF from "jspdf";
 import { Button } from "@/components/ui/button";
 
 const DELIVERABLES_DEFAULT = [
@@ -605,17 +607,40 @@ export default function PropostaOutplacement() {
     setInitialized(true);
   }
 
-  const handleExport = useCallback((format: string) => {
-    const htmlStr = buildExportHTML(config, deliverables);
-    if (format === "html") {
-      const w = window.open("", "_blank");
-      if (w) {
-        w.document.write(htmlStr);
-        w.document.close();
-        setExportMsg("Aberto em nova aba! Use o botão 'Imprimir / Salvar PDF' na página.");
-      } else {
-        setExportMsg("Pop-up bloqueado. Permita pop-ups e tente novamente.");
-      }
+  const handleExport = useCallback(async () => {
+    if (!previewRef.current) return;
+    setExportMsg("Gerando PDF...");
+    try {
+      // Capture the preview as a high-res PNG
+      const dataUrl = await toPng(previewRef.current, {
+        quality: 1,
+        pixelRatio: 2,
+        backgroundColor: '#0a1628',
+      });
+
+      const img = new Image();
+      img.src = dataUrl;
+      await new Promise<void>((resolve) => { img.onload = () => resolve(); });
+
+      const imgW = img.width;
+      const imgH = img.height;
+
+      // A4 dimensions in mm
+      const pdfW = 210;
+      const pdfH = (imgH * pdfW) / imgW;
+
+      const pdf = new jsPDF({
+        orientation: pdfH > pdfW * 1.5 ? 'portrait' : 'portrait',
+        unit: 'mm',
+        format: [pdfW, pdfH],
+      });
+
+      pdf.addImage(dataUrl, 'PNG', 0, 0, pdfW, pdfH);
+      pdf.save(`Proposta_Orion_${config.nome || 'Outplacement'}.pdf`);
+      setExportMsg("PDF baixado com sucesso!");
+    } catch (err) {
+      console.error('PDF export error:', err);
+      setExportMsg("Erro ao gerar PDF. Tente novamente.");
     }
     setTimeout(() => setExportMsg(""), 4000);
   }, [config, deliverables]);
@@ -643,7 +668,7 @@ export default function PropostaOutplacement() {
         </div>
         <div className="flex items-center gap-2">
           {exportMsg && <span className="text-[10px] text-emerald-400 mr-2 hidden md:inline">{exportMsg}</span>}
-          <button onClick={() => handleExport("html")} className="bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-400 px-4 py-2 rounded-lg text-xs font-semibold transition-all border border-cyan-400/30 flex items-center gap-2">
+          <button onClick={() => handleExport()} className="bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-400 px-4 py-2 rounded-lg text-xs font-semibold transition-all border border-cyan-400/30 flex items-center gap-2">
             <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
             Exportar PDF
           </button>
