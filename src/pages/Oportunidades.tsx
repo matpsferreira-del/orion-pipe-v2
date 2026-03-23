@@ -12,7 +12,8 @@ import { useCompanies } from '@/hooks/useCompanies';
 import { useContacts } from '@/hooks/useContacts';
 import { useProfiles } from '@/hooks/useProfiles';
 import { OpportunityDialog } from '@/components/opportunities/OpportunityDialog';
-import { Plus, Search, Filter, MoreHorizontal, Target, Eye, Pencil, Trash2, Download, Loader2 } from 'lucide-react';
+import { Plus, Search, Filter, MoreHorizontal, Target, Eye, Pencil, Trash2, Download, Loader2, Presentation } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -59,6 +60,7 @@ export default function Oportunidades() {
   const { data: contacts = [] } = useContacts();
   const { data: profiles = [] } = useProfiles();
   const deleteOpportunity = useDeleteOpportunity();
+  const navigate = useNavigate();
 
   const filteredOpportunities = useMemo(() => {
     return opportunities.filter(opp => {
@@ -112,6 +114,10 @@ export default function Oportunidades() {
         description="Lista completa de oportunidades de negócio"
         actions={
           <div className="flex items-center gap-2">
+            <Button variant="outline" className="hidden sm:flex" onClick={() => navigate('/ppt-institucional')}>
+              <Presentation className="h-4 w-4 mr-2" />
+              PPT Institucional
+            </Button>
             <Button variant="outline" className="hidden sm:flex">
               <Download className="h-4 w-4 mr-2" />
               Exportar

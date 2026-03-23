@@ -30,6 +30,7 @@ import ChromeExtension from "./pages/ChromeExtension";
 import CartaOferta from "./pages/CartaOferta";
 import Financeiro from "./pages/Financeiro";
 import PropostaOutplacement from "./pages/PropostaOutplacement";
+import PptInstitucional from "./pages/PptInstitucional";
 import NotFound from "./pages/NotFound";
 import { Loader2 } from "lucide-react";
 
@@ -116,6 +117,7 @@ const App = () => (
               <Route path="/oportunidades" element={<Oportunidades />} />
               <Route path="/oportunidades/:id/proposta" element={<ProposalGenerator />} />
               <Route path="/oportunidades/:id/proposta-outplacement" element={<PropostaOutplacement />} />
+              <Route path="/ppt-institucional" element={<PptInstitucional />} />
               <Route path="/tarefas" element={<Tarefas />} />
               <Route path="/faturamento" element={<Faturamento />} />
               <Route path="/financeiro" element={<Financeiro />} />
