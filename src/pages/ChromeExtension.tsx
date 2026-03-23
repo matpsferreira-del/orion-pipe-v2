@@ -82,7 +82,7 @@ export default function ChromeExtension() {
           .eq('job_id', selectedJobId);
         if (stagesError) throw stagesError;
 
-        const mapeadoStage = stages?.find(s => s.name.toLowerCase() === 'mapeado');
+        const mapeadoStage = stages?.find(s => s.name.toLowerCase() === 'mapeado' || s.name.toLowerCase() === 'mapeados');
         if (!mapeadoStage) throw new Error('Etapa "Mapeado" não encontrada nesta vaga.');
 
         const { error: appError } = await supabase.from('applications').insert({
