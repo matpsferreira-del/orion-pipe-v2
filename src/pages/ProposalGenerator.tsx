@@ -46,6 +46,7 @@ export default function ProposalGenerator() {
   const [feeP2, setFeeP2] = useState('30%');
   const [feeP3, setFeeP3] = useState('40%');
   const [isExporting, setIsExporting] = useState(false);
+  const [proposalMode, setProposalMode] = useState<'simples' | 'completa'>('simples');
 
   useEffect(() => {
     if (!opportunity) return;
@@ -302,6 +303,14 @@ export default function ProposalGenerator() {
               <option value="45 dias">45 dias</option>
               <option value="60 dias">60 dias</option>
               <option value="90 dias">90 dias</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="text-xs text-slate-400 mb-1 block">Tipo de Proposta</label>
+            <select value={proposalMode} onChange={(e) => setProposalMode(e.target.value as 'simples' | 'completa')} className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white focus:border-cyan-500 focus:outline-none text-sm cursor-pointer appearance-none shadow-inner">
+              <option value="simples">Simples (4 slides)</option>
+              <option value="completa">Completa (slides extras: Quem Somos, Metodologia, etc.)</option>
             </select>
           </div>
 
@@ -579,6 +588,142 @@ export default function ProposalGenerator() {
               </div>
             </div>
 
+            {/* SLIDES EXTRAS — Proposta Completa */}
+            {proposalMode === 'completa' && (
+              <>
+                {/* Slide Extra 1 — Quem Somos */}
+                <div className="proposal-slide">
+                  <div style={{ position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(to right, rgba(6,182,212,0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(6,182,212,0.05) 1px, transparent 1px)', backgroundSize: '40px 40px', zIndex: 0, pointerEvents: 'none' as const }} />
+                  <h2 style={{ fontSize: '36px', fontWeight: 800, marginBottom: '32px' }}>
+                    <span style={{ color: '#ffffff' }}>Quem é a </span>
+                    <span style={{ color: '#06b6d4' }}>Orion?</span>
+                  </h2>
+                  <div className="flex-1 flex items-center">
+                    <div className="flex gap-10 w-full">
+                      <div className="flex-1 space-y-5">
+                        <p className="text-slate-300 leading-relaxed text-base">Somos uma consultoria especializada em recrutamento estratégico com atuação nacional. Unimos <strong className="text-white">inteligência de mercado, hunting ativo e tecnologia</strong> para conectar empresas aos profissionais certos — com velocidade, precisão e confidencialidade.</p>
+                        <p className="text-slate-300 leading-relaxed text-base">Nossa abordagem é consultiva: entendemos o contexto do negócio, a cultura organizacional e as competências técnicas e comportamentais necessárias antes de iniciar qualquer busca.</p>
+                        <div className="grid grid-cols-4 gap-4 mt-6">
+                          {[
+                            { value: '500+', label: 'Profissionais mapeados/ano' },
+                            { value: '12', label: 'Dias úteis de SLA médio' },
+                            { value: '95%', label: 'Taxa de aderência cultural' },
+                            { value: '30', label: 'Dias de garantia de reposição' },
+                          ].map((n) => (
+                            <div key={n.label} className="bg-slate-800/50 p-4 rounded-xl border border-slate-700/50 text-center">
+                              <p className="text-2xl font-black text-cyan-400">{n.value}</p>
+                              <p className="text-slate-400 text-xs mt-1">{n.label}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Slide Extra 2 — Diferenciais */}
+                <div className="proposal-slide">
+                  <div style={{ position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(to right, rgba(6,182,212,0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(6,182,212,0.05) 1px, transparent 1px)', backgroundSize: '40px 40px', zIndex: 0, pointerEvents: 'none' as const }} />
+                  <h2 style={{ fontSize: '36px', fontWeight: 800, marginBottom: '32px' }}>
+                    <span style={{ color: '#ffffff' }}>Por que a </span>
+                    <span style={{ color: '#06b6d4' }}>Orion?</span>
+                  </h2>
+                  <div className="flex-1 flex items-center">
+                    <div className="grid grid-cols-2 gap-6 w-full">
+                      {[
+                        { icon: '💎', title: 'Exclusividade no Processo', desc: 'Cada projeto recebe dedicação integral de um consultor especialista. 100% do esforço direcionado ao seu desafio.' },
+                        { icon: '🤖', title: 'IA + Hunting Ativo', desc: 'IA para mapeamento preditivo combinada com abordagem humana consultiva. Acessamos talentos passivos que outros métodos não alcançam.' },
+                        { icon: '⚡', title: 'SLA Agressivo', desc: 'Apresentação dos primeiros candidatos hiper-qualificados em até 12 dias úteis — validados técnica e culturalmente.' },
+                        { icon: '🔒', title: 'Sigilo Total', desc: 'Processos conduzidos com total confidencialidade. Informações sensíveis protegidas em todas as etapas.' },
+                      ].map((d) => (
+                        <div key={d.title} className="bg-slate-800/50 p-6 rounded-xl border border-slate-700/50">
+                          <div className="flex items-center gap-3 mb-3">
+                            <div className="w-10 h-10 rounded-full bg-cyan-500/10 flex items-center justify-center text-lg">{d.icon}</div>
+                            <p className="text-lg font-bold text-cyan-400">{d.title}</p>
+                          </div>
+                          <p className="text-slate-300 text-sm leading-relaxed">{d.desc}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Slide Extra 3 — Metodologia */}
+                <div className="proposal-slide">
+                  <div style={{ position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(to right, rgba(6,182,212,0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(6,182,212,0.05) 1px, transparent 1px)', backgroundSize: '40px 40px', zIndex: 0, pointerEvents: 'none' as const }} />
+                  <h2 style={{ fontSize: '36px', fontWeight: 800, marginBottom: '32px' }}>
+                    <span style={{ color: '#ffffff' }}>Nossa </span>
+                    <span style={{ color: '#06b6d4' }}>Metodologia</span>
+                  </h2>
+                  <div className="flex-1 flex items-center">
+                    <div className="flex flex-col gap-4 w-full">
+                      {[
+                        { step: '01', title: 'Alinhamento Estratégico', desc: 'Imersão no desafio: cultura, contexto da área, perfil ideal e critérios eliminatórios.', time: 'Dia 1-2' },
+                        { step: '02', title: 'Mapeamento & Hunting', desc: 'Busca multicanal: LinkedIn Recruiter, base proprietária, IA preditiva e rede de contatos.', time: 'Dia 3-8' },
+                        { step: '03', title: 'Triagem & Validação', desc: 'Entrevistas por competência, avaliação técnica e análise de fit cultural rigorosa.', time: 'Dia 6-10' },
+                        { step: '04', title: 'Shortlist & Parecer', desc: '3-5 candidatos finalistas com parecer detalhado: histórico, motivações e pontos de atenção.', time: 'Dia 10-12' },
+                        { step: '05', title: 'Acompanhamento & Garantia', desc: 'Suporte na negociação, acompanhamento do onboarding e monitoramento no período de garantia.', time: 'Pós-contratação' },
+                      ].map((m) => (
+                        <div key={m.step} className="flex items-center gap-5 bg-slate-800/30 rounded-xl p-4 border border-slate-700/30">
+                          <div className="w-14 h-14 rounded-full bg-cyan-500/10 border border-cyan-700/30 flex items-center justify-center flex-shrink-0">
+                            <span className="text-cyan-400 font-black text-lg">{m.step}</span>
+                          </div>
+                          <div className="flex-1">
+                            <p className="font-bold text-white text-base">{m.title}</p>
+                            <p className="text-slate-400 text-sm">{m.desc}</p>
+                          </div>
+                          <span className="text-cyan-400/60 text-xs font-mono flex-shrink-0">{m.time}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Slide Extra 4 — Modelo de Trabalho */}
+                <div className="proposal-slide">
+                  <div style={{ position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(to right, rgba(6,182,212,0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(6,182,212,0.05) 1px, transparent 1px)', backgroundSize: '40px 40px', zIndex: 0, pointerEvents: 'none' as const }} />
+                  <h2 style={{ fontSize: '36px', fontWeight: 800, marginBottom: '32px' }}>
+                    <span style={{ color: '#ffffff' }}>Modelo de </span>
+                    <span style={{ color: '#06b6d4' }}>Trabalho</span>
+                  </h2>
+                  <div className="flex-1 flex items-center">
+                    <div className="grid grid-cols-3 gap-6 w-full">
+                      <div className="bg-slate-800/50 p-6 rounded-xl border border-cyan-700/30 space-y-3">
+                        <div className="w-10 h-10 rounded-full bg-cyan-500/10 flex items-center justify-center text-lg">📋</div>
+                        <p className="font-bold text-cyan-400 text-base">Processo Consultivo</p>
+                        <p className="text-slate-300 text-sm leading-relaxed">Não somos apenas fornecedores — somos parceiros estratégicos. Atuamos como extensão da sua equipe de RH, com proximidade e comprometimento.</p>
+                      </div>
+                      <div className="bg-slate-800/50 p-6 rounded-xl border border-slate-700/50 space-y-3">
+                        <div className="w-10 h-10 rounded-full bg-cyan-500/10 flex items-center justify-center text-lg">🔄</div>
+                        <p className="font-bold text-cyan-400 text-base">Atualizações Semanais</p>
+                        <p className="text-slate-300 text-sm leading-relaxed">Relatórios de progresso semanais com métricas de pipeline: candidatos mapeados, abordados, entrevistados e aprovados em cada etapa.</p>
+                      </div>
+                      <div className="bg-slate-800/50 p-6 rounded-xl border border-slate-700/50 space-y-3">
+                        <div className="w-10 h-10 rounded-full bg-cyan-500/10 flex items-center justify-center text-lg">🎯</div>
+                        <p className="font-bold text-cyan-400 text-base">Foco em Resultado</p>
+                        <p className="text-slate-300 text-sm leading-relaxed">Trabalhamos orientados por KPIs claros: tempo de preenchimento, taxa de aprovação, aderência cultural e permanência do profissional.</p>
+                      </div>
+                      <div className="bg-slate-800/50 p-6 rounded-xl border border-slate-700/50 space-y-3">
+                        <div className="w-10 h-10 rounded-full bg-cyan-500/10 flex items-center justify-center text-lg">🌐</div>
+                        <p className="font-bold text-cyan-400 text-base">Cobertura Nacional</p>
+                        <p className="text-slate-300 text-sm leading-relaxed">Operamos em todos os 26 estados + DF com processos remote-friendly, mantendo o mesmo padrão de qualidade e velocidade.</p>
+                      </div>
+                      <div className="bg-slate-800/50 p-6 rounded-xl border border-slate-700/50 space-y-3">
+                        <div className="w-10 h-10 rounded-full bg-cyan-500/10 flex items-center justify-center text-lg">🤝</div>
+                        <p className="font-bold text-cyan-400 text-base">Ponto Focal Dedicado</p>
+                        <p className="text-slate-300 text-sm leading-relaxed">Cada cliente tem um consultor dedicado do início ao fim, garantindo continuidade, contexto e agilidade na comunicação.</p>
+                      </div>
+                      <div className="bg-slate-800/50 p-6 rounded-xl border border-slate-700/50 space-y-3">
+                        <div className="w-10 h-10 rounded-full bg-cyan-500/10 flex items-center justify-center text-lg">📊</div>
+                        <p className="font-bold text-cyan-400 text-base">Inteligência de Mercado</p>
+                        <p className="text-slate-300 text-sm leading-relaxed">Compartilhamos insights sobre benchmark salarial, disponibilidade de talentos e tendências do mercado para cada posição.</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+
             {/* Slide 4 — Investimento */}
             <div className="proposal-slide">
               <div style={{ position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(to right, rgba(6,182,212,0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(6,182,212,0.05) 1px, transparent 1px)', backgroundSize: '40px 40px', zIndex: 0, pointerEvents: 'none' as const }} />
@@ -596,7 +741,8 @@ export default function ProposalGenerator() {
                         <p className="text-slate-400 mt-2 text-lg">Fee sobre Remuneração Anual</p>
                       </div>
                       <div className="flex-1 space-y-4">
-                        <h3 className="text-2xl font-bold text-white">Taxa sobre Remuneração Anual</h3>
+                        <h3 className="text-2xl font-bold text-white">Sem Custos Antecipados</h3>
+                        <p className="text-slate-300 leading-relaxed">Nossa parceria é pautada estritamente no resultado. O investimento ocorre <strong className="text-white">apenas em caso de sucesso</strong> na contratação.</p>
                         <p className="text-slate-300 leading-relaxed">O honorário é calculado como uma <strong className="text-white">taxa percentual sobre a remuneração anual total</strong> do colaborador contratado.</p>
                         <div className="bg-slate-800/50 rounded-xl p-5 border border-cyan-700/30">
                           <p className="text-cyan-400 font-bold text-sm mb-2">📐 Fórmula de Cálculo</p>
