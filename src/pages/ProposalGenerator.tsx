@@ -687,15 +687,25 @@ export default function ProposalGenerator() {
                             return (
                               <div key={seg}>
                                 <p className="text-cyan-400 font-bold text-sm uppercase tracking-wider mb-4">{seg}</p>
-                                <div className="flex flex-wrap gap-6">
-                                  {items.map((c, i) => (
-                                    <div key={i} className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-5 flex flex-col items-center justify-center min-w-[160px] max-w-[200px]" style={{ minHeight: 100 }}>
-                                      {c.logoUrl ? (
-                                        <img src={c.logoUrl} alt={c.name} className="max-h-12 max-w-[140px] object-contain mb-2" crossOrigin="anonymous" onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
-                                      ) : null}
-                                      {c.name && <p className="text-slate-300 text-xs text-center font-medium mt-1">{c.name}</p>}
-                                    </div>
-                                  ))}
+                                <div className="flex gap-6">
+                                  {(() => {
+                                    const cols: typeof items[] = [];
+                                    for (let i = 0; i < items.length; i += 3) {
+                                      cols.push(items.slice(i, i + 3));
+                                    }
+                                    return cols.map((col, ci) => (
+                                      <div key={ci} className="flex flex-col gap-4">
+                                        {col.map((c, i) => (
+                                          <div key={i} className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-5 flex flex-col items-center justify-center min-w-[160px] max-w-[200px]" style={{ minHeight: 100 }}>
+                                            {c.logoUrl ? (
+                                              <img src={c.logoUrl} alt={c.name} className="max-h-12 max-w-[140px] object-contain mb-2" crossOrigin="anonymous" onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
+                                            ) : null}
+                                            {c.name && <p className="text-slate-300 text-xs text-center font-medium mt-1">{c.name}</p>}
+                                          </div>
+                                        ))}
+                                      </div>
+                                    ));
+                                  })()}
                                 </div>
                               </div>
                             );
