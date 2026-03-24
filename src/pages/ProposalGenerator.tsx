@@ -676,34 +676,25 @@ export default function ProposalGenerator() {
                 <p className="text-slate-400 text-base mb-8">Empresas que confiam na Orion para recrutar seus talentos estratégicos.</p>
                 <div className="flex-1 flex items-center">
                   <div className="w-full">
-                    {/* Group by segment */}
+                    {/* Group by segment — laid out horizontally, max 3 per column, never overflow slide */}
                     {(() => {
                       const validCases = cases.filter(c => c.name || c.logoUrl);
                       const segments = [...new Set(validCases.map(c => c.segment || 'Outros'))];
                       return (
-                        <div className="space-y-8">
+                        <div style={{ display: 'flex', flexDirection: 'row', gap: 28, flexWrap: 'wrap', alignItems: 'flex-start', maxHeight: 420, overflow: 'hidden' }}>
                           {segments.map(seg => {
                             const items = validCases.filter(c => (c.segment || 'Outros') === seg);
                             return (
-                              <div key={seg}>
-                                <p className="text-cyan-400 font-bold text-sm uppercase tracking-wider mb-4">{seg}</p>
-                                <div style={{ display: 'flex', flexDirection: 'row', gap: 24, flexWrap: 'nowrap' }}>
-                                  {Array.from({ length: Math.ceil(items.length / 3) }, (_, ci) => {
-                                    const col = items.slice(ci * 3, ci * 3 + 3);
-                                    return (
-                                      <div key={ci} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                                        {col.map((c, i) => (
-                                          <div key={i} className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-5 flex flex-col items-center justify-center" style={{ minWidth: 160, maxWidth: 200, minHeight: 100 }}>
-                                            {c.logoUrl ? (
-                                              <img src={c.logoUrl} alt={c.name} style={{ maxHeight: 48, maxWidth: 140, objectFit: 'contain', marginBottom: 8 }} crossOrigin="anonymous" onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
-                                            ) : null}
-                                            {c.name && <p className="text-slate-300 text-xs text-center font-medium mt-1">{c.name}</p>}
-                                          </div>
-                                        ))}
-                                      </div>
-                                    );
-                                  })}
-                                </div>
+                              <div key={seg} style={{ display: 'flex', flexDirection: 'column', gap: 8, maxWidth: 200 }}>
+                                <p className="text-cyan-400 font-bold text-xs uppercase tracking-wider" style={{ marginBottom: 4 }}>{seg}</p>
+                                {items.slice(0, 3).map((c, i) => (
+                                  <div key={i} className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 flex flex-col items-center justify-center" style={{ minWidth: 150, maxWidth: 200, minHeight: 80 }}>
+                                    {c.logoUrl ? (
+                                      <img src={c.logoUrl} alt={c.name} style={{ maxHeight: 40, maxWidth: 130, objectFit: 'contain', marginBottom: 6 }} crossOrigin="anonymous" onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
+                                    ) : null}
+                                    {c.name && <p className="text-slate-300 text-xs text-center font-medium">{c.name}</p>}
+                                  </div>
+                                ))}
                               </div>
                             );
                           })}
