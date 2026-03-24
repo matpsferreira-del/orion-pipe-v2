@@ -46,6 +46,7 @@ export default function ProposalGenerator() {
   const [feeP2, setFeeP2] = useState('30%');
   const [feeP3, setFeeP3] = useState('40%');
   const [isExporting, setIsExporting] = useState(false);
+  const [proposalMode, setProposalMode] = useState<'simples' | 'completa'>('simples');
 
   useEffect(() => {
     if (!opportunity) return;
