@@ -597,7 +597,8 @@ export default function ProposalGenerator() {
                         <p className="text-slate-400 mt-2 text-lg">Fee sobre Remuneração Anual</p>
                       </div>
                       <div className="flex-1 space-y-4">
-                        <h3 className="text-2xl font-bold text-white">Taxa sobre Remuneração Anual</h3>
+                        <h3 className="text-2xl font-bold text-white">Sem Custos Antecipados</h3>
+                        <p className="text-slate-300 leading-relaxed">Nossa parceria é pautada estritamente no resultado. O investimento ocorre <strong className="text-white">apenas em caso de sucesso</strong> na contratação.</p>
                         <p className="text-slate-300 leading-relaxed">O honorário é calculado como uma <strong className="text-white">taxa percentual sobre a remuneração anual total</strong> do colaborador contratado.</p>
                         <div className="bg-slate-800/50 rounded-xl p-5 border border-cyan-700/30">
                           <p className="text-cyan-400 font-bold text-sm mb-2">📐 Fórmula de Cálculo</p>
