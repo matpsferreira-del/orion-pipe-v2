@@ -306,6 +306,14 @@ export default function ProposalGenerator() {
             </select>
           </div>
 
+          <div>
+            <label className="text-xs text-slate-400 mb-1 block">Tipo de Proposta</label>
+            <select value={proposalMode} onChange={(e) => setProposalMode(e.target.value as 'simples' | 'completa')} className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white focus:border-cyan-500 focus:outline-none text-sm cursor-pointer appearance-none shadow-inner">
+              <option value="simples">Simples (4 slides)</option>
+              <option value="completa">Completa (slides extras: Quem Somos, Metodologia, etc.)</option>
+            </select>
+          </div>
+
           <hr className="border-slate-700/50" />
 
           <div className="space-y-3">
