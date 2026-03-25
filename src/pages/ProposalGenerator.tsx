@@ -668,43 +668,68 @@ export default function ProposalGenerator() {
               </div>
             </div>
 
-            {/* ── Slide: Cases de Sucesso ── */}
-            {showCases && cases.filter(c => c.name || c.logoUrl).length > 0 && (
-              <div className="proposal-slide">
-                <div style={gridPattern} />
-                <h2 style={{ fontSize: 36, fontWeight: 800, marginBottom: 32 }}><span style={{ color: '#fff' }}>Cases de </span><span style={{ color: '#06b6d4' }}>Sucesso</span></h2>
-                <p className="text-slate-400 text-base mb-8">Empresas que confiam na Orion para recrutar seus talentos estratégicos.</p>
-                <div className="flex-1 flex items-center">
-                  <div className="w-full">
-                    {/* Group by segment — laid out horizontally, max 3 per column, never overflow slide */}
-                    {(() => {
-                      const validCases = cases.filter(c => c.name || c.logoUrl);
-                      const segments = [...new Set(validCases.map(c => c.segment || 'Outros'))];
-                      return (
-                        <div style={{ display: 'flex', flexDirection: 'row', gap: 28, flexWrap: 'wrap', alignItems: 'flex-start', maxHeight: 420, overflow: 'hidden' }}>
-                          {segments.map(seg => {
-                            const items = validCases.filter(c => (c.segment || 'Outros') === seg);
-                            return (
-                              <div key={seg} style={{ display: 'flex', flexDirection: 'column', gap: 8, maxWidth: 200 }}>
-                                <p className="text-cyan-400 font-bold text-xs uppercase tracking-wider" style={{ marginBottom: 4 }}>{seg}</p>
-                                {items.slice(0, 3).map((c, i) => (
-                                  <div key={i} className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 flex flex-col items-center justify-center" style={{ minWidth: 150, maxWidth: 200, minHeight: 80 }}>
-                                    {c.logoUrl ? (
-                                      <img src={c.logoUrl} alt={c.name} style={{ maxHeight: 40, maxWidth: 130, objectFit: 'contain', marginBottom: 6 }} crossOrigin="anonymous" onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
-                                    ) : null}
-                                    {c.name && <p className="text-slate-300 text-xs text-center font-medium">{c.name}</p>}
-                                  </div>
-                                ))}
+            {/* ── Slides: Cases de Sucesso (auto-paginados) ── */}
+            {showCases && cases.filter(c => c.name || c.logoUrl).length > 0 && (() => {
+              const validCases = cases.filter(c => c.name || c.logoUrl);
+              const segments = [...new Set(validCases.map(c => c.segment || 'Outros'))];
+
+              // Build segment columns: each segment becomes a column with up to 3 items
+              const segmentColumns = segments.map(seg => ({
+                seg,
+                items: validCases.filter(c => (c.segment || 'Outros') === seg).slice(0, 6),
+              }));
+
+              // Split segment columns into sub-columns of max 3 items each
+              const allColumns: { seg: string; items: typeof validCases; subIndex: number }[] = [];
+              segmentColumns.forEach(({ seg, items }) => {
+                const chunks = Math.ceil(items.length / 3);
+                for (let ch = 0; ch < chunks; ch++) {
+                  allColumns.push({ seg, items: items.slice(ch * 3, ch * 3 + 3), subIndex: ch });
+                }
+              });
+
+              // Paginate: max 5 columns per slide to fit within slide width
+              const MAX_COLS_PER_SLIDE = 5;
+              const slidePages: typeof allColumns[] = [];
+              for (let i = 0; i < allColumns.length; i += MAX_COLS_PER_SLIDE) {
+                slidePages.push(allColumns.slice(i, i + MAX_COLS_PER_SLIDE));
+              }
+
+              return slidePages.map((pageCols, pageIdx) => (
+                <div key={`cases-${pageIdx}`} className="proposal-slide">
+                  <div style={gridPattern} />
+                  <h2 style={{ fontSize: 36, fontWeight: 800, marginBottom: 32 }}>
+                    <span style={{ color: '#fff' }}>Cases de </span><span style={{ color: '#06b6d4' }}>Sucesso</span>
+                    {slidePages.length > 1 && <span className="text-slate-500 text-lg font-normal ml-3">({pageIdx + 1}/{slidePages.length})</span>}
+                  </h2>
+                  <p className="text-slate-400 text-base mb-8">Empresas que confiam na Orion para recrutar seus talentos estratégicos.</p>
+                  <div className="flex-1 flex items-center">
+                    <div className="w-full">
+                      <div style={{ display: 'flex', flexDirection: 'row', gap: 24, flexWrap: 'nowrap', alignItems: 'flex-start' }}>
+                        {pageCols.map((col, ci) => (
+                          <div key={ci} style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: '1 1 0', minWidth: 140, maxWidth: 220 }}>
+                            {col.subIndex === 0 && (
+                              <p className="text-cyan-400 font-bold text-xs uppercase tracking-wider" style={{ marginBottom: 4 }}>{col.seg}</p>
+                            )}
+                            {col.subIndex > 0 && (
+                              <p className="text-slate-600 text-[10px] uppercase tracking-wider" style={{ marginBottom: 4 }}>{col.seg} (cont.)</p>
+                            )}
+                            {col.items.map((c, i) => (
+                              <div key={i} className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 flex flex-col items-center justify-center" style={{ minHeight: 75 }}>
+                                {c.logoUrl ? (
+                                  <img src={c.logoUrl} alt={c.name} style={{ maxHeight: 36, maxWidth: 120, objectFit: 'contain', marginBottom: 6 }} crossOrigin="anonymous" onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
+                                ) : null}
+                                {c.name && <p className="text-slate-300 text-xs text-center font-medium">{c.name}</p>}
                               </div>
-                            );
-                          })}
-                        </div>
-                      );
-                    })()}
+                            ))}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
+              ));
+            })()}
 
             {/* ── Slide: CTA ── */}
             <div className="proposal-slide" style={{ justifyContent: 'center', alignItems: 'center', textAlign: 'center' as const }}>
