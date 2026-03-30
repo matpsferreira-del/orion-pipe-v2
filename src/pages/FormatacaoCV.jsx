@@ -663,9 +663,13 @@ function CVDoc({
         </Section>
         </div>
 
+        <div data-pdf-section="exp-header">
         <Section title="EXPERIÊNCIA PROFISSIONAL" sectionKey="experiencias" editing={editing} hidden={hiddenSections.includes("experiencias")} onToggle={() => toggleSection("experiencias")}>
-          {(cv.experiencias || []).map((exp, i) => (
-            <div key={i} style={{ ...S.expItem, marginBottom: i < cv.experiencias.length - 1 ? 24 : 0 }}>
+          {null}
+        </Section>
+        </div>
+        {!hiddenSections.includes("experiencias") && (cv.experiencias || []).map((exp, i) => (
+            <div data-pdf-section={`exp-${i}`} key={i} style={{ ...S.expItem, marginBottom: i < cv.experiencias.length - 1 ? 24 : 0, padding: "0 0 22px 0" }}>
               <div style={S.expHeader}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <EditableText editing={editing} value={exp.empresa} onChange={(v) => setField(`experiencias.${i}.empresa`, v)} style={S.expEmpresa} placeholder="Empresa" inline />
@@ -688,8 +692,7 @@ function CVDoc({
               )}
             </div>
           ))}
-          {editing && <button onClick={addExp} style={S.addBlockBtn}>+ adicionar experiência</button>}
-        </Section>
+          {editing && !hiddenSections.includes("experiencias") && <button onClick={addExp} style={S.addBlockBtn}>+ adicionar experiência</button>}
 
         <div style={S.twoCol}>
           <div style={{ flex: 1 }}>
