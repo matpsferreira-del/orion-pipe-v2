@@ -7,6 +7,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toPng } from "html-to-image";
 import jsPDF from "jspdf";
 import mammoth from "mammoth";
+import { Document, Packer, Paragraph, TextRun, AlignmentType, LevelFormat, PageBreak, ShadingType, BorderStyle } from "docx";
+import { saveAs } from "file-saver";
 
 const EXTRACT_PROMPT = `Você é um especialista em leitura e extração de dados de currículos para a empresa Orion.
 Você receberá um CV em qualquer formato — LinkedIn PDF, Word convertido, CV tradicional, currículo Lattes, ou qualquer outro layout — e deve extrair ABSOLUTAMENTE TODAS as informações presentes, retornando SOMENTE um JSON válido, sem markdown, sem blocos de código, sem qualquer texto antes ou depois.
@@ -261,27 +263,49 @@ function EditorScreen({ data, onReset }) {
     if (!docRef.current) return;
     setExporting(true);
     try {
-      const dataUrl = await toPng(docRef.current, {
-        quality: 0.95,
-        pixelRatio: 2,
-        backgroundColor: "#ffffff",
-      });
-
-      const img = new Image();
-      img.src = dataUrl;
-      await new Promise((resolve) => { img.onload = resolve; });
-
+      // Capture each section individually to avoid text cutting at page breaks
+      const sections = docRef.current.querySelectorAll("[data-pdf-section]");
       const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
       const pageW = pdf.internal.pageSize.getWidth();
       const pageH = pdf.internal.pageSize.getHeight();
-      const ratio = img.width / img.height;
-      const imgH = pageW / ratio;
+      const marginTop = 4;
+      const marginBottom = 4;
+      const usableH = pageH - marginTop - marginBottom;
+      let cursorY = marginTop;
+      let isFirstSection = true;
 
-      let yOffset = 0;
-      while (yOffset < imgH) {
-        if (yOffset > 0) pdf.addPage();
-        pdf.addImage(dataUrl, "PNG", 0, -yOffset, pageW, imgH);
-        yOffset += pageH;
+      if (sections.length === 0) {
+        // Fallback: capture entire document
+        const dataUrl = await toPng(docRef.current, { quality: 0.95, pixelRatio: 2, backgroundColor: "#ffffff" });
+        const img = new Image();
+        img.src = dataUrl;
+        await new Promise((r) => { img.onload = r; });
+        const ratio = img.width / img.height;
+        const imgH = pageW / ratio;
+        let yOff = 0;
+        while (yOff < imgH) {
+          if (yOff > 0) pdf.addPage();
+          pdf.addImage(dataUrl, "PNG", 0, -yOff, pageW, imgH);
+          yOff += pageH;
+        }
+      } else {
+        for (const section of sections) {
+          const dataUrl = await toPng(section, { quality: 0.95, pixelRatio: 2, backgroundColor: "#ffffff" });
+          const img = new Image();
+          img.src = dataUrl;
+          await new Promise((r) => { img.onload = r; });
+          const ratio = img.width / img.height;
+          const imgH = pageW / ratio;
+
+          // If this section doesn't fit on current page, start new page
+          if (!isFirstSection && cursorY + imgH > pageH - marginBottom) {
+            pdf.addPage();
+            cursorY = marginTop;
+          }
+          pdf.addImage(dataUrl, "PNG", 0, cursorY, pageW, imgH);
+          cursorY += imgH;
+          isFirstSection = false;
+        }
       }
 
       const nomeArquivo = (cv.nome || "CV").replace(/\s+/g, "_");
@@ -293,6 +317,181 @@ function EditorScreen({ data, onReset }) {
       setExporting(false);
     }
   }, [cv.nome]);
+
+  const handleExportWord = useCallback(async () => {
+    setExporting(true);
+    try {
+      const children = [];
+      const CYAN = "06B6D4";
+      const DARK = "0F172A";
+      const GRAY = "475569";
+      const LIGHT_GRAY = "94A3B8";
+
+      // Header block: Name + Title
+      children.push(
+        new Paragraph({
+          spacing: { after: 60 },
+          children: [new TextRun({ text: cv.nome || "Nome", bold: true, size: 48, font: "Calibri", color: DARK })],
+        }),
+        new Paragraph({
+          spacing: { after: 100 },
+          children: [new TextRun({ text: cv.cargo_titulo || "", size: 22, font: "Calibri", color: LIGHT_GRAY })],
+        })
+      );
+
+      // Contact info
+      const contactParts = [cv.localizacao, cv.telefone, cv.email, cv.linkedin].filter(Boolean);
+      if (contactParts.length > 0) {
+        children.push(
+          new Paragraph({
+            spacing: { after: 200 },
+            children: contactParts.flatMap((c, i) => {
+              const runs = [new TextRun({ text: c, size: 20, font: "Calibri", color: GRAY })];
+              if (i < contactParts.length - 1) runs.push(new TextRun({ text: "  |  ", size: 20, color: LIGHT_GRAY }));
+              return runs;
+            }),
+          })
+        );
+      }
+
+      // Separator
+      const addSectionHeader = (title) => {
+        children.push(
+          new Paragraph({
+            spacing: { before: 300, after: 120 },
+            border: { bottom: { style: BorderStyle.SINGLE, size: 4, color: "E2E8F0" } },
+            children: [new TextRun({ text: title, bold: true, size: 20, font: "Calibri", color: CYAN, allCaps: true })],
+          })
+        );
+      };
+
+      // Resumo
+      if (cv.resumo && !hiddenSections.includes("resumo")) {
+        addSectionHeader("RESUMO DAS QUALIFICAÇÕES");
+        children.push(new Paragraph({ spacing: { after: 200 }, children: [new TextRun({ text: cv.resumo, size: 21, font: "Calibri", color: GRAY })] }));
+      }
+
+      // Experiências
+      if ((cv.experiencias || []).length > 0 && !hiddenSections.includes("experiencias")) {
+        addSectionHeader("EXPERIÊNCIA PROFISSIONAL");
+        cv.experiencias.forEach((exp) => {
+          children.push(
+            new Paragraph({
+              spacing: { before: 180, after: 40 },
+              children: [
+                new TextRun({ text: exp.empresa || "", bold: true, size: 22, font: "Calibri", color: CYAN }),
+                new TextRun({ text: exp.cargo ? `  ·  ${exp.cargo}` : "", bold: true, size: 22, font: "Calibri", color: DARK }),
+              ],
+            }),
+            new Paragraph({
+              spacing: { after: 80 },
+              children: [
+                new TextRun({ text: [exp.periodo, exp.localizacao].filter(Boolean).join("  |  "), size: 18, font: "Calibri", color: LIGHT_GRAY, italics: true }),
+              ],
+            })
+          );
+          if (exp.descricao) {
+            children.push(new Paragraph({ spacing: { after: 60 }, children: [new TextRun({ text: exp.descricao, size: 20, font: "Calibri", color: GRAY })] }));
+          }
+          (exp.responsabilidades || []).forEach((r) => {
+            children.push(new Paragraph({
+              spacing: { after: 30 },
+              numbering: { reference: "bullets", level: 0 },
+              children: [new TextRun({ text: r, size: 20, font: "Calibri", color: GRAY })],
+            }));
+          });
+          if ((exp.resultados || []).length > 0) {
+            children.push(new Paragraph({ spacing: { before: 60, after: 30 }, children: [new TextRun({ text: "Resultados", bold: true, size: 18, font: "Calibri", color: CYAN, allCaps: true })] }));
+            exp.resultados.forEach((r) => {
+              children.push(new Paragraph({
+                spacing: { after: 30 },
+                numbering: { reference: "results", level: 0 },
+                children: [new TextRun({ text: r, size: 20, font: "Calibri", color: GRAY })],
+              }));
+            });
+          }
+        });
+      }
+
+      // Formação
+      if ((cv.formacao || []).length > 0 && !hiddenSections.includes("formacao")) {
+        addSectionHeader("FORMAÇÃO ACADÊMICA");
+        cv.formacao.forEach((f) => {
+          children.push(
+            new Paragraph({
+              spacing: { after: 20 },
+              children: [new TextRun({ text: [f.nivel, f.curso].filter(Boolean).join(" "), bold: true, size: 21, font: "Calibri", color: DARK })],
+            }),
+            new Paragraph({
+              spacing: { after: 20 },
+              children: [new TextRun({ text: f.instituicao || "", size: 20, font: "Calibri", color: CYAN })],
+            }),
+            new Paragraph({
+              spacing: { after: 120 },
+              children: [new TextRun({ text: f.periodo || "", size: 18, font: "Calibri", color: LIGHT_GRAY })],
+            })
+          );
+        });
+      }
+
+      // Idiomas
+      if ((cv.idiomas || []).length > 0 && !hiddenSections.includes("idiomas")) {
+        addSectionHeader("IDIOMAS");
+        cv.idiomas.forEach((idioma) => {
+          children.push(new Paragraph({
+            spacing: { after: 40 },
+            numbering: { reference: "bullets", level: 0 },
+            children: [new TextRun({ text: idioma, size: 20, font: "Calibri", color: GRAY })],
+          }));
+        });
+      }
+
+      // Footer
+      children.push(
+        new Paragraph({ spacing: { before: 400 }, border: { top: { style: BorderStyle.SINGLE, size: 2, color: "E2E8F0" } }, children: [] }),
+        new Paragraph({
+          spacing: { before: 80 },
+          children: [
+            new TextRun({ text: "✦ ORION", bold: true, size: 18, font: "Calibri", color: CYAN }),
+            new TextRun({ text: "  ·  Gerado automaticamente · CV Transformer", size: 18, font: "Calibri", color: LIGHT_GRAY }),
+          ],
+        })
+      );
+
+      const doc = new Document({
+        numbering: {
+          config: [
+            {
+              reference: "bullets",
+              levels: [{ level: 0, format: LevelFormat.BULLET, text: "\u2022", alignment: AlignmentType.LEFT, style: { paragraph: { indent: { left: 720, hanging: 360 } } } }],
+            },
+            {
+              reference: "results",
+              levels: [{ level: 0, format: LevelFormat.BULLET, text: "\u25B8", alignment: AlignmentType.LEFT, style: { paragraph: { indent: { left: 720, hanging: 360 } } } }],
+            },
+          ],
+        },
+        sections: [{
+          properties: {
+            page: {
+              size: { width: 11906, height: 16838 },
+              margin: { top: 1134, right: 1134, bottom: 1134, left: 1134 },
+            },
+          },
+          children,
+        }],
+      });
+
+      const blob = await Packer.toBlob(doc);
+      const nomeArquivo = (cv.nome || "CV").replace(/\s+/g, "_");
+      saveAs(blob, `CV_${nomeArquivo}_Orion.docx`);
+    } catch (err) {
+      console.error("Erro ao gerar Word:", err);
+      alert("Erro ao gerar Word. Tente novamente.");
+    } finally {
+      setExporting(false);
+    }
+  }, [cv, hiddenSections]);
 
   const setField = (path, value) => {
     setCv((prev) => deepSet({ ...prev }, path.split("."), value));
@@ -378,6 +577,13 @@ function EditorScreen({ data, onReset }) {
           >
             {exporting ? "⏳ Gerando..." : "⬇️ Baixar PDF"}
           </button>
+          <button
+            onClick={handleExportWord}
+            disabled={exporting}
+            style={{ ...S.printBtn, background: "#155E75", opacity: exporting ? 0.7 : 1, cursor: exporting ? "wait" : "pointer" }}
+          >
+            {exporting ? "⏳ Gerando..." : "📝 Baixar Word"}
+          </button>
         </div>
       </div>
 
@@ -437,7 +643,7 @@ function CVDoc({
 }) {
   return (
     <div style={S.doc}>
-      <div style={S.docHeader}>
+      <div data-pdf-section="header" style={S.docHeader}>
         <div style={{ flex: 1 }}>
           <EditableText editing={editing} value={cv.nome} onChange={(v) => setField("nome", v)} style={S.docName} placeholder="Nome Completo" />
           <EditableText editing={editing} value={cv.cargo_titulo} onChange={(v) => setField("cargo_titulo", v)} style={S.docCargo} placeholder="Cargo / Especialidade" />
@@ -451,13 +657,19 @@ function CVDoc({
       </div>
 
       <div style={S.docBody}>
+        <div data-pdf-section="resumo">
         <Section title="RESUMO DAS QUALIFICAÇÕES" sectionKey="resumo" editing={editing} hidden={hiddenSections.includes("resumo")} onToggle={() => toggleSection("resumo")}>
           <EditableText editing={editing} value={cv.resumo} onChange={(v) => setField("resumo", v)} style={S.resumoText} placeholder="Resumo profissional..." multiline />
         </Section>
+        </div>
 
+        <div data-pdf-section="exp-header">
         <Section title="EXPERIÊNCIA PROFISSIONAL" sectionKey="experiencias" editing={editing} hidden={hiddenSections.includes("experiencias")} onToggle={() => toggleSection("experiencias")}>
-          {(cv.experiencias || []).map((exp, i) => (
-            <div key={i} style={{ ...S.expItem, marginBottom: i < cv.experiencias.length - 1 ? 24 : 0 }}>
+          {null}
+        </Section>
+        </div>
+        {!hiddenSections.includes("experiencias") && (cv.experiencias || []).map((exp, i) => (
+            <div data-pdf-section={`exp-${i}`} key={i} style={{ ...S.expItem, marginBottom: i < cv.experiencias.length - 1 ? 24 : 0, padding: "0 0 22px 0" }}>
               <div style={S.expHeader}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <EditableText editing={editing} value={exp.empresa} onChange={(v) => setField(`experiencias.${i}.empresa`, v)} style={S.expEmpresa} placeholder="Empresa" inline />
@@ -480,10 +692,9 @@ function CVDoc({
               )}
             </div>
           ))}
-          {editing && <button onClick={addExp} style={S.addBlockBtn}>+ adicionar experiência</button>}
-        </Section>
+          {editing && !hiddenSections.includes("experiencias") && <button onClick={addExp} style={S.addBlockBtn}>+ adicionar experiência</button>}
 
-        <div style={S.twoCol}>
+        <div data-pdf-section="formacao-idiomas" style={S.twoCol}>
           <div style={{ flex: 1 }}>
             <Section title="FORMAÇÃO ACADÊMICA" sectionKey="formacao" editing={editing} hidden={hiddenSections.includes("formacao")} onToggle={() => toggleSection("formacao")}>
               {(cv.formacao || []).map((f, i) => (
@@ -504,7 +715,7 @@ function CVDoc({
           </div>
         </div>
 
-        <div style={S.footer}>
+        <div data-pdf-section="footer" style={S.footer}>
           <span style={{ color: "#06B6D4", fontWeight: 700 }}>✦ ORION</span>
           <span>Gerado automaticamente · CV Transformer</span>
         </div>
