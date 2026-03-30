@@ -11,7 +11,7 @@ import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { 
   Mail, Phone, Linkedin, Star, ExternalLink, 
-  CheckCircle, XCircle, UserMinus, DollarSign, FileText
+  CheckCircle, XCircle, UserMinus, DollarSign, FileText, RotateCcw
 } from 'lucide-react';
 import { 
   ApplicationWithRelations, JobPipelineStage, 
