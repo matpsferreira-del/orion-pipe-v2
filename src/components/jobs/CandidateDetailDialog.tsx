@@ -334,7 +334,19 @@ export function CandidateDetailDialog({
           <Separator />
 
           {/* Actions */}
-          {!isFinalStatus && (
+          {isFinalStatus ? (
+            <div className="flex justify-center">
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="text-primary hover:text-primary/80"
+                onClick={() => handleStatusChange('new')}
+              >
+                <RotateCcw className="h-4 w-4 mr-1" />
+                Reativar Candidato
+              </Button>
+            </div>
+          ) : (
             <div className="flex justify-between">
               <Button 
                 variant="outline" 
