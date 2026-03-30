@@ -643,7 +643,7 @@ function CVDoc({
 }) {
   return (
     <div style={S.doc}>
-      <div style={S.docHeader}>
+      <div data-pdf-section="header" style={S.docHeader}>
         <div style={{ flex: 1 }}>
           <EditableText editing={editing} value={cv.nome} onChange={(v) => setField("nome", v)} style={S.docName} placeholder="Nome Completo" />
           <EditableText editing={editing} value={cv.cargo_titulo} onChange={(v) => setField("cargo_titulo", v)} style={S.docCargo} placeholder="Cargo / Especialidade" />
