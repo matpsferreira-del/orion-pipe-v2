@@ -657,9 +657,11 @@ function CVDoc({
       </div>
 
       <div style={S.docBody}>
+        <div data-pdf-section="resumo">
         <Section title="RESUMO DAS QUALIFICAÇÕES" sectionKey="resumo" editing={editing} hidden={hiddenSections.includes("resumo")} onToggle={() => toggleSection("resumo")}>
           <EditableText editing={editing} value={cv.resumo} onChange={(v) => setField("resumo", v)} style={S.resumoText} placeholder="Resumo profissional..." multiline />
         </Section>
+        </div>
 
         <Section title="EXPERIÊNCIA PROFISSIONAL" sectionKey="experiencias" editing={editing} hidden={hiddenSections.includes("experiencias")} onToggle={() => toggleSection("experiencias")}>
           {(cv.experiencias || []).map((exp, i) => (
