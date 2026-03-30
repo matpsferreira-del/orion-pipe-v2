@@ -1,63 +1,39 @@
 
 
-# Plano: Abrir permissões de edição para todos os usuários (exceto faturamento)
+## Plan: Fix CV Export — Add Word (.docx) Download
 
-## Objetivo
-Permitir que todos os usuários autenticados possam criar, editar e excluir dados de recrutamento (ATS) e comercial (CRM). As permissões de faturamento (tabela `invoices`) permanecem inalteradas.
+### Problem
+The current PDF export captures the entire CV as a single image and slices it across A4 pages, cutting text mid-line at page breaks (as shown in the screenshot).
 
-## Tabelas afetadas e mudanças nas políticas RLS
+### Approach
+Add a **"Baixar Word"** button alongside the existing PDF button. This is the more robust solution because:
+- Word handles page breaks and text wrapping natively — no text will ever be cut
+- The user explicitly mentioned Word export as a good alternative
+- The user can then fine-tune formatting and export to PDF from Word if needed
 
-### CRM / Comercial
+Additionally, **fix the PDF export** to use section-based capture instead of one giant image slice, so each experience block stays intact across pages.
 
-**1. `companies`**
-- UPDATE: de "responsavel + admin/gestor" → todos autenticados
-- DELETE: de "admin only" → todos autenticados
+### Changes — `src/pages/FormatacaoCV.jsx`
 
-**2. `contacts`**
-- INSERT (autenticado): de "admin ou company access" → todos autenticados
-- UPDATE: de "admin ou company access" → todos autenticados
-- DELETE: de "admin/gestor" → todos autenticados
+1. **Add DOCX export function** (`handleExportWord`):
+   - Use the `docx` npm library (Document, Packer, Paragraph, TextRun, etc.)
+   - Map `cv` data to structured Word content preserving the CV layout:
+     - Header: name, role, contact info
+     - Sections: Resumo, Experiências (with bullets for responsibilities/results), Formação, Idiomas
+   - Style with Orion brand colors (cyan accent `#06B6D4`, dark header)
+   - Download as `.docx` file via Blob
 
-**3. `opportunities`**
-- UPDATE: de "responsavel + admin/gestor" → todos autenticados
-- DELETE: de "admin only" → todos autenticados
+2. **Fix PDF export** (`handleExportPDF`):
+   - Add `data-pdf-section` attributes to each logical block in `CVDoc` (header, each experience, formação, idiomas)
+   - Capture each section individually with `html-to-image`
+   - Before placing on PDF page, check remaining space; if it won't fit, add new page
+   - This prevents text from being cut mid-line
 
-**4. `activities`**
-- INSERT: de "own user_id" → todos autenticados
-- UPDATE: de "own user_id" → todos autenticados
-- DELETE: de "own user_id" → todos autenticados
+3. **Add Word button to toolbar** next to the existing PDF button
 
-**5. `tasks`**
-- INSERT: de "own user/responsavel" → todos autenticados
-- UPDATE: de "own user/responsavel" → todos autenticados
-- DELETE: de "own user_id" → todos autenticados
+### Technical Details
 
-### ATS / Recrutamento
-
-**6. `jobs`**
-- UPDATE: de "responsavel/created_by/admin/gestor" → todos autenticados
-- DELETE: de "admin only" → todos autenticados
-
-**7. `applications`**
-- UPDATE: de "responsavel/created_by/admin/gestor" → todos autenticados
-- DELETE: de "admin only" → todos autenticados
-
-**8. `job_pipeline_stages`**
-- ALL (manage): de "responsavel/created_by/admin/gestor" → todos autenticados
-
-**9. `party`**
-- DELETE: de "admin only" → todos autenticados (UPDATE ja permite todos autenticados)
-
-### SEM alteração
-- **`invoices`** — mantém políticas atuais (admin/gestor para insert/update, admin para delete)
-- **SELECT policies** — sem alteração (mantém visibilidade baseada em company access)
-
-## Implementação
-Uma única migração SQL que:
-1. Faz `DROP POLICY` das políticas restritivas listadas acima
-2. Cria novas políticas com `auth.uid() IS NOT NULL` para as operações correspondentes
-
-## Frontend
-- Remover verificação `isAdmin` no `Faturamento.tsx` para editar/excluir — **NÃO**, isso deve continuar restrito
-- Verificar se há guards no frontend que bloqueiam edição para consultores em CRM/ATS e removê-los se necessário
+- **New dependency**: `docx` (npm package for generating .docx files)
+- The DOCX generation maps each CV section to Word paragraphs with proper formatting (bold titles, bullet lists, colored headings)
+- PDF fix uses the same `toPng` + `jsPDF` stack but captures sections individually instead of the whole document at once
 
