@@ -577,6 +577,13 @@ function EditorScreen({ data, onReset }) {
           >
             {exporting ? "⏳ Gerando..." : "⬇️ Baixar PDF"}
           </button>
+          <button
+            onClick={handleExportWord}
+            disabled={exporting}
+            style={{ ...S.printBtn, background: "#155E75", opacity: exporting ? 0.7 : 1, cursor: exporting ? "wait" : "pointer" }}
+          >
+            {exporting ? "⏳ Gerando..." : "📝 Baixar Word"}
+          </button>
         </div>
       </div>
 
