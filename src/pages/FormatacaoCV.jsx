@@ -694,7 +694,7 @@ function CVDoc({
           ))}
           {editing && !hiddenSections.includes("experiencias") && <button onClick={addExp} style={S.addBlockBtn}>+ adicionar experiência</button>}
 
-        <div style={S.twoCol}>
+        <div data-pdf-section="formacao-idiomas" style={S.twoCol}>
           <div style={{ flex: 1 }}>
             <Section title="FORMAÇÃO ACADÊMICA" sectionKey="formacao" editing={editing} hidden={hiddenSections.includes("formacao")} onToggle={() => toggleSection("formacao")}>
               {(cv.formacao || []).map((f, i) => (
@@ -715,7 +715,7 @@ function CVDoc({
           </div>
         </div>
 
-        <div style={S.footer}>
+        <div data-pdf-section="footer" style={S.footer}>
           <span style={{ color: "#06B6D4", fontWeight: 700 }}>✦ ORION</span>
           <span>Gerado automaticamente · CV Transformer</span>
         </div>
