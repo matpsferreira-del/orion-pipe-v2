@@ -263,30 +263,31 @@ function EditorScreen({ data, onReset }) {
     if (!docRef.current) return;
     setExporting(true);
     try {
-      // Capture each section individually to avoid text cutting at page breaks
-      const sections = docRef.current.querySelectorAll("[data-pdf-section]");
       const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-      const pageW = pdf.internal.pageSize.getWidth();
-      const pageH = pdf.internal.pageSize.getHeight();
-      const marginTop = 4;
-      const marginBottom = 4;
-      const usableH = pageH - marginTop - marginBottom;
+      const pageW = pdf.internal.pageSize.getWidth(); // 210
+      const pageH = pdf.internal.pageSize.getHeight(); // 297
+      const marginX = 15;
+      const marginTop = 12;
+      const marginBottom = 10;
+      const contentW = pageW - marginX * 2;
+      const sectionGap = 1;
       let cursorY = marginTop;
       let isFirstSection = true;
 
+      const sections = docRef.current.querySelectorAll("[data-pdf-section]");
+
       if (sections.length === 0) {
-        // Fallback: capture entire document
+        // Fallback: capture entire document as single image
         const dataUrl = await toPng(docRef.current, { quality: 0.95, pixelRatio: 2, backgroundColor: "#ffffff" });
         const img = new Image();
         img.src = dataUrl;
         await new Promise((r) => { img.onload = r; });
-        const ratio = img.width / img.height;
-        const imgH = pageW / ratio;
+        const imgH = contentW / (img.width / img.height);
         let yOff = 0;
         while (yOff < imgH) {
           if (yOff > 0) pdf.addPage();
-          pdf.addImage(dataUrl, "PNG", 0, -yOff, pageW, imgH);
-          yOff += pageH;
+          pdf.addImage(dataUrl, "PNG", marginX, marginTop - yOff, contentW, imgH);
+          yOff += (pageH - marginTop - marginBottom);
         }
       } else {
         for (const section of sections) {
@@ -294,16 +295,35 @@ function EditorScreen({ data, onReset }) {
           const img = new Image();
           img.src = dataUrl;
           await new Promise((r) => { img.onload = r; });
-          const ratio = img.width / img.height;
-          const imgH = pageW / ratio;
+          const imgH = contentW / (img.width / img.height);
 
           // If this section doesn't fit on current page, start new page
           if (!isFirstSection && cursorY + imgH > pageH - marginBottom) {
             pdf.addPage();
             cursorY = marginTop;
           }
-          pdf.addImage(dataUrl, "PNG", 0, cursorY, pageW, imgH);
-          cursorY += imgH;
+
+          // If a single section is taller than a full page, split it across pages
+          if (imgH > pageH - marginTop - marginBottom) {
+            const usableH = pageH - marginTop - marginBottom;
+            let srcY = 0;
+            const totalImgPx = img.height;
+            const pxPerMm = totalImgPx / imgH;
+            while (srcY < imgH) {
+              const sliceH = Math.min(usableH, imgH - srcY);
+              if (srcY > 0) {
+                pdf.addPage();
+                cursorY = marginTop;
+              }
+              // Use clip by drawing the full image offset
+              pdf.addImage(dataUrl, "PNG", marginX, cursorY - srcY, contentW, imgH);
+              srcY += sliceH;
+              cursorY = marginTop + sliceH;
+            }
+          } else {
+            pdf.addImage(dataUrl, "PNG", marginX, cursorY, contentW, imgH);
+            cursorY += imgH + sectionGap;
+          }
           isFirstSection = false;
         }
       }
