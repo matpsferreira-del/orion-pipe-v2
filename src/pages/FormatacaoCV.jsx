@@ -7,6 +7,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toPng } from "html-to-image";
 import jsPDF from "jspdf";
 import mammoth from "mammoth";
+import { Document, Packer, Paragraph, TextRun, AlignmentType, LevelFormat, PageBreak, ShadingType, BorderStyle } from "docx";
+import { saveAs } from "file-saver";
 
 const EXTRACT_PROMPT = `Você é um especialista em leitura e extração de dados de currículos para a empresa Orion.
 Você receberá um CV em qualquer formato — LinkedIn PDF, Word convertido, CV tradicional, currículo Lattes, ou qualquer outro layout — e deve extrair ABSOLUTAMENTE TODAS as informações presentes, retornando SOMENTE um JSON válido, sem markdown, sem blocos de código, sem qualquer texto antes ou depois.
