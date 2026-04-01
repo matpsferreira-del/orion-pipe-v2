@@ -209,6 +209,161 @@ function ProposalPreview({ config, deliverables, previewRef }: { config: Config;
 
   return (
     <div ref={previewRef} className="min-h-full text-white" style={{ fontFamily: "'DM Sans', sans-serif", background: "linear-gradient(170deg,#0a1628 0%,#0d1f3c 40%,#0a1628 100%)", backgroundImage: gridBg }}>
+      {/* Hidden slide-based sections for PDF export */}
+      <div data-pdf-slides-container style={{ position: 'absolute', left: '-9999px', top: 0, width: '900px', pointerEvents: 'none' }}>
+        {/* Slide 1: Cover */}
+        <div data-pdf-slide style={{ width: '900px', minHeight: '1272px', background: 'linear-gradient(170deg,#0a1628 0%,#0d1f3c 40%,#0a1628 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px 60px', textAlign: 'center' as const, fontFamily: "'DM Sans', sans-serif", boxSizing: 'border-box' as const }}>
+          <div style={{ marginBottom: 48 }}>
+            <h1 style={{ fontSize: 44, fontWeight: 900, color: '#fff', margin: 0 }}>ORION <span style={{ color: '#22d3ee' }}>Recruitment</span></h1>
+            <p style={{ color: '#94a3b8', fontSize: 15, marginTop: 10, letterSpacing: '0.05em' }}>Seu sucesso é o nosso sucesso.</p>
+          </div>
+          <div style={{ width: 80, height: 1, background: 'rgba(34,211,238,0.4)', marginBottom: 48 }} />
+          <p style={{ color: '#94a3b8', fontSize: 12, textTransform: 'uppercase' as const, letterSpacing: '0.2em', marginBottom: 16 }}>Proposta Comercial Exclusiva para</p>
+          <h2 style={{ fontSize: 36, fontWeight: 700, color: '#22d3ee', margin: 0 }}>{config.nome || "Nome do Profissional"}</h2>
+          {config.cargo && <p style={{ color: '#cbd5e1', fontSize: 18, marginTop: 16 }}>Cargo-Alvo: <strong style={{ color: '#fff' }}>{config.cargo}</strong></p>}
+          <p style={{ color: '#64748b', fontSize: 13, marginTop: 40 }}>{dateStr}</p>
+        </div>
+
+        {/* Slide 2: Compromisso / Entregáveis */}
+        <div data-pdf-slide style={{ width: '900px', minHeight: '1272px', background: 'linear-gradient(170deg,#0a1628 0%,#0d1f3c 40%,#0a1628 100%)', padding: '60px', fontFamily: "'DM Sans', sans-serif", boxSizing: 'border-box' as const }}>
+          <h3 style={{ fontSize: 28, fontWeight: 900, color: '#fff', marginBottom: 10 }}>Nosso <span style={{ color: '#22d3ee' }}>Compromisso</span></h3>
+          <p style={{ color: '#94a3b8', fontSize: 14, lineHeight: 1.6, maxWidth: 700, marginBottom: 32 }}>Atuamos como seu braço estratégico no mercado. Combinamos metodologias de hunting comercial, prospecção ativa de decisores e inteligência de mercado para posicionar seu perfil diretamente na mesa de quem toma a decisão.</p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 14 }}>
+            {activeDels.map((d) => (
+              <div key={d.id} style={{ border: '1px solid rgba(51,65,85,0.4)', background: 'rgba(15,23,42,0.3)', borderRadius: 12, padding: 18 }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#22d3ee', marginTop: 5, flexShrink: 0 }} />
+                  <div>
+                    <h4 style={{ fontSize: 13, fontWeight: 700, color: '#fff', margin: '0 0 5px' }}>{d.label}{d.qtyEditable ? ` (${d.qty}x/mês)` : ""}</h4>
+                    <p style={{ fontSize: 11, color: '#94a3b8', margin: 0, lineHeight: 1.5 }}>{d.desc}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Slide 3: Metodologia */}
+        <div data-pdf-slide style={{ width: '900px', minHeight: '1272px', background: 'linear-gradient(170deg,#0a1628 0%,#0d1f3c 40%,#0a1628 100%)', padding: '60px', fontFamily: "'DM Sans', sans-serif", boxSizing: 'border-box' as const, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+          <h3 style={{ fontSize: 28, fontWeight: 900, color: '#fff', marginBottom: 32 }}>Metodologia <span style={{ color: '#22d3ee' }}>de Trabalho</span></h3>
+          <div style={{ display: 'flex', gap: 16 }}>
+            {[
+              { step: "01", title: "Diagnóstico & Estratégia", text: "Análise do perfil, definição do ICP (Perfil de Empresa Ideal), mapeamento de mercado e construção do plano tático de recolocação." },
+              { step: "02", title: "Hunting & Prospecção", text: "Ativação de cadências multicanal (LinkedIn, e-mail, telefone) com decisores de empresas-alvo. Follow-ups estratégicos com report semanal." },
+              { step: "03", title: "Negociação & Fechamento", text: "Ponte direta com as empresas, preparação para entrevistas, negociação de proposta salarial e acompanhamento até o onboarding." },
+            ].map((s) => (
+              <div key={s.step} style={{ flex: 1, border: '1px solid rgba(51,65,85,0.4)', background: 'rgba(15,23,42,0.3)', borderRadius: 12, padding: 24 }}>
+                <span style={{ fontSize: 36, fontWeight: 900, color: 'rgba(22,211,238,0.2)' }}>{s.step}</span>
+                <h4 style={{ fontSize: 15, fontWeight: 700, color: '#fff', margin: '12px 0' }}>{s.title}</h4>
+                <p style={{ fontSize: 13, color: '#94a3b8', lineHeight: 1.6, margin: 0 }}>{s.text}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Slide 4: Investimento */}
+        <div data-pdf-slide style={{ width: '900px', minHeight: '1272px', background: 'linear-gradient(170deg,#0a1628 0%,#0d1f3c 40%,#0a1628 100%)', padding: '50px 60px', fontFamily: "'DM Sans', sans-serif", boxSizing: 'border-box' as const }}>
+          <h3 style={{ fontSize: 28, fontWeight: 900, color: '#fff', marginBottom: 28 }}>Modelo de <span style={{ color: '#22d3ee' }}>Investimento</span></h3>
+          <div style={{ border: '1px solid rgba(51,65,85,0.4)', background: 'rgba(15,23,42,0.3)', borderRadius: 12, padding: 24, marginBottom: 20 }}>
+            <p style={{ fontSize: 11, color: '#94a3b8', textTransform: 'uppercase' as const, letterSpacing: '0.1em', fontWeight: 600, marginBottom: 4 }}>Como calculamos os honorários</p>
+            <p style={{ fontSize: 11, color: '#64748b', marginBottom: 20 }}>Transparência total: a fee incide apenas sobre a composição salarial do cargo-alvo.</p>
+            {/* Step 1 */}
+            <div style={{ background: 'rgba(51,65,85,0.2)', border: '1px solid rgba(51,65,85,0.3)', borderRadius: 8, padding: 16, marginBottom: 6 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                <span style={{ width: 24, height: 24, borderRadius: '50%', background: 'rgba(34,211,238,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: '#22d3ee' }}>1</span>
+                <span style={{ fontSize: 11, fontWeight: 600, color: '#cbd5e1', textTransform: 'uppercase' as const }}>Composição Salarial Mensal</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ flex: 1, background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(51,65,85,0.3)', borderRadius: 8, padding: 12, textAlign: 'center' as const }}>
+                  <p style={{ fontSize: 9, color: '#22d3ee', textTransform: 'uppercase' as const, fontWeight: 600, marginBottom: 4 }}>Salário Fixo</p>
+                  {sv ? <p style={{ fontSize: 15, color: '#fff', fontWeight: 700, margin: 0 }}>{formatBRL(salarioBase)}</p> : <p style={{ fontSize: 12, color: '#cbd5e1', margin: 0 }}>Mensal</p>}
+                </div>
+                <span style={{ color: '#22d3ee', fontWeight: 700, fontSize: 16 }}>+</span>
+                <div style={{ flex: 1, background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(51,65,85,0.3)', borderRadius: 8, padding: 12, textAlign: 'center' as const }}>
+                  <p style={{ fontSize: 9, color: '#22d3ee', textTransform: 'uppercase' as const, fontWeight: 600, marginBottom: 4 }}>Bônus Anual ÷ 12</p>
+                  {sv ? <p style={{ fontSize: 15, color: '#fff', fontWeight: 700, margin: 0 }}>{formatBRL(bonusAnual / 12)}</p> : <p style={{ fontSize: 12, color: '#cbd5e1', margin: 0 }}>Rateado mensal</p>}
+                </div>
+                <span style={{ color: '#22d3ee', fontWeight: 700, fontSize: 16 }}>=</span>
+                <div style={{ flex: 1, background: 'rgba(34,211,238,0.1)', border: '1px solid rgba(34,211,238,0.3)', borderRadius: 8, padding: 12, textAlign: 'center' as const }}>
+                  <p style={{ fontSize: 9, color: '#22d3ee', textTransform: 'uppercase' as const, fontWeight: 600, marginBottom: 4 }}>Base Mensal</p>
+                  {sv ? <p style={{ fontSize: 17, color: '#22d3ee', fontWeight: 700, margin: 0 }}>{formatBRL(composicao)}</p> : <p style={{ fontSize: 13, color: '#22d3ee', fontWeight: 700, margin: 0 }}>Salário + Bônus/12</p>}
+                </div>
+              </div>
+            </div>
+            {/* Arrow */}
+            <div style={{ textAlign: 'center' as const, padding: '4px 0' }}><svg width="20" height="20" viewBox="0 0 20 20"><path d="M10 4v10m0 0l-3-3m3 3l3-3" stroke="#22d3ee" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg></div>
+            {/* Step 2 */}
+            <div style={{ background: 'rgba(51,65,85,0.2)', border: '1px solid rgba(51,65,85,0.3)', borderRadius: 8, padding: 16, marginBottom: 6 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                <span style={{ width: 24, height: 24, borderRadius: '50%', background: 'rgba(34,211,238,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: '#22d3ee' }}>2</span>
+                <span style={{ fontSize: 11, fontWeight: 600, color: '#cbd5e1', textTransform: 'uppercase' as const }}>Aplicação da Fee</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ flex: 1, background: 'rgba(34,211,238,0.1)', border: '1px solid rgba(34,211,238,0.3)', borderRadius: 8, padding: 12, textAlign: 'center' as const }}>
+                  <p style={{ fontSize: 9, color: '#22d3ee', textTransform: 'uppercase' as const, fontWeight: 600, marginBottom: 4 }}>Base Mensal</p>
+                  {sv ? <p style={{ fontSize: 15, color: '#22d3ee', fontWeight: 700, margin: 0 }}>{formatBRL(composicao)}</p> : <p style={{ fontSize: 12, color: '#22d3ee', fontWeight: 700, margin: 0 }}>Composição</p>}
+                </div>
+                <span style={{ color: '#22d3ee', fontWeight: 700, fontSize: 16 }}>×</span>
+                <div style={{ background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(51,65,85,0.3)', borderRadius: 8, padding: 12, textAlign: 'center' as const, minWidth: 80 }}>
+                  <p style={{ fontSize: 9, color: '#22d3ee', textTransform: 'uppercase' as const, fontWeight: 600, marginBottom: 4 }}>Fee</p>
+                  <p style={{ fontSize: 18, fontWeight: 900, color: isRet ? '#22d3ee' : '#f59e0b', margin: 0 }}>{feePct}%</p>
+                </div>
+                <span style={{ color: '#22d3ee', fontWeight: 700, fontSize: 16 }}>=</span>
+                <div style={{ flex: 1, background: isRet ? 'rgba(34,211,238,0.1)' : 'rgba(245,158,11,0.1)', border: `1px solid ${isRet ? 'rgba(34,211,238,0.3)' : 'rgba(245,158,11,0.3)'}`, borderRadius: 8, padding: 12, textAlign: 'center' as const }}>
+                  <p style={{ fontSize: 9, color: isRet ? '#22d3ee' : '#f59e0b', textTransform: 'uppercase' as const, fontWeight: 600, marginBottom: 4 }}>Honorário</p>
+                  {sv ? <p style={{ fontSize: 18, fontWeight: 900, color: isRet ? '#22d3ee' : '#f59e0b', margin: 0 }}>{formatBRL(fee)}</p> : <p style={{ fontSize: 13, fontWeight: 700, color: isRet ? '#22d3ee' : '#f59e0b', margin: 0 }}>Base × {feePct}%</p>}
+                </div>
+              </div>
+            </div>
+            {isRet && (
+              <>
+                <div style={{ textAlign: 'center' as const, padding: '4px 0' }}><svg width="20" height="20" viewBox="0 0 20 20"><path d="M10 4v10m0 0l-3-3m3 3l3-3" stroke="#22d3ee" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg></div>
+                <div style={{ background: 'rgba(51,65,85,0.2)', border: '1px solid rgba(51,65,85,0.3)', borderRadius: 8, padding: 16 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                    <span style={{ width: 24, height: 24, borderRadius: '50%', background: 'rgba(34,211,238,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: '#22d3ee' }}>3</span>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: '#cbd5e1', textTransform: 'uppercase' as const }}>Cronograma de Desembolso</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: 12 }}>
+                    <div style={{ flex: 1, background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(51,65,85,0.3)', borderRadius: 8, padding: 12 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}><span style={{ fontSize: 9, color: '#22d3ee', fontWeight: 600, textTransform: 'uppercase' as const }}>Entrada</span><span style={{ fontSize: 13, color: '#22d3ee', fontWeight: 700 }}>{rEntrada}%</span></div>
+                      <p style={{ fontSize: 10, color: '#94a3b8', margin: 0 }}>Setup, Estratégia e Mentoria Inicial</p>
+                      {sv && <p style={{ fontSize: 13, color: '#fff', fontWeight: 700, margin: '4px 0 0' }}>{formatBRL(fee * rEntrada / 100)}</p>}
+                    </div>
+                    <div style={{ flex: 1, background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(51,65,85,0.3)', borderRadius: 8, padding: 12 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}><span style={{ fontSize: 9, color: '#22d3ee', fontWeight: 600, textTransform: 'uppercase' as const }}>No Sucesso</span><span style={{ fontSize: 13, color: '#22d3ee', fontWeight: 700 }}>{rSucesso}%</span></div>
+                      <p style={{ fontSize: 10, color: '#94a3b8', margin: 0 }}>Aprovação e Fechamento de Contrato</p>
+                      {sv && <p style={{ fontSize: 13, color: '#fff', fontWeight: 700, margin: '4px 0 0' }}>{formatBRL(fee * rSucesso / 100)}</p>}
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+          {/* Model box */}
+          <div style={{ border: `1px solid ${isRet ? 'rgba(34,211,238,0.3)' : 'rgba(245,158,11,0.3)'}`, background: isRet ? 'rgba(34,211,238,0.05)' : 'rgba(245,158,11,0.05)', borderRadius: 12, padding: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <h4 style={{ fontSize: 18, fontWeight: 700, color: '#fff', margin: 0 }}>{isRet ? "Modelo Retainer" : "Modelo 100% Sucesso"}</h4>
+              <p style={{ fontSize: 12, color: '#94a3b8', margin: '4px 0 0' }}>{isRet ? `Inclui Mentoria Preparatória e Estratégia de LinkedIn avançada. Entrada de ${rEntrada}% + ${rSucesso}% no sucesso.` : "Sem custos antecipados. Pagamento integral apenas quando a recolocação acontece."}</p>
+            </div>
+            <span style={{ fontSize: 48, fontWeight: 900, color: isRet ? '#22d3ee' : '#f59e0b', marginLeft: 16 }}>{feePct}%</span>
+          </div>
+        </div>
+
+        {/* Slide 5: CTA + Observações */}
+        <div data-pdf-slide style={{ width: '900px', minHeight: '1272px', background: 'linear-gradient(170deg,#0a1628 0%,#0d1f3c 40%,#0a1628 100%)', padding: '60px', fontFamily: "'DM Sans', sans-serif", boxSizing: 'border-box' as const, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' as const }}>
+          {config.obs && (
+            <div style={{ border: '1px solid rgba(51,65,85,0.4)', background: 'rgba(15,23,42,0.3)', borderRadius: 12, padding: 24, marginBottom: 48, textAlign: 'left' as const, width: '100%', maxWidth: 600 }}>
+              <p style={{ fontSize: 11, color: '#94a3b8', textTransform: 'uppercase' as const, letterSpacing: '0.1em', fontWeight: 600, marginBottom: 10 }}>Observações</p>
+              <p style={{ fontSize: 13, color: '#cbd5e1', lineHeight: 1.6, whiteSpace: 'pre-line' as const, margin: 0 }}>{config.obs}</p>
+            </div>
+          )}
+          <h3 style={{ fontSize: 32, fontWeight: 900, color: '#fff', marginBottom: 14 }}>Pronto para o <span style={{ color: '#22d3ee' }}>próximo passo?</span></h3>
+          <p style={{ color: '#94a3b8', fontSize: 14, maxWidth: 460, margin: '0 auto 40px', lineHeight: 1.6 }}>Agradecemos a confiança. Estamos preparados para iniciar imediatamente e assumir o desafio de acelerar sua recolocação.</p>
+          <div style={{ display: 'inline-block', border: '1px solid rgba(51,65,85,0.5)', background: 'rgba(15,23,42,0.3)', borderRadius: 999, padding: '14px 36px' }}>
+            <span style={{ color: '#22d3ee', fontSize: 13, fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase' as const }}>orionrecruitment.com.br</span>
+          </div>
+        </div>
+      </div>
       {/* Cover */}
       <div className="flex flex-col items-center justify-center py-20 px-8 text-center" style={{ minHeight: 400 }}>
         <div className="mb-8">
@@ -611,31 +766,61 @@ export default function PropostaOutplacement() {
     if (!previewRef.current) return;
     setExportMsg("Gerando PDF...");
     try {
-      // Capture the preview as a high-res PNG
-      const dataUrl = await toPng(previewRef.current, {
-        quality: 1,
-        pixelRatio: 2,
-        backgroundColor: '#0a1628',
-      });
+      const container = previewRef.current.querySelector('[data-pdf-slides-container]') as HTMLElement;
+      if (!container) return;
 
-      const img = new Image();
-      img.src = dataUrl;
-      await new Promise<void>((resolve) => { img.onload = () => resolve(); });
+      // Temporarily make the hidden container visible for capture
+      const origStyle = container.style.cssText;
+      container.style.position = 'fixed';
+      container.style.left = '0';
+      container.style.top = '0';
+      container.style.zIndex = '-1';
+      container.style.opacity = '1';
+      container.style.pointerEvents = 'none';
 
-      const imgW = img.width;
-      const imgH = img.height;
+      const slides = Array.from(container.querySelectorAll('[data-pdf-slide]')) as HTMLElement[];
+      
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const A4_W = 210;
+      const A4_H = 297;
 
-      // A4 dimensions in mm
-      const pdfW = 210;
-      const pdfH = (imgH * pdfW) / imgW;
+      for (let i = 0; i < slides.length; i++) {
+        if (i > 0) pdf.addPage();
+        
+        const slide = slides[i];
+        const dataUrl = await toPng(slide, {
+          quality: 1,
+          pixelRatio: 2,
+          backgroundColor: '#0a1628',
+          width: 900,
+        });
 
-      const pdf = new jsPDF({
-        orientation: pdfH > pdfW * 1.5 ? 'portrait' : 'portrait',
-        unit: 'mm',
-        format: [pdfW, pdfH],
-      });
+        const img = new Image();
+        img.src = dataUrl;
+        await new Promise<void>((resolve) => { img.onload = () => resolve(); });
 
-      pdf.addImage(dataUrl, 'PNG', 0, 0, pdfW, pdfH);
+        const imgW = img.width;
+        const imgH = img.height;
+        const ratio = imgH / imgW;
+        const pdfImgW = A4_W;
+        const pdfImgH = A4_W * ratio;
+
+        // If content is taller than A4, scale it down to fit
+        if (pdfImgH > A4_H) {
+          const scale = A4_H / pdfImgH;
+          const scaledW = pdfImgW * scale;
+          const offsetX = (A4_W - scaledW) / 2;
+          pdf.addImage(dataUrl, 'PNG', offsetX, 0, scaledW, A4_H);
+        } else {
+          // Center vertically on the page
+          const offsetY = (A4_H - pdfImgH) / 2;
+          pdf.addImage(dataUrl, 'PNG', 0, offsetY, pdfImgW, pdfImgH);
+        }
+      }
+
+      // Restore hidden container
+      container.style.cssText = origStyle;
+
       pdf.save(`Proposta_Orion_${config.nome || 'Outplacement'}.pdf`);
       setExportMsg("PDF baixado com sucesso!");
     } catch (err) {
