@@ -766,31 +766,61 @@ export default function PropostaOutplacement() {
     if (!previewRef.current) return;
     setExportMsg("Gerando PDF...");
     try {
-      // Capture the preview as a high-res PNG
-      const dataUrl = await toPng(previewRef.current, {
-        quality: 1,
-        pixelRatio: 2,
-        backgroundColor: '#0a1628',
-      });
+      const container = previewRef.current.querySelector('[data-pdf-slides-container]') as HTMLElement;
+      if (!container) return;
 
-      const img = new Image();
-      img.src = dataUrl;
-      await new Promise<void>((resolve) => { img.onload = () => resolve(); });
+      // Temporarily make the hidden container visible for capture
+      const origStyle = container.style.cssText;
+      container.style.position = 'fixed';
+      container.style.left = '0';
+      container.style.top = '0';
+      container.style.zIndex = '-1';
+      container.style.opacity = '1';
+      container.style.pointerEvents = 'none';
 
-      const imgW = img.width;
-      const imgH = img.height;
+      const slides = Array.from(container.querySelectorAll('[data-pdf-slide]')) as HTMLElement[];
+      
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const A4_W = 210;
+      const A4_H = 297;
 
-      // A4 dimensions in mm
-      const pdfW = 210;
-      const pdfH = (imgH * pdfW) / imgW;
+      for (let i = 0; i < slides.length; i++) {
+        if (i > 0) pdf.addPage();
+        
+        const slide = slides[i];
+        const dataUrl = await toPng(slide, {
+          quality: 1,
+          pixelRatio: 2,
+          backgroundColor: '#0a1628',
+          width: 900,
+        });
 
-      const pdf = new jsPDF({
-        orientation: pdfH > pdfW * 1.5 ? 'portrait' : 'portrait',
-        unit: 'mm',
-        format: [pdfW, pdfH],
-      });
+        const img = new Image();
+        img.src = dataUrl;
+        await new Promise<void>((resolve) => { img.onload = () => resolve(); });
 
-      pdf.addImage(dataUrl, 'PNG', 0, 0, pdfW, pdfH);
+        const imgW = img.width;
+        const imgH = img.height;
+        const ratio = imgH / imgW;
+        const pdfImgW = A4_W;
+        const pdfImgH = A4_W * ratio;
+
+        // If content is taller than A4, scale it down to fit
+        if (pdfImgH > A4_H) {
+          const scale = A4_H / pdfImgH;
+          const scaledW = pdfImgW * scale;
+          const offsetX = (A4_W - scaledW) / 2;
+          pdf.addImage(dataUrl, 'PNG', offsetX, 0, scaledW, A4_H);
+        } else {
+          // Center vertically on the page
+          const offsetY = (A4_H - pdfImgH) / 2;
+          pdf.addImage(dataUrl, 'PNG', 0, offsetY, pdfImgW, pdfImgH);
+        }
+      }
+
+      // Restore hidden container
+      container.style.cssText = origStyle;
+
       pdf.save(`Proposta_Orion_${config.nome || 'Outplacement'}.pdf`);
       setExportMsg("PDF baixado com sucesso!");
     } catch (err) {
