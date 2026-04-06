@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Printer, User, Download, Loader2 } from 'lucide-react';
+import { ArrowLeft, Printer, User, Download, Loader2, Linkedin } from 'lucide-react';
 import pptxgen from 'pptxgenjs';
 
 const SHAPES = {
@@ -13,6 +13,7 @@ interface ShortlistCandidate {
   name: string;
   current_role: string | null;
   photo_url: string | null;
+  linkedin_url: string | null;
   ai_summary: string | null;
   ai_deliveries: string[] | null;
   ai_background: string[] | null;
@@ -104,6 +105,10 @@ function generatePptx(candidates: ShortlistCandidate[], jobTitle: string, compan
 
     slide.addText(cand.name || 'Nome do Candidato', { x: 0.3, y: 2.6, w: 2.2, h: 0.45, align: 'center', fontSize: 14, color: WHITE, fontFace: 'Arial', bold: true });
     slide.addText(cand.current_role || 'Cargo Atual', { x: 0.3, y: 3.05, w: 2.2, h: 0.35, align: 'center', fontSize: 10, color: CYAN, fontFace: 'Arial' });
+
+    if (cand.linkedin_url) {
+      slide.addText([{ text: '🔗 LinkedIn', options: { hyperlink: { url: cand.linkedin_url }, fontSize: 8, color: '0077B5', fontFace: 'Arial' } }], { x: 0.3, y: 3.4, w: 2.2, h: 0.3, align: 'center' });
+    }
 
     // Summary box
     const summaryText = cand.ai_summary || 'Resumo executivo gerado pela IA.';
@@ -308,6 +313,17 @@ export default function ShortlistPresentation() {
                 <p className="text-cyan-400 text-sm text-center" contentEditable suppressContentEditableWarning>
                   {cand.current_role || 'Cargo Atual'}
                 </p>
+                {cand.linkedin_url && (
+                  <a
+                    href={cand.linkedin_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-xs text-[#0077B5] hover:underline no-print"
+                  >
+                    <Linkedin className="h-3 w-3" />
+                    LinkedIn
+                  </a>
+                )}
               </div>
 
               {/* RIGHT: Details */}

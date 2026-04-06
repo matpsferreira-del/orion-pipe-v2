@@ -8,10 +8,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
   Mail, Phone, Linkedin, Star, ExternalLink, 
-  CheckCircle, XCircle, UserMinus, DollarSign, FileText, RotateCcw
+  CheckCircle, XCircle, UserMinus, DollarSign, FileText, RotateCcw, ImageIcon
 } from 'lucide-react';
 import { 
   ApplicationWithRelations, JobPipelineStage, 
@@ -44,6 +44,7 @@ export function CandidateDetailDialog({
   const [rating, setRating] = useState(0);
   const [salaryExpectation, setSalaryExpectation] = useState('');
   const [phoneInput, setPhoneInput] = useState('');
+  const [photoUrlInput, setPhotoUrlInput] = useState('');
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
 
   // Reset state when application changes
@@ -55,6 +56,7 @@ export function CandidateDetailDialog({
         application.salary_expectation != null ? String(application.salary_expectation) : ''
       );
       setPhoneInput(application._party?.phone_raw || '');
+      setPhotoUrlInput(application._party?.photo_url || '');
     }
   }, [application?.id]);
 
@@ -80,13 +82,18 @@ export function CandidateDetailDialog({
         rating: rating || null,
         salary_expectation: parsedSalary || null,
       });
-      // Update party phone if changed
-      if (party && phoneInput !== (party.phone_raw || '')) {
-        const { error } = await supabase
-          .from('party')
-          .update({ phone_raw: phoneInput || null })
-          .eq('id', party.id);
-        if (error) throw error;
+      // Update party fields if changed
+      if (party) {
+        const partyUpdates: Record<string, any> = {};
+        if (phoneInput !== (party.phone_raw || '')) partyUpdates.phone_raw = phoneInput || null;
+        if (photoUrlInput !== (party.photo_url || '')) partyUpdates.photo_url = photoUrlInput || null;
+        if (Object.keys(partyUpdates).length > 0) {
+          const { error } = await supabase
+            .from('party')
+            .update(partyUpdates)
+            .eq('id', party.id);
+          if (error) throw error;
+        }
       }
       toast.success('Dados salvos');
     } catch (error) {
@@ -130,6 +137,9 @@ export function CandidateDetailDialog({
           {/* Candidate Info */}
           <div className="flex items-start gap-4">
             <Avatar className="h-14 w-14">
+              {(photoUrlInput || party?.photo_url) && (
+                <AvatarImage src={photoUrlInput || party?.photo_url || ''} alt={party?.full_name || ''} />
+              )}
               <AvatarFallback className="text-lg bg-primary/10 text-primary">
                 {party ? getInitials(party.full_name) : '??'}
               </AvatarFallback>
@@ -189,6 +199,21 @@ export function CandidateDetailDialog({
                 className="pl-9"
                 value={phoneInput}
                 onChange={(e) => setPhoneInput(e.target.value)}
+              />
+            </div>
+          </div>
+
+          {/* Photo URL */}
+          <div>
+            <Label>URL da Foto</Label>
+            <div className="relative mt-1.5">
+              <ImageIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="url"
+                placeholder="https://exemplo.com/foto.jpg"
+                className="pl-9"
+                value={photoUrlInput}
+                onChange={(e) => setPhotoUrlInput(e.target.value)}
               />
             </div>
           </div>
