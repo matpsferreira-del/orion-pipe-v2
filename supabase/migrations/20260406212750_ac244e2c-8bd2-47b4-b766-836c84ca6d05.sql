@@ -1,0 +1,1 @@
+ALTER TABLE public.party ADD COLUMN photo_url TEXT DEFAULT NULL;

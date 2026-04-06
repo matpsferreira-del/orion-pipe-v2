@@ -1214,6 +1214,7 @@ export type Database = {
           parsed_summary: string | null
           phone_e164: string | null
           phone_raw: string | null
+          photo_url: string | null
           state: string | null
           status: Database["public"]["Enums"]["party_status"]
           tags: Json | null
@@ -1240,6 +1241,7 @@ export type Database = {
           parsed_summary?: string | null
           phone_e164?: string | null
           phone_raw?: string | null
+          photo_url?: string | null
           state?: string | null
           status?: Database["public"]["Enums"]["party_status"]
           tags?: Json | null
@@ -1266,6 +1268,7 @@ export type Database = {
           parsed_summary?: string | null
           phone_e164?: string | null
           phone_raw?: string | null
+          photo_url?: string | null
           state?: string | null
           status?: Database["public"]["Enums"]["party_status"]
           tags?: Json | null
