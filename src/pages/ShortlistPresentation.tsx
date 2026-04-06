@@ -3,6 +3,12 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Printer, User, Download, Loader2 } from 'lucide-react';
 import pptxgen from 'pptxgenjs';
 
+const SHAPES = {
+  OVAL: 'ellipse' as const,
+  RECTANGLE: 'rect' as const,
+  ROUNDED_RECTANGLE: 'roundRect' as const,
+};
+
 interface ShortlistCandidate {
   name: string;
   current_role: string | null;
