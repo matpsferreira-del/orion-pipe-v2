@@ -228,6 +228,14 @@ export function PartyDetailDialog({ partyId, open, onOpenChange }: PartyDetailDi
                     onChange={(e) => setEditData(prev => ({ ...prev, linkedin_url: e.target.value }))}
                   />
                 </div>
+                <div className="space-y-2">
+                  <Label>URL da Foto</Label>
+                  <Input
+                    value={editData.photo_url}
+                    onChange={(e) => setEditData(prev => ({ ...prev, photo_url: e.target.value }))}
+                    placeholder="https://..."
+                  />
+                </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Cidade</Label>
