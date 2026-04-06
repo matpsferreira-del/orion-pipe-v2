@@ -81,7 +81,7 @@ function generatePptx(candidates: ShortlistCandidate[], jobTitle: string, compan
   funnelData.forEach((item, i) => {
     const x = 1.5 + i * 2;
     const barY = 4.6 - item.h;
-    s2.addShape(pres.shapes.ROUNDED_RECTANGLE, { x, y: barY, w: 1.5, h: item.h, fill: { color: item.color }, rectRadius: 0.08 });
+    s2.addShape(SHAPES.ROUNDED_RECTANGLE, { x, y: barY, w: 1.5, h: item.h, fill: { color: item.color }, rectRadius: 0.08 });
     s2.addText(item.value, { x, y: barY - 0.45, w: 1.5, h: 0.4, align: 'center', fontSize: 18, color: WHITE, fontFace: 'Arial', bold: true });
     s2.addText(item.label, { x, y: 4.7, w: 1.5, h: 0.35, align: 'center', fontSize: 10, color: GRAY400, fontFace: 'Arial' });
   });
@@ -98,7 +98,7 @@ function generatePptx(candidates: ShortlistCandidate[], jobTitle: string, compan
     if (photoData) {
       slide.addImage({ data: photoData, x: 0.6, y: 0.8, w: 1.6, h: 1.6, rounding: true });
     } else {
-      slide.addShape(pres.shapes.OVAL, { x: 0.6, y: 0.8, w: 1.6, h: 1.6, fill: { color: GRAY700 }, line: { color: CYAN, width: 1.5, transparency: 70 } });
+      slide.addShape(SHAPES.OVAL, { x: 0.6, y: 0.8, w: 1.6, h: 1.6, fill: { color: GRAY700 }, line: { color: CYAN, width: 1.5, transparency: 70 } });
       slide.addText('👤', { x: 0.6, y: 1.2, w: 1.6, h: 0.8, align: 'center', fontSize: 32 });
     }
 
@@ -107,12 +107,12 @@ function generatePptx(candidates: ShortlistCandidate[], jobTitle: string, compan
 
     // Summary box
     const summaryText = cand.ai_summary || 'Resumo executivo gerado pela IA.';
-    slide.addShape(pres.shapes.ROUNDED_RECTANGLE, { x: 2.8, y: 0.7, w: 6.8, h: 1.3, fill: { color: BG2 }, line: { color: GRAY700, width: 0.5 }, rectRadius: 0.08 });
+    slide.addShape(SHAPES.ROUNDED_RECTANGLE, { x: 2.8, y: 0.7, w: 6.8, h: 1.3, fill: { color: BG2 }, line: { color: GRAY700, width: 0.5 }, rectRadius: 0.08 });
     slide.addText(summaryText, { x: 3.0, y: 0.8, w: 6.4, h: 1.1, fontSize: 10, color: GRAY300, fontFace: 'Arial', valign: 'top', wrap: true });
 
     // Deliveries
     const deliveries = cand.ai_deliveries || ['Resultado A', 'Resultado B', 'Resultado C'];
-    slide.addShape(pres.shapes.ROUNDED_RECTANGLE, { x: 2.8, y: 2.15, w: 3.3, h: 2.0, fill: { color: BG2 }, line: { color: GRAY700, width: 0.5 }, rectRadius: 0.08 });
+    slide.addShape(SHAPES.ROUNDED_RECTANGLE, { x: 2.8, y: 2.15, w: 3.3, h: 2.0, fill: { color: BG2 }, line: { color: GRAY700, width: 0.5 }, rectRadius: 0.08 });
     slide.addText('PRINCIPAIS ENTREGAS', { x: 3.0, y: 2.25, w: 3.0, h: 0.3, fontSize: 8, color: CYAN, fontFace: 'Arial', bold: true, charSpacing: 3 });
     const delTexts = deliveries.map((d, i) => ({
       text: `◆ ${d}`,
@@ -122,7 +122,7 @@ function generatePptx(candidates: ShortlistCandidate[], jobTitle: string, compan
 
     // Background
     const background = cand.ai_background || ['Formação A', 'Skill B', 'Idioma C'];
-    slide.addShape(pres.shapes.ROUNDED_RECTANGLE, { x: 6.3, y: 2.15, w: 3.3, h: 2.0, fill: { color: BG2 }, line: { color: GRAY700, width: 0.5 }, rectRadius: 0.08 });
+    slide.addShape(SHAPES.ROUNDED_RECTANGLE, { x: 6.3, y: 2.15, w: 3.3, h: 2.0, fill: { color: BG2 }, line: { color: GRAY700, width: 0.5 }, rectRadius: 0.08 });
     slide.addText('BACKGROUND & SKILLS', { x: 6.5, y: 2.25, w: 3.0, h: 0.3, fontSize: 8, color: CYAN, fontFace: 'Arial', bold: true, charSpacing: 3 });
     const bgTexts = background.map((b, i) => ({
       text: `◆ ${b}`,
@@ -131,7 +131,7 @@ function generatePptx(candidates: ShortlistCandidate[], jobTitle: string, compan
     slide.addText(bgTexts, { x: 6.5, y: 2.6, w: 2.9, h: 1.4, valign: 'top' });
 
     // Salary
-    slide.addShape(pres.shapes.ROUNDED_RECTANGLE, { x: 2.8, y: 4.35, w: 6.8, h: 0.55, fill: { color: BG2 }, line: { color: '0E7490', width: 0.5, transparency: 60 }, rectRadius: 0.06 });
+    slide.addShape(SHAPES.ROUNDED_RECTANGLE, { x: 2.8, y: 4.35, w: 6.8, h: 0.55, fill: { color: BG2 }, line: { color: '0E7490', width: 0.5, transparency: 60 }, rectRadius: 0.06 });
     slide.addText('EXPECTATIVA SALARIAL', { x: 3.0, y: 4.38, w: 2.5, h: 0.5, fontSize: 8, color: CYAN, fontFace: 'Arial', bold: true, charSpacing: 3, valign: 'middle' });
     slide.addText(cand.salary_expectation || 'A Combinar', { x: 5.5, y: 4.38, w: 4.0, h: 0.5, fontSize: 14, color: WHITE, fontFace: 'Arial', bold: true, valign: 'middle' });
   });
@@ -142,7 +142,7 @@ function generatePptx(candidates: ShortlistCandidate[], jobTitle: string, compan
   sF.addText('Próximos Passos', { x: 1, y: 1.5, w: 8, h: 0.7, align: 'center', fontSize: 32, color: WHITE, fontFace: 'Arial', bold: true });
   sF.addText('Recomendamos o agendamento de entrevistas com os finalistas apresentados.', { x: 1.5, y: 2.5, w: 7, h: 0.5, align: 'center', fontSize: 14, color: GRAY300, fontFace: 'Arial' });
   sF.addText('Por favor, informe-nos as suas disponibilidades de agenda para os próximos dias.', { x: 1.5, y: 3.1, w: 7, h: 0.5, align: 'center', fontSize: 12, color: GRAY400, fontFace: 'Arial' });
-  sF.addShape(pres.shapes.ROUNDED_RECTANGLE, { x: 3, y: 4.0, w: 4, h: 0.6, fill: { color: CYAN }, rectRadius: 0.3 });
+  sF.addShape(SHAPES.ROUNDED_RECTANGLE, { x: 3, y: 4.0, w: 4, h: 0.6, fill: { color: CYAN }, rectRadius: 0.3 });
   sF.addText('Avançar com Entrevistas', { x: 3, y: 4.0, w: 4, h: 0.6, align: 'center', fontSize: 14, color: BG, fontFace: 'Arial', bold: true, valign: 'middle' });
 
   return pres;
