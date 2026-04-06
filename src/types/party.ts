@@ -14,6 +14,7 @@ export interface Party {
   phone_raw: string | null;
   phone_e164: string | null;
   linkedin_url: string | null;
+  photo_url: string | null;
   headline: string | null;
   city: string | null;
   state: string | null;

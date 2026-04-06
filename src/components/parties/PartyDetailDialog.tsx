@@ -56,6 +56,7 @@ export function PartyDetailDialog({ partyId, open, onOpenChange }: PartyDetailDi
         email_raw: party.email_raw || '',
         phone_raw: party.phone_raw || '',
         linkedin_url: party.linkedin_url || '',
+        photo_url: (party as any).photo_url || '',
         headline: party.headline || '',
         city: party.city || '',
         state: party.state || '',
@@ -75,12 +76,13 @@ export function PartyDetailDialog({ partyId, open, onOpenChange }: PartyDetailDi
       email_raw: editData.email_raw || null,
       phone_raw: editData.phone_raw || null,
       linkedin_url: editData.linkedin_url || null,
+      photo_url: editData.photo_url || null,
       headline: editData.headline || null,
       city: editData.city || null,
       state: editData.state || null,
       notes: editData.notes || null,
       tags: editData.tags ? editData.tags.split(',').map(t => t.trim()) : [],
-    });
+    } as any);
 
     setIsEditing(false);
   };
@@ -224,6 +226,14 @@ export function PartyDetailDialog({ partyId, open, onOpenChange }: PartyDetailDi
                   <Input
                     value={editData.linkedin_url}
                     onChange={(e) => setEditData(prev => ({ ...prev, linkedin_url: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>URL da Foto</Label>
+                  <Input
+                    value={editData.photo_url}
+                    onChange={(e) => setEditData(prev => ({ ...prev, photo_url: e.target.value }))}
+                    placeholder="https://..."
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">

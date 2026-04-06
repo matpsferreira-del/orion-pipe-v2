@@ -303,6 +303,7 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
       const candidatesPayload = shortlistApps.map(app => ({
         name: app._party?.full_name || 'Candidato',
         current_role: app._party?.headline || null,
+        photo_url: app._party?.photo_url || null,
         notes: app.notes || '',
         salary_expectation: app.salary_expectation,
       }));
@@ -316,6 +317,7 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
       const processedCandidates = (data?.candidates || candidatesPayload).map((c: any) => ({
         name: c.name,
         current_role: c.current_role,
+        photo_url: c.photo_url || null,
         ai_summary: c.ai_summary || null,
         ai_deliveries: c.ai_deliveries || null,
         ai_background: c.ai_background || null,
@@ -341,6 +343,7 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
       const fallbackCandidates = shortlistApps.map(app => ({
         name: app._party?.full_name || 'Candidato',
         current_role: app._party?.headline || null,
+        photo_url: app._party?.photo_url || null,
         ai_summary: app.notes || null,
         ai_deliveries: null,
         ai_background: null,
