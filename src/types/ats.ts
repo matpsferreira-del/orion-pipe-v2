@@ -80,6 +80,7 @@ export interface ApplicationWithRelations extends Application {
     phone_raw: string | null;
     headline: string | null;
     linkedin_url: string | null;
+    photo_url: string | null;
     current_title: string | null;
     current_company: string | null;
     city: string | null;
