@@ -21,14 +21,14 @@ interface SpecItem { icon: string; title: string; desc: string }
 // ── Defaults ──
 const DEFAULT_NUMBERS: NumberItem[] = [
   { value: '500+', label: 'Profissionais mapeados/ano' },
-  { value: '12', label: 'Dias úteis de SLA médio' },
+  { value: '', label: 'SLA médio' },
   { value: '95%', label: 'Taxa de aderência cultural' },
   { value: '30', label: 'Dias de garantia de reposição' },
 ];
 const DEFAULT_DIFFS: DiffItem[] = [
   { icon: '💎', title: 'Exclusividade no Processo', desc: 'Cada projeto recebe dedicação integral de um consultor especialista. 100% do esforço direcionado ao seu desafio.' },
   { icon: '🤖', title: 'IA + Hunting Ativo', desc: 'IA para mapeamento preditivo combinada com abordagem humana consultiva. Acessamos talentos passivos que outros métodos não alcançam.' },
-  { icon: '⚡', title: 'SLA Agressivo', desc: 'Apresentação dos primeiros candidatos hiper-qualificados em até 12 dias úteis — validados técnica e culturalmente.' },
+  { icon: '⚡', title: 'SLA Agressivo', desc: '' },
   { icon: '🔒', title: 'Sigilo Total', desc: 'Processos conduzidos com total confidencialidade. Informações sensíveis protegidas em todas as etapas.' },
 ];
 const DEFAULT_METHOD: MethodItem[] = [
@@ -612,7 +612,7 @@ export default function ProposalGenerator() {
                         <p className="text-slate-300 leading-relaxed">O honorário é calculado como uma <strong className="text-white">taxa percentual sobre a remuneração anual total</strong> do colaborador contratado.</p>
                         <div className="bg-slate-800/50 rounded-xl p-5 border border-cyan-700/30">
                           <p className="text-cyan-400 font-bold text-sm mb-2">📐 Fórmula de Cálculo</p>
-                          <p className="text-white font-mono text-lg"><span className="text-cyan-400">{feePercentual}</span><span className="text-slate-400"> × </span>(Remuneração Mensal + Bônus Anual)<span className="text-slate-400"> × </span><span className="text-cyan-400">{contractTypeProposal === 'CLT' ? '13,33' : '12'}</span></p>
+                          <p className="text-white font-mono text-lg"><span className="text-cyan-400">{feePercentual}</span><span className="text-slate-400"> × </span>(<span className="text-slate-300">Rem. Mensal</span><span className="text-slate-400"> × </span><span className="text-cyan-400">{contractTypeProposal === 'CLT' ? '13,33' : '12'}</span><span className="text-slate-400"> + </span><span className="text-slate-300">Bônus Anual</span>)</p>
                           <p className="text-slate-400 text-xs mt-2">{contractTypeProposal === 'CLT' ? 'Multiplicador 13,33 contempla 13º salário e férias proporcionais (regime CLT).' : 'Multiplicador 12 referente aos 12 meses do contrato (regime PJ).'}</p>
                         </div>
                         <div className="border-t border-slate-700/50 pt-4 mt-4">
@@ -625,7 +625,7 @@ export default function ProposalGenerator() {
                       <h3 className="text-2xl font-bold text-white">Comprometimento Compartilhado</h3>
                       <div className="bg-slate-800/50 rounded-xl p-5 border border-cyan-700/30 mb-4">
                         <p className="text-cyan-400 font-bold text-sm mb-2">📐 Fórmula de Cálculo do Honorário</p>
-                        <p className="text-white font-mono text-lg"><span className="text-cyan-400">{feePercentual}</span><span className="text-slate-400"> × </span>(Remuneração Mensal + Bônus Anual)<span className="text-slate-400"> × </span><span className="text-cyan-400">{contractTypeProposal === 'CLT' ? '13,33' : '12'}</span></p>
+                        <p className="text-white font-mono text-lg"><span className="text-cyan-400">{feePercentual}</span><span className="text-slate-400"> × </span>(<span className="text-slate-300">Rem. Mensal</span><span className="text-slate-400"> × </span><span className="text-cyan-400">{contractTypeProposal === 'CLT' ? '13,33' : '12'}</span><span className="text-slate-400"> + </span><span className="text-slate-300">Bônus Anual</span>)</p>
                         <p className="text-slate-400 text-xs mt-2">{contractTypeProposal === 'CLT' ? 'Multiplicador 13,33 contempla 13º salário e férias proporcionais (regime CLT).' : 'Multiplicador 12 referente aos 12 meses do contrato (regime PJ).'}</p>
                       </div>
                       <div className={`grid ${retainerType === '3x' ? 'grid-cols-3' : 'grid-cols-2'} gap-6`}>
