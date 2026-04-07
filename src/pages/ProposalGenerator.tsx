@@ -259,7 +259,7 @@ export default function ProposalGenerator() {
         <div className="p-5 space-y-3 flex-1">
           {/* ── Básico ── */}
           <div><label className="text-xs text-slate-400 mb-1 block">Cliente / Empresa</label><input value={empresa} onChange={e => setEmpresa(e.target.value)} className={inputCls} /></div>
-          <div><label className="text-xs text-slate-400 mb-1 block">SLA de Entrega</label><input value={sla} onChange={e => setSla(e.target.value)} className={inputCls} /></div>
+          <div><label className="text-xs text-slate-400 mb-1 block">SLA de Entrega</label><input value={sla} onChange={e => { const v = e.target.value; setSla(v); setAboutNumbers(prev => prev.map((n, i) => i === 1 ? { ...n, value: v } : n)); setDifferentials(prev => prev.map((d, i) => i === 2 ? { ...d, desc: `Apresentação dos primeiros candidatos hiper-qualificados em até ${v} — validados técnica e culturalmente.` } : d)); }} className={inputCls} /></div>
           <div><label className="text-xs text-slate-400 mb-1 block">Exclusividade</label>
             <select value={exclusividade} onChange={e => setExclusividade(e.target.value)} className={inputCls + ' cursor-pointer appearance-none'}>
               <option value="com exclusividade no processo">Sim (Com Exclusividade)</option>
