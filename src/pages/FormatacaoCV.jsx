@@ -291,7 +291,9 @@ function EditorScreen({ data, onReset }) {
         }
       } else {
         for (const section of sections) {
-          const dataUrl = await toPng(section, { quality: 0.95, pixelRatio: 2, backgroundColor: "#ffffff" });
+          const sectionName = section.getAttribute("data-pdf-section") || "";
+          const isHeader = sectionName === "header";
+          const dataUrl = await toPng(section, { quality: 0.95, pixelRatio: 2, backgroundColor: isHeader ? "#0F172A" : "#ffffff" });
           const img = new Image();
           img.src = dataUrl;
           await new Promise((r) => { img.onload = r; });
