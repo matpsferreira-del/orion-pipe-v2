@@ -21,14 +21,14 @@ interface SpecItem { icon: string; title: string; desc: string }
 // ── Defaults ──
 const DEFAULT_NUMBERS: NumberItem[] = [
   { value: '500+', label: 'Profissionais mapeados/ano' },
-  { value: '12', label: 'Dias úteis de SLA médio' },
+  { value: '', label: 'SLA médio' },
   { value: '95%', label: 'Taxa de aderência cultural' },
   { value: '30', label: 'Dias de garantia de reposição' },
 ];
 const DEFAULT_DIFFS: DiffItem[] = [
   { icon: '💎', title: 'Exclusividade no Processo', desc: 'Cada projeto recebe dedicação integral de um consultor especialista. 100% do esforço direcionado ao seu desafio.' },
   { icon: '🤖', title: 'IA + Hunting Ativo', desc: 'IA para mapeamento preditivo combinada com abordagem humana consultiva. Acessamos talentos passivos que outros métodos não alcançam.' },
-  { icon: '⚡', title: 'SLA Agressivo', desc: 'Apresentação dos primeiros candidatos hiper-qualificados em até 12 dias úteis — validados técnica e culturalmente.' },
+  { icon: '⚡', title: 'SLA Agressivo', desc: '' },
   { icon: '🔒', title: 'Sigilo Total', desc: 'Processos conduzidos com total confidencialidade. Informações sensíveis protegidas em todas as etapas.' },
 ];
 const DEFAULT_METHOD: MethodItem[] = [
@@ -114,8 +114,9 @@ export default function ProposalGenerator() {
 
   useEffect(() => {
     if (!opportunity) return;
+    const slaVal = opportunity.proposal_sla || '10 a 12 dias úteis';
     setEmpresa(company?.nome_fantasia || '');
-    setSla(opportunity.proposal_sla || '10 a 12 dias úteis');
+    setSla(slaVal);
     setExclusividade(opportunity.proposal_exclusivity || 'com exclusividade no processo');
     setGarantia(opportunity.proposal_guarantee || '30 dias');
     setFee(opportunity.proposal_fee || '100%');
@@ -124,6 +125,9 @@ export default function ProposalGenerator() {
     setFeeP1(opportunity.proposal_fee_p1 || '30%');
     setFeeP2(opportunity.proposal_fee_p2 || '30%');
     setFeeP3(opportunity.proposal_fee_p3 || '40%');
+    // Update SLA-dependent defaults
+    setAboutNumbers(prev => prev.map((n, i) => i === 1 ? { ...n, value: slaVal } : n));
+    setDifferentials(prev => prev.map((d, i) => i === 2 ? { ...d, desc: `Apresentação dos primeiros candidatos hiper-qualificados em até ${slaVal} — validados técnica e culturalmente.` } : d));
   }, [opportunity, company]);
 
   const saveMutation = useMutation({
@@ -255,7 +259,7 @@ export default function ProposalGenerator() {
         <div className="p-5 space-y-3 flex-1">
           {/* ── Básico ── */}
           <div><label className="text-xs text-slate-400 mb-1 block">Cliente / Empresa</label><input value={empresa} onChange={e => setEmpresa(e.target.value)} className={inputCls} /></div>
-          <div><label className="text-xs text-slate-400 mb-1 block">SLA de Entrega</label><input value={sla} onChange={e => setSla(e.target.value)} className={inputCls} /></div>
+          <div><label className="text-xs text-slate-400 mb-1 block">SLA de Entrega</label><input value={sla} onChange={e => { const v = e.target.value; setSla(v); setAboutNumbers(prev => prev.map((n, i) => i === 1 ? { ...n, value: v } : n)); setDifferentials(prev => prev.map((d, i) => i === 2 ? { ...d, desc: `Apresentação dos primeiros candidatos hiper-qualificados em até ${v} — validados técnica e culturalmente.` } : d)); }} className={inputCls} /></div>
           <div><label className="text-xs text-slate-400 mb-1 block">Exclusividade</label>
             <select value={exclusividade} onChange={e => setExclusividade(e.target.value)} className={inputCls + ' cursor-pointer appearance-none'}>
               <option value="com exclusividade no processo">Sim (Com Exclusividade)</option>
@@ -612,7 +616,7 @@ export default function ProposalGenerator() {
                         <p className="text-slate-300 leading-relaxed">O honorário é calculado como uma <strong className="text-white">taxa percentual sobre a remuneração anual total</strong> do colaborador contratado.</p>
                         <div className="bg-slate-800/50 rounded-xl p-5 border border-cyan-700/30">
                           <p className="text-cyan-400 font-bold text-sm mb-2">📐 Fórmula de Cálculo</p>
-                          <p className="text-white font-mono text-lg"><span className="text-cyan-400">{feePercentual}</span><span className="text-slate-400"> × </span>(Remuneração Mensal + Bônus Anual)<span className="text-slate-400"> × </span><span className="text-cyan-400">{contractTypeProposal === 'CLT' ? '13,33' : '12'}</span></p>
+                          <p className="text-white font-mono text-lg"><span className="text-cyan-400">{feePercentual}</span><span className="text-slate-400"> × </span>(<span className="text-slate-300">Rem. Mensal</span><span className="text-slate-400"> × </span><span className="text-cyan-400">{contractTypeProposal === 'CLT' ? '13,33' : '12'}</span><span className="text-slate-400"> + </span><span className="text-slate-300">Bônus Anual</span>)</p>
                           <p className="text-slate-400 text-xs mt-2">{contractTypeProposal === 'CLT' ? 'Multiplicador 13,33 contempla 13º salário e férias proporcionais (regime CLT).' : 'Multiplicador 12 referente aos 12 meses do contrato (regime PJ).'}</p>
                         </div>
                         <div className="border-t border-slate-700/50 pt-4 mt-4">
@@ -625,7 +629,7 @@ export default function ProposalGenerator() {
                       <h3 className="text-2xl font-bold text-white">Comprometimento Compartilhado</h3>
                       <div className="bg-slate-800/50 rounded-xl p-5 border border-cyan-700/30 mb-4">
                         <p className="text-cyan-400 font-bold text-sm mb-2">📐 Fórmula de Cálculo do Honorário</p>
-                        <p className="text-white font-mono text-lg"><span className="text-cyan-400">{feePercentual}</span><span className="text-slate-400"> × </span>(Remuneração Mensal + Bônus Anual)<span className="text-slate-400"> × </span><span className="text-cyan-400">{contractTypeProposal === 'CLT' ? '13,33' : '12'}</span></p>
+                        <p className="text-white font-mono text-lg"><span className="text-cyan-400">{feePercentual}</span><span className="text-slate-400"> × </span>(<span className="text-slate-300">Rem. Mensal</span><span className="text-slate-400"> × </span><span className="text-cyan-400">{contractTypeProposal === 'CLT' ? '13,33' : '12'}</span><span className="text-slate-400"> + </span><span className="text-slate-300">Bônus Anual</span>)</p>
                         <p className="text-slate-400 text-xs mt-2">{contractTypeProposal === 'CLT' ? 'Multiplicador 13,33 contempla 13º salário e férias proporcionais (regime CLT).' : 'Multiplicador 12 referente aos 12 meses do contrato (regime PJ).'}</p>
                       </div>
                       <div className={`grid ${retainerType === '3x' ? 'grid-cols-3' : 'grid-cols-2'} gap-6`}>
