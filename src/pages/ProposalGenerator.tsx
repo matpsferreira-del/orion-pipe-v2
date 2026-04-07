@@ -114,8 +114,9 @@ export default function ProposalGenerator() {
 
   useEffect(() => {
     if (!opportunity) return;
+    const slaVal = opportunity.proposal_sla || '10 a 12 dias úteis';
     setEmpresa(company?.nome_fantasia || '');
-    setSla(opportunity.proposal_sla || '10 a 12 dias úteis');
+    setSla(slaVal);
     setExclusividade(opportunity.proposal_exclusivity || 'com exclusividade no processo');
     setGarantia(opportunity.proposal_guarantee || '30 dias');
     setFee(opportunity.proposal_fee || '100%');
@@ -124,6 +125,9 @@ export default function ProposalGenerator() {
     setFeeP1(opportunity.proposal_fee_p1 || '30%');
     setFeeP2(opportunity.proposal_fee_p2 || '30%');
     setFeeP3(opportunity.proposal_fee_p3 || '40%');
+    // Update SLA-dependent defaults
+    setAboutNumbers(prev => prev.map((n, i) => i === 1 ? { ...n, value: slaVal } : n));
+    setDifferentials(prev => prev.map((d, i) => i === 2 ? { ...d, desc: `Apresentação dos primeiros candidatos hiper-qualificados em até ${slaVal} — validados técnica e culturalmente.` } : d));
   }, [opportunity, company]);
 
   const saveMutation = useMutation({
