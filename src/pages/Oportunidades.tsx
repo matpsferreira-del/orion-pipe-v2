@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { pipelineStages } from '@/data/mockData';
-import { useOpportunities, useDeleteOpportunity, OpportunityRow } from '@/hooks/useOpportunities';
+import { useOpportunities, useDeleteOpportunity, useUpdateOpportunity, OpportunityRow } from '@/hooks/useOpportunities';
 import { useCompanies } from '@/hooks/useCompanies';
 import { useContacts } from '@/hooks/useContacts';
 import { useProfiles } from '@/hooks/useProfiles';
@@ -60,6 +60,7 @@ export default function Oportunidades() {
   const { data: contacts = [] } = useContacts();
   const { data: profiles = [] } = useProfiles();
   const deleteOpportunity = useDeleteOpportunity();
+  const updateOpportunity = useUpdateOpportunity();
   const navigate = useNavigate();
 
   const filteredOpportunities = useMemo(() => {
@@ -268,6 +269,21 @@ export default function Oportunidades() {
                             <Trash2 className="h-4 w-4 mr-2" />
                             Excluir
                           </DropdownMenuItem>
+                          {opp.stage !== 'fechado_perdeu' && (
+                            <DropdownMenuItem 
+                              className="text-destructive" 
+                              onClick={(e) => { 
+                                e.stopPropagation(); 
+                                const motivo = prompt('Motivo da rejeição:');
+                                if (motivo) {
+                                  updateOpportunity.mutate({ id: opp.id, data: { stage: 'fechado_perdeu', observacoes: (opp.observacoes || '') + `\n[Rejeitada] ${motivo}` } as any });
+                                }
+                              }}
+                            >
+                              <XCircle className="h-4 w-4 mr-2" />
+                              Rejeitar
+                            </DropdownMenuItem>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
