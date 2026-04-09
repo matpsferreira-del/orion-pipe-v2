@@ -149,46 +149,62 @@ Deno.serve(async (req) => {
       ]);
     }
 
-    // 5. Verifica se já existe candidatura
+    // 5. Busca o stage "Candidatura" (position 0) para esta vaga
+    const { data: candidaturaStage } = await supabaseAdmin
+      .from('job_pipeline_stages')
+      .select('id')
+      .eq('job_id', job.id)
+      .eq('position', 0)
+      .maybeSingle();
+
+    // 6. Verifica se já existe candidatura
     const { data: existing } = await supabaseAdmin
       .from('applications')
-      .select('id')
+      .select('id, stage_id')
       .eq('job_id', job.id)
       .eq('party_id', partyId)
       .maybeSingle();
 
+    let application: { id: string };
+
     if (existing) {
-      return new Response(
-        JSON.stringify({
-          success: true,
-          application_id: existing.id,
-          already_applied: true,
-          message: 'Você já se candidatou a esta vaga anteriormente.'
-        }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+      // Atualiza dados da candidatura existente SEM alterar a etapa
+      const updatePayload: Record<string, unknown> = {};
+      if (salary_expectation) updatePayload.salary_expectation = salary_expectation;
+      if (notes) updatePayload.notes = notes;
 
-    // 6. Insere a candidatura
-    const { data: application, error: appError } = await supabaseAdmin
-      .from('applications')
-      .insert({
-        job_id: job.id,
-        party_id: partyId,
-        source: 'website',
-        status: 'new',
-        salary_expectation: salary_expectation || null,
-        notes: notes || null,
-      })
-      .select('id')
-      .single();
+      if (Object.keys(updatePayload).length > 0) {
+        await supabaseAdmin
+          .from('applications')
+          .update(updatePayload)
+          .eq('id', existing.id);
+      }
 
-    if (appError || !application) {
-      console.error('application insert error:', appError);
-      return new Response(
-        JSON.stringify({ error: 'Erro ao registrar candidatura' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      application = { id: existing.id };
+    } else {
+      // Insere nova candidatura já na etapa "Candidatura"
+      const { data: newApp, error: appError } = await supabaseAdmin
+        .from('applications')
+        .insert({
+          job_id: job.id,
+          party_id: partyId,
+          source: 'website',
+          status: 'new',
+          stage_id: candidaturaStage?.id || null,
+          salary_expectation: salary_expectation || null,
+          notes: notes || null,
+        })
+        .select('id')
+        .single();
+
+      if (appError || !newApp) {
+        console.error('application insert error:', appError);
+        return new Response(
+          JSON.stringify({ error: 'Erro ao registrar candidatura' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      application = newApp;
     }
 
     // 7. Save questionnaire answers if provided
@@ -216,8 +232,10 @@ Deno.serve(async (req) => {
       JSON.stringify({
         success: true,
         application_id: application.id,
-        already_applied: false,
-        message: 'Candidatura enviada com sucesso!'
+        already_applied: !!existing,
+        message: existing
+          ? 'Seus dados foram atualizados com sucesso!'
+          : 'Candidatura enviada com sucesso!'
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
