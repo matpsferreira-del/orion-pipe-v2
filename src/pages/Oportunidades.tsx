@@ -12,7 +12,7 @@ import { useCompanies } from '@/hooks/useCompanies';
 import { useContacts } from '@/hooks/useContacts';
 import { useProfiles } from '@/hooks/useProfiles';
 import { OpportunityDialog } from '@/components/opportunities/OpportunityDialog';
-import { Plus, Search, Filter, MoreHorizontal, Target, Eye, Pencil, Trash2, Download, Loader2, Presentation } from 'lucide-react';
+import { Plus, Search, Filter, MoreHorizontal, Target, Eye, Pencil, Trash2, Download, Loader2, Presentation, XCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
