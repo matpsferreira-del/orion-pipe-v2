@@ -918,6 +918,47 @@ export type Database = {
         }
         Relationships: []
       }
+      job_questions: {
+        Row: {
+          created_at: string
+          id: string
+          job_id: string
+          options: Json | null
+          position: number
+          question_text: string
+          question_type: string
+          required: boolean
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          job_id: string
+          options?: Json | null
+          position?: number
+          question_text: string
+          question_type?: string
+          required?: boolean
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          job_id?: string
+          options?: Json | null
+          position?: number
+          question_text?: string
+          question_type?: string
+          required?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_questions_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       jobs: {
         Row: {
           admission_date: string | null
@@ -1513,6 +1554,48 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      questionnaire_responses: {
+        Row: {
+          answer_option: Json | null
+          answer_text: string | null
+          application_id: string
+          created_at: string
+          id: string
+          question_id: string
+        }
+        Insert: {
+          answer_option?: Json | null
+          answer_text?: string | null
+          application_id: string
+          created_at?: string
+          id?: string
+          question_id: string
+        }
+        Update: {
+          answer_option?: Json | null
+          answer_text?: string | null
+          application_id?: string
+          created_at?: string
+          id?: string
+          question_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "questionnaire_responses_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "questionnaire_responses_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "job_questions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tasks: {
         Row: {
