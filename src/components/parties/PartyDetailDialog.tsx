@@ -24,7 +24,7 @@ import {
 } from 'lucide-react';
 import { useParty, useUpdateParty, useAddPartyRole, useRemovePartyRole } from '@/hooks/useParties';
 import { PartyRoleType, partyRoleLabels, partyStatusLabels } from '@/types/party';
-import { usePartyApplications } from '@/hooks/useApplications';
+import { usePartyApplications, useApplicationHistory } from '@/hooks/useApplications';
 import { applicationStatusLabels, sourceLabels } from '@/types/ats';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -344,42 +344,7 @@ export function PartyDetailDialog({ partyId, open, onOpenChange }: PartyDetailDi
             ) : partyApplications && partyApplications.length > 0 ? (
               <div className="space-y-3">
                 {partyApplications.map((app) => (
-                  <div key={app.id} className="border rounded-lg p-4 space-y-2">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <p className="font-medium">{app._job?.title || 'Vaga não encontrada'}</p>
-                        {app._job?._company && (
-                          <p className="text-sm text-muted-foreground">{app._job._company.nome_fantasia}</p>
-                        )}
-                      </div>
-                      <div className="flex flex-col items-end gap-1">
-                        <Badge className="text-xs">
-                          {applicationStatusLabels[app.status as keyof typeof applicationStatusLabels] || app.status}
-                        </Badge>
-                        {app._stage && (
-                          <Badge variant="outline" className="text-xs">
-                            {app._stage.name}
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        {format(new Date(app.applied_at), "dd/MM/yyyy", { locale: ptBR })}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        {app.source === 'website' ? (
-                          <>
-                            <Globe className="h-3 w-3 text-primary" />
-                            <span className="text-primary font-medium">Via Portal</span>
-                          </>
-                        ) : (
-                          <span>{sourceLabels[app.source as keyof typeof sourceLabels] || app.source}</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
+                  <ApplicationHistoryCard key={app.id} app={app} />
                 ))}
               </div>
             ) : (
