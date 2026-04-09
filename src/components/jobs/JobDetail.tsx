@@ -7,7 +7,7 @@ import { Separator } from '@/components/ui/separator';
 import { 
   Building2, MapPin, Calendar, DollarSign, User, Clock, 
   Edit, UserPlus, Play, Pause, CheckCircle, XCircle,
-  Globe, GlobeLock, Copy, ExternalLink, Image, FileText, Loader2, Download
+  Globe, GlobeLock, Copy, ExternalLink, Image, FileText, Loader2, Download, ClipboardList
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { JobRow, useUpdateJobStatus, useUpdateJob, useJobStages, usePublishJob } from '@/hooks/useJobs';
@@ -436,6 +436,10 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
               </Button>
             </>
           )}
+          <Button variant="outline" size="sm" onClick={() => navigate(`/vagas/${job.id}/questionario`)}>
+            <ClipboardList className="h-4 w-4 mr-1" />
+            Questionário
+          </Button>
           <Button variant="outline" size="sm" onClick={onEdit}>
             <Edit className="h-4 w-4 mr-1" />
             Editar

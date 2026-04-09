@@ -11,8 +11,9 @@ import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
   Mail, Phone, Linkedin, Star, ExternalLink, 
-  CheckCircle, XCircle, UserMinus, DollarSign, FileText, RotateCcw, ImageIcon
+  CheckCircle, XCircle, UserMinus, DollarSign, FileText, RotateCcw, ImageIcon, ClipboardList
 } from 'lucide-react';
+import { useQuestionnaireResponses } from '@/hooks/useJobQuestions';
 import { 
   ApplicationWithRelations, JobPipelineStage, 
   applicationStatusLabels, ApplicationStatus, sourceLabels 
@@ -336,6 +337,9 @@ export function CandidateDetailDialog({
               Salvar Dados
             </Button>
           </div>
+
+          {/* Questionnaire Responses */}
+          <QuestionnaireResponsesSection applicationId={application.id} />
 
           {/* CV Data */}
           <div>
