@@ -106,18 +106,6 @@ export function OpportunityDetail({ opportunity, onOpenActivityDialog, onOpenJob
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const handleReject = async () => {
-    await updateOpportunity.mutateAsync({
-      id: opportunity.id,
-      data: {
-        stage: 'fechado_perdeu',
-        observacoes: (opportunity.observacoes || '') + `\n[Rejeitada] ${rejectReason}`.trim(),
-      } as any,
-    });
-    setShowRejectDialog(false);
-    setRejectReason('');
-  };
-
   const isRejected = opportunity.stage === 'fechado_perdeu';
 
   return (
