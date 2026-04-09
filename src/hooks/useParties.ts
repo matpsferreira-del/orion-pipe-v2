@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Party, PartyRole, PartyDuplicateSuggestion, PartyCreatedFrom, PartyRoleType } from '@/types/party';
 import { useToast } from '@/hooks/use-toast';
 
-// Fetch all active parties
+// Fetch all active parties (paginated to bypass 1000-row limit)
 export function useParties(filters?: { 
   role?: PartyRoleType; 
   search?: string;
@@ -13,34 +13,49 @@ export function useParties(filters?: {
   return useQuery({
     queryKey: ['parties', filters],
     queryFn: async () => {
-      let query = supabase
-        .from('party')
-        .select(`
-          *,
-          party_role (*)
-        `)
-        .order('full_name', { ascending: true });
+      const batchSize = 1000;
+      let allData: any[] = [];
+      let offset = 0;
+      let hasMore = true;
 
-      if (filters?.status) {
-        query = query.eq('status', filters.status);
-      } else {
-        query = query.neq('status', 'merged');
+      while (hasMore) {
+        let query = supabase
+          .from('party')
+          .select(`
+            *,
+            party_role (*)
+          `)
+          .order('full_name', { ascending: true })
+          .range(offset, offset + batchSize - 1);
+
+        if (filters?.status) {
+          query = query.eq('status', filters.status);
+        } else {
+          query = query.neq('status', 'merged');
+        }
+
+        if (filters?.search) {
+          query = query.or(`full_name.ilike.%${filters.search}%,email_norm.ilike.%${filters.search}%,phone_raw.ilike.%${filters.search}%,city.ilike.%${filters.search}%,state.ilike.%${filters.search}%,headline.ilike.%${filters.search}%,linkedin_url.ilike.%${filters.search}%`);
+        }
+
+        if (filters?.createdFrom) {
+          query = query.eq('created_from', filters.createdFrom);
+        }
+
+        const { data, error } = await query;
+        if (error) throw error;
+
+        if (data && data.length > 0) {
+          allData.push(...data);
+          offset += batchSize;
+          hasMore = data.length === batchSize;
+        } else {
+          hasMore = false;
+        }
       }
-
-      if (filters?.search) {
-        query = query.or(`full_name.ilike.%${filters.search}%,email_norm.ilike.%${filters.search}%,phone_raw.ilike.%${filters.search}%,city.ilike.%${filters.search}%,state.ilike.%${filters.search}%,headline.ilike.%${filters.search}%,linkedin_url.ilike.%${filters.search}%`);
-      }
-
-      if (filters?.createdFrom) {
-        query = query.eq('created_from', filters.createdFrom);
-      }
-
-      const { data, error } = await query;
-      
-      if (error) throw error;
 
       // Filter by role if specified
-      let result = data as (Party & { party_role: PartyRole[] })[];
+      let result = allData as (Party & { party_role: PartyRole[] })[];
       
       if (filters?.role) {
         result = result.filter(p => 
@@ -77,7 +92,7 @@ export function useParty(partyId: string | undefined) {
   });
 }
 
-// Create a new party
+// Create a new party (uses resolve_party for automatic deduplication)
 export function useCreateParty() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -95,41 +110,63 @@ export function useCreateParty() {
       notes?: string;
       created_from: PartyCreatedFrom;
       roles?: PartyRoleType[];
+      current_title?: string;
+      current_company?: string;
     }) => {
-      const { roles, ...partyData } = party;
+      const { roles, tags, ...partyData } = party;
       
-      const { data, error } = await supabase
-        .from('party')
-        .insert({
-          ...partyData,
-          tags: partyData.tags || [],
-        })
-        .select()
-        .single();
+      // Use resolve_party RPC for automatic deduplication by email/phone/linkedin
+      const { data: partyId, error } = await supabase.rpc('resolve_party', {
+        p_full_name: partyData.full_name,
+        p_email: partyData.email_raw || null,
+        p_phone: partyData.phone_raw || null,
+        p_linkedin_url: partyData.linkedin_url || null,
+        p_city: partyData.city || null,
+        p_state: partyData.state || null,
+        p_created_from: partyData.created_from || 'crm',
+        p_headline: partyData.headline || null,
+        p_notes: partyData.notes || null,
+        p_current_title: partyData.current_title || null,
+        p_current_company: partyData.current_company || null,
+      });
       
       if (error) throw error;
+      if (!partyId) throw new Error('Erro ao resolver pessoa');
+
+      // Update tags if provided
+      if (tags && tags.length > 0) {
+        await supabase
+          .from('party')
+          .update({ tags })
+          .eq('id', partyId);
+      }
 
       // Add roles if specified
       if (roles && roles.length > 0) {
-        const roleInserts = roles.map(role => ({
-          party_id: data.id,
-          role,
-        }));
-
-        const { error: roleError } = await supabase
-          .from('party_role')
-          .insert(roleInserts);
-
-        if (roleError) throw roleError;
+        for (const role of roles) {
+          await supabase.rpc('ensure_party_role', {
+            p_party_id: partyId,
+            p_role: role,
+            p_confidence: 100,
+          });
+        }
       }
 
-      return data as Party;
+      // Fetch the full party record to return
+      const { data: fullParty, error: fetchError } = await supabase
+        .from('party')
+        .select('*')
+        .eq('id', partyId)
+        .single();
+
+      if (fetchError) throw fetchError;
+      return fullParty as Party;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['parties'] });
       toast({
-        title: 'Pessoa criada',
-        description: 'Registro criado com sucesso.',
+        title: 'Pessoa criada/atualizada',
+        description: 'Registro processado com sucesso. Duplicatas foram unificadas automaticamente.',
       });
     },
     onError: (error: Error) => {
