@@ -13,14 +13,7 @@ import { useCompanies } from '@/hooks/useCompanies';
 import { useContacts } from '@/hooks/useContacts';
 import { useProfiles } from '@/hooks/useProfiles';
 import { useActivitiesByOpportunity } from '@/hooks/useActivities';
-import { useOpportunityAttachments, useUploadOpportunityAttachment, useDeleteOpportunityAttachment, getAttachmentUrl } from '@/hooks/useOpportunityAttachments';
-import { ActivityDialog } from '@/components/activities/ActivityDialog';
-import { JobDialog } from '@/components/jobs/JobDialog';
 import { pipelineStages } from '@/data/mockData';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
-import { useAuth } from '@/contexts/AuthContext';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 
 interface OpportunityDetailProps {
   opportunity: OpportunityRow;
