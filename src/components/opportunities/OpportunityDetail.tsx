@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -500,54 +501,57 @@ export function OpportunityDetail({ opportunity }: OpportunityDetailProps) {
         </TabsContent>
       </Tabs>
 
-      {/* Reject Dialog */}
-      <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Rejeitar Oportunidade</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Informe o motivo da rejeição desta oportunidade. Ela será movida para "Fechado Perdeu".
-            </p>
-            <Textarea
-              placeholder="Motivo da rejeição..."
-              value={rejectReason}
-              onChange={(e) => setRejectReason(e.target.value)}
-              rows={4}
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowRejectDialog(false)}>Cancelar</Button>
-            <Button variant="destructive" onClick={handleReject} disabled={!rejectReason.trim() || updateOpportunity.isPending}>
-              Confirmar Rejeição
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Portaled dialogs to prevent Sheet nesting infinite loop */}
+      {createPortal(
+        <>
+          <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Rejeitar Oportunidade</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Informe o motivo da rejeição desta oportunidade. Ela será movida para "Fechado Perdeu".
+                </p>
+                <Textarea
+                  placeholder="Motivo da rejeição..."
+                  value={rejectReason}
+                  onChange={(e) => setRejectReason(e.target.value)}
+                  rows={4}
+                />
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setShowRejectDialog(false)}>Cancelar</Button>
+                <Button variant="destructive" onClick={handleReject} disabled={!rejectReason.trim() || updateOpportunity.isPending}>
+                  Confirmar Rejeição
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
 
-      {/* Activity Dialog */}
-      <ActivityDialog 
-        open={showActivityDialog} 
-        onOpenChange={setShowActivityDialog}
-        preSelectedCompanyId={opportunity.company_id}
-        preSelectedOpportunityId={opportunity.id}
-      />
+          <ActivityDialog 
+            open={showActivityDialog} 
+            onOpenChange={setShowActivityDialog}
+            preSelectedCompanyId={opportunity.company_id}
+            preSelectedOpportunityId={opportunity.id}
+          />
 
-      {/* Job Dialog */}
-      <JobDialog
-        open={showJobDialog}
-        onOpenChange={setShowJobDialog}
-        preSelectedCompanyId={opportunity.company_id || undefined}
-        preSelectedContactId={opportunity.contact_id || undefined}
-        preSelectedResponsavelId={opportunity.responsavel_id}
-        preSelectedOpportunityId={opportunity.id}
-        isOutplacementProject={isOutplacement}
-        outplacementClientName={isOutplacement && !opportunity.company_id
-          ? (opportunity.observacoes?.match(/\[PF: (.+?)\]/)?.[1] || '')
-          : undefined
-        }
-      />
+          <JobDialog
+            open={showJobDialog}
+            onOpenChange={setShowJobDialog}
+            preSelectedCompanyId={opportunity.company_id || undefined}
+            preSelectedContactId={opportunity.contact_id || undefined}
+            preSelectedResponsavelId={opportunity.responsavel_id}
+            preSelectedOpportunityId={opportunity.id}
+            isOutplacementProject={isOutplacement}
+            outplacementClientName={isOutplacement && !opportunity.company_id
+              ? (opportunity.observacoes?.match(/\[PF: (.+?)\]/)?.[1] || '')
+              : undefined
+            }
+          />
+        </>,
+        document.body
+      )}
     </div>
   );
 }
