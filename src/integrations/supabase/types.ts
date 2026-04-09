@@ -1113,6 +1113,7 @@ export type Database = {
           created_at: string
           data_previsao_fechamento: string
           id: string
+          motivo_rejeicao: string | null
           observacoes: string | null
           origem_lead: string
           probabilidade: number
@@ -1145,6 +1146,7 @@ export type Database = {
           created_at?: string
           data_previsao_fechamento: string
           id?: string
+          motivo_rejeicao?: string | null
           observacoes?: string | null
           origem_lead?: string
           probabilidade?: number
@@ -1177,6 +1179,7 @@ export type Database = {
           created_at?: string
           data_previsao_fechamento?: string
           id?: string
+          motivo_rejeicao?: string | null
           observacoes?: string | null
           origem_lead?: string
           probabilidade?: number
@@ -1228,6 +1231,61 @@ export type Database = {
           {
             foreignKeyName: "opportunities_responsavel_id_fkey"
             columns: ["responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      opportunity_attachments: {
+        Row: {
+          created_at: string
+          file_name: string
+          file_path: string
+          file_size: number | null
+          file_type: string | null
+          id: string
+          opportunity_id: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          file_name: string
+          file_path: string
+          file_size?: number | null
+          file_type?: string | null
+          id?: string
+          opportunity_id: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          file_name?: string
+          file_path?: string
+          file_size?: number | null
+          file_type?: string | null
+          id?: string
+          opportunity_id?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "opportunity_attachments_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunity_attachments_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunity_attachments_uploaded_by_fkey"
+            columns: ["uploaded_by"]
             isOneToOne: false
             referencedRelation: "public_profiles"
             referencedColumns: ["id"]

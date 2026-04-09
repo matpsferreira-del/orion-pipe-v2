@@ -23,6 +23,7 @@ export interface OpportunityRow {
   spin_implicacao_perda: string | null;
   spin_necessidade_cenario: string | null;
   spin_necessidade_urgencia: string | null;
+  motivo_rejeicao: string | null;
   created_at: string;
   updated_at: string;
 }

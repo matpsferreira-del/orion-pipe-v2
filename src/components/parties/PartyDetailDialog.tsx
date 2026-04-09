@@ -20,11 +20,11 @@ import {
 } from '@/components/ui/select';
 import { 
   Mail, Phone, Linkedin, MapPin, Calendar, Edit2, Save, X, 
-  UserPlus, Building2, Briefcase, FileText, Globe 
+  UserPlus, Building2, Briefcase, FileText, Globe, ChevronDown, ChevronUp, ArrowRight
 } from 'lucide-react';
 import { useParty, useUpdateParty, useAddPartyRole, useRemovePartyRole } from '@/hooks/useParties';
 import { PartyRoleType, partyRoleLabels, partyStatusLabels } from '@/types/party';
-import { usePartyApplications } from '@/hooks/useApplications';
+import { usePartyApplications, useApplicationHistory } from '@/hooks/useApplications';
 import { applicationStatusLabels, sourceLabels } from '@/types/ats';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -344,42 +344,7 @@ export function PartyDetailDialog({ partyId, open, onOpenChange }: PartyDetailDi
             ) : partyApplications && partyApplications.length > 0 ? (
               <div className="space-y-3">
                 {partyApplications.map((app) => (
-                  <div key={app.id} className="border rounded-lg p-4 space-y-2">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <p className="font-medium">{app._job?.title || 'Vaga não encontrada'}</p>
-                        {app._job?._company && (
-                          <p className="text-sm text-muted-foreground">{app._job._company.nome_fantasia}</p>
-                        )}
-                      </div>
-                      <div className="flex flex-col items-end gap-1">
-                        <Badge className="text-xs">
-                          {applicationStatusLabels[app.status as keyof typeof applicationStatusLabels] || app.status}
-                        </Badge>
-                        {app._stage && (
-                          <Badge variant="outline" className="text-xs">
-                            {app._stage.name}
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        {format(new Date(app.applied_at), "dd/MM/yyyy", { locale: ptBR })}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        {app.source === 'website' ? (
-                          <>
-                            <Globe className="h-3 w-3 text-primary" />
-                            <span className="text-primary font-medium">Via Portal</span>
-                          </>
-                        ) : (
-                          <span>{sourceLabels[app.source as keyof typeof sourceLabels] || app.source}</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
+                  <ApplicationHistoryCard key={app.id} app={app} />
                 ))}
               </div>
             ) : (
@@ -427,5 +392,90 @@ export function PartyDetailDialog({ partyId, open, onOpenChange }: PartyDetailDi
       />
     )}
     </>
+  );
+}
+
+function ApplicationHistoryCard({ app }: { app: any }) {
+  const [expanded, setExpanded] = useState(false);
+  const { data: history = [], isLoading } = useApplicationHistory(expanded ? app.id : undefined);
+
+  return (
+    <div className="border rounded-lg p-4 space-y-2">
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <p className="font-medium">{app._job?.title || 'Vaga não encontrada'}</p>
+          {app._job?._company && (
+            <p className="text-sm text-muted-foreground">{app._job._company.nome_fantasia}</p>
+          )}
+        </div>
+        <div className="flex flex-col items-end gap-1">
+          <Badge className="text-xs">
+            {applicationStatusLabels[app.status as keyof typeof applicationStatusLabels] || app.status}
+          </Badge>
+          {app._stage && (
+            <Badge variant="outline" className="text-xs">
+              {app._stage.name}
+            </Badge>
+          )}
+        </div>
+      </div>
+      <div className="flex items-center gap-4 text-xs text-muted-foreground">
+        <div className="flex items-center gap-1">
+          <Calendar className="h-3 w-3" />
+          {format(new Date(app.applied_at), "dd/MM/yyyy", { locale: ptBR })}
+        </div>
+        <div className="flex items-center gap-1">
+          {app.source === 'website' ? (
+            <>
+              <Globe className="h-3 w-3 text-primary" />
+              <span className="text-primary font-medium">Via Portal</span>
+            </>
+          ) : (
+            <span>{sourceLabels[app.source as keyof typeof sourceLabels] || app.source}</span>
+          )}
+        </div>
+      </div>
+      <button
+        className="flex items-center gap-1 text-xs text-primary hover:underline mt-1"
+        onClick={() => setExpanded(!expanded)}
+      >
+        {expanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+        {expanded ? 'Ocultar histórico' : 'Ver histórico de etapas'}
+      </button>
+      {expanded && (
+        <div className="mt-2 pl-2 border-l-2 border-muted space-y-2">
+          {isLoading ? (
+            <p className="text-xs text-muted-foreground">Carregando...</p>
+          ) : history.length > 0 ? (
+            history.map((h: any) => (
+              <div key={h.id} className="text-xs text-muted-foreground">
+                <div className="flex items-center gap-1">
+                  {h._from_stage_name && (
+                    <>
+                      <Badge variant="outline" className="text-[10px] py-0">{h._from_stage_name}</Badge>
+                      <ArrowRight className="h-3 w-3" />
+                    </>
+                  )}
+                  {h._to_stage_name && (
+                    <Badge variant="outline" className="text-[10px] py-0">{h._to_stage_name}</Badge>
+                  )}
+                  {h.from_status !== h.to_status && h.to_status && (
+                    <Badge className="text-[10px] py-0 ml-1">
+                      {applicationStatusLabels[h.to_status as keyof typeof applicationStatusLabels] || h.to_status}
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-[10px] mt-0.5">
+                  {format(new Date(h.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                  {h.note && ` — ${h.note}`}
+                </p>
+              </div>
+            ))
+          ) : (
+            <p className="text-xs text-muted-foreground">Sem movimentações registradas.</p>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
