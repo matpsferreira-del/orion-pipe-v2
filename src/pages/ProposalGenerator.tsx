@@ -696,6 +696,116 @@ export default function ProposalGenerator() {
               </div>
             </div>
 
+            {/* ── Slide: Simulação de Valores ── */}
+            {showSimulation && simSalary && (() => {
+              const salary = Number(simSalary.replace(/[^\d.,]/g, '').replace(',', '.')) || 0;
+              const bonus = Number(simBonus.replace(/[^\d.,]/g, '').replace(',', '.')) || 0;
+              const mult = contractTypeProposal === 'CLT' ? 13.33 : 12;
+              const fmtBRL = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2 });
+
+              if (feeModel === 'remuneracao_anual') {
+                const pct = parseFloat(feePercentual.replace('%', '').replace(',', '.')) / 100 || 0;
+                const remAnual = salary * mult + bonus;
+                const totalFee = remAnual * pct;
+                return (
+                  <div className="proposal-slide">
+                    <div style={gridPattern} />
+                    <h2 style={{ fontSize: 36, fontWeight: 800, marginBottom: 32 }}><span style={{ color: '#fff' }}>Simulação de </span><span style={{ color: '#06b6d4' }}>Investimento</span></h2>
+                    <div className="flex-1 flex items-center">
+                      <div className="w-full space-y-6">
+                        <div className="grid grid-cols-3 gap-6">
+                          <div className="bg-slate-800/50 p-6 rounded-xl border border-slate-700/50 text-center">
+                            <p className="text-slate-400 text-sm mb-2">Remuneração Mensal</p>
+                            <p className="text-3xl font-black text-white">{fmtBRL(salary)}</p>
+                          </div>
+                          <div className="bg-slate-800/50 p-6 rounded-xl border border-slate-700/50 text-center">
+                            <p className="text-slate-400 text-sm mb-2">Bônus Anual</p>
+                            <p className="text-3xl font-black text-white">{fmtBRL(bonus)}</p>
+                          </div>
+                          <div className="bg-slate-800/50 p-6 rounded-xl border border-slate-700/50 text-center">
+                            <p className="text-slate-400 text-sm mb-2">Regime</p>
+                            <p className="text-3xl font-black text-white">{contractTypeProposal}</p>
+                          </div>
+                        </div>
+                        <div className="bg-slate-800/50 rounded-xl p-6 border border-cyan-700/30">
+                          <p className="text-cyan-400 font-bold text-sm mb-3">📐 Cálculo</p>
+                          <div className="space-y-2">
+                            <p className="text-slate-300"><span className="text-slate-400">Remuneração Anual:</span> {fmtBRL(salary)} × {contractTypeProposal === 'CLT' ? '13,33' : '12'} + {fmtBRL(bonus)} = <strong className="text-white">{fmtBRL(remAnual)}</strong></p>
+                            <p className="text-slate-300"><span className="text-slate-400">Honorário ({feePercentual}):</span> {feePercentual} × {fmtBRL(remAnual)} = <strong className="text-cyan-400 text-xl">{fmtBRL(totalFee)}</strong></p>
+                          </div>
+                        </div>
+                        {paymentModel === 'retainer' && (
+                          <div className={`grid ${retainerType === '3x' ? 'grid-cols-3' : 'grid-cols-2'} gap-6`}>
+                            <div className="bg-slate-800/50 p-5 rounded-xl border border-cyan-700/30 text-center">
+                              <p className="text-slate-400 text-xs mb-1">Upfront ({feeP1})</p>
+                              <p className="text-2xl font-black text-cyan-400">{fmtBRL(totalFee * parseFloat(feeP1) / 100)}</p>
+                            </div>
+                            {retainerType === '3x' && <div className="bg-slate-800/50 p-5 rounded-xl border border-slate-700/50 text-center">
+                              <p className="text-slate-400 text-xs mb-1">Shortlist ({feeP2})</p>
+                              <p className="text-2xl font-black text-cyan-400">{fmtBRL(totalFee * parseFloat(feeP2) / 100)}</p>
+                            </div>}
+                            <div className="bg-slate-800/50 p-5 rounded-xl border border-slate-700/50 text-center">
+                              <p className="text-slate-400 text-xs mb-1">Success Fee ({feeP3})</p>
+                              <p className="text-2xl font-black text-cyan-400">{fmtBRL(totalFee * parseFloat(feeP3) / 100)}</p>
+                            </div>
+                          </div>
+                        )}
+                        <div className="bg-slate-800/50 rounded-lg p-4 text-center border border-slate-700/50">
+                          <p className="text-slate-300 text-sm">Investimento Total: <strong className="text-cyan-400 text-lg">{fmtBRL(totalFee)}</strong> | Garantia: <strong className="text-cyan-400">{garantia}</strong></p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              } else {
+                const pct = parseFloat(fee.replace('%', '').replace(',', '.')) / 100 || 0;
+                const totalFee = salary * pct;
+                return (
+                  <div className="proposal-slide">
+                    <div style={gridPattern} />
+                    <h2 style={{ fontSize: 36, fontWeight: 800, marginBottom: 32 }}><span style={{ color: '#fff' }}>Simulação de </span><span style={{ color: '#06b6d4' }}>Investimento</span></h2>
+                    <div className="flex-1 flex items-center">
+                      <div className="w-full space-y-6">
+                        <div className="grid grid-cols-2 gap-6">
+                          <div className="bg-slate-800/50 p-6 rounded-xl border border-slate-700/50 text-center">
+                            <p className="text-slate-400 text-sm mb-2">Remuneração Mensal</p>
+                            <p className="text-3xl font-black text-white">{fmtBRL(salary)}</p>
+                          </div>
+                          <div className="bg-slate-800/50 p-6 rounded-xl border border-cyan-700/30 text-center">
+                            <p className="text-slate-400 text-sm mb-2">Honorário ({fee})</p>
+                            <p className="text-3xl font-black text-cyan-400">{fmtBRL(totalFee)}</p>
+                          </div>
+                        </div>
+                        <div className="bg-slate-800/50 rounded-xl p-6 border border-cyan-700/30">
+                          <p className="text-cyan-400 font-bold text-sm mb-3">📐 Cálculo</p>
+                          <p className="text-slate-300 text-lg">{fee} × {fmtBRL(salary)} = <strong className="text-cyan-400 text-2xl">{fmtBRL(totalFee)}</strong></p>
+                        </div>
+                        {paymentModel === 'retainer' && (
+                          <div className={`grid ${retainerType === '3x' ? 'grid-cols-3' : 'grid-cols-2'} gap-6`}>
+                            <div className="bg-slate-800/50 p-5 rounded-xl border border-cyan-700/30 text-center">
+                              <p className="text-slate-400 text-xs mb-1">Upfront ({feeP1})</p>
+                              <p className="text-2xl font-black text-cyan-400">{fmtBRL(totalFee * parseFloat(feeP1) / 100)}</p>
+                            </div>
+                            {retainerType === '3x' && <div className="bg-slate-800/50 p-5 rounded-xl border border-slate-700/50 text-center">
+                              <p className="text-slate-400 text-xs mb-1">Shortlist ({feeP2})</p>
+                              <p className="text-2xl font-black text-cyan-400">{fmtBRL(totalFee * parseFloat(feeP2) / 100)}</p>
+                            </div>}
+                            <div className="bg-slate-800/50 p-5 rounded-xl border border-slate-700/50 text-center">
+                              <p className="text-slate-400 text-xs mb-1">Success Fee ({feeP3})</p>
+                              <p className="text-2xl font-black text-cyan-400">{fmtBRL(totalFee * parseFloat(feeP3) / 100)}</p>
+                            </div>
+                          </div>
+                        )}
+                        <div className="bg-slate-800/50 rounded-lg p-4 text-center border border-slate-700/50">
+                          <p className="text-slate-300 text-sm">Investimento Total: <strong className="text-cyan-400 text-lg">{fmtBRL(totalFee)}</strong> | Garantia: <strong className="text-cyan-400">{garantia}</strong></p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+            })()}
+
             {/* ── Slides: Cases de Sucesso (auto-paginados) ── */}
             {showCases && cases.filter(c => c.name || c.logoUrl).length > 0 && (() => {
               const validCases = cases.filter(c => c.name || c.logoUrl);
