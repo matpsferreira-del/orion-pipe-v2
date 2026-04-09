@@ -34,7 +34,10 @@ export function useUploadOpportunityAttachment() {
 
   return useMutation({
     mutationFn: async ({ opportunityId, file, uploadedBy }: { opportunityId: string; file: File; uploadedBy?: string }) => {
-      const filePath = `${opportunityId}/${Date.now()}_${file.name}`;
+      const safeName = file.name
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-zA-Z0-9._-]/g, '_');
+      const filePath = `${opportunityId}/${Date.now()}_${safeName}`;
       
       const { error: uploadError } = await supabase.storage
         .from('opportunity-attachments')

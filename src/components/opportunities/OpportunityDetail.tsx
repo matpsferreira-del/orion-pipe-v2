@@ -501,7 +501,7 @@ export function OpportunityDetail({ opportunity }: OpportunityDetailProps) {
       </Tabs>
 
       {/* Reject Dialog */}
-      <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
+      <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog} modal={false}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Rejeitar Oportunidade</DialogTitle>
