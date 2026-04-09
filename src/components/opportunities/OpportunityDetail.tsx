@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -6,17 +6,21 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Building2, User, Calendar, DollarSign, Target, Phone, Mail, Plus, MessageSquare, FileText, Briefcase } from 'lucide-react';
-import { OpportunityRow } from '@/hooks/useOpportunities';
+import { Textarea } from '@/components/ui/textarea';
+import { Building2, User, Calendar, DollarSign, Target, Phone, Mail, Plus, MessageSquare, FileText, Briefcase, Upload, Trash2, Download, XCircle, Paperclip, Loader2 } from 'lucide-react';
+import { OpportunityRow, useUpdateOpportunity } from '@/hooks/useOpportunities';
 import { useCompanies } from '@/hooks/useCompanies';
 import { useContacts } from '@/hooks/useContacts';
 import { useProfiles } from '@/hooks/useProfiles';
 import { useActivitiesByOpportunity } from '@/hooks/useActivities';
+import { useOpportunityAttachments, useUploadOpportunityAttachment, useDeleteOpportunityAttachment, getAttachmentUrl } from '@/hooks/useOpportunityAttachments';
 import { ActivityDialog } from '@/components/activities/ActivityDialog';
 import { JobDialog } from '@/components/jobs/JobDialog';
 import { pipelineStages } from '@/data/mockData';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useAuth } from '@/contexts/AuthContext';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 
 interface OpportunityDetailProps {
   opportunity: OpportunityRow;
@@ -49,16 +53,31 @@ const activityTypeLabels: Record<string, string> = {
   outro: 'Outro',
 };
 
+function formatFileSize(bytes: number | null) {
+  if (!bytes) return '';
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
 export function OpportunityDetail({ opportunity }: OpportunityDetailProps) {
   const [showActivityDialog, setShowActivityDialog] = useState(false);
   const [showJobDialog, setShowJobDialog] = useState(false);
+  const [showRejectDialog, setShowRejectDialog] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
+  const { profile } = useAuth();
   const isOutplacement = opportunity.tipo_servico === 'outplacement';
   
   const { data: companies = [] } = useCompanies();
   const { data: contacts = [] } = useContacts();
   const { data: profiles = [] } = useProfiles();
   const { data: activities = [] } = useActivitiesByOpportunity(opportunity.id);
+  const { data: attachments = [], isLoading: attachmentsLoading } = useOpportunityAttachments(opportunity.id);
+  const uploadAttachment = useUploadOpportunityAttachment();
+  const deleteAttachment = useDeleteOpportunityAttachment();
+  const updateOpportunity = useUpdateOpportunity();
 
   const company = companies.find(c => c.id === opportunity.company_id);
   const contact = contacts.find(c => c.id === opportunity.contact_id);
@@ -66,10 +85,7 @@ export function OpportunityDetail({ opportunity }: OpportunityDetailProps) {
   const stage = pipelineStages.find(s => s.key === opportunity.stage);
 
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(value);
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
   };
 
   const formatDate = (date: string) => {
@@ -80,6 +96,33 @@ export function OpportunityDetail({ opportunity }: OpportunityDetailProps) {
                   opportunity.spin_problema_dificuldades || 
                   opportunity.spin_implicacao_impacto || 
                   opportunity.spin_necessidade_cenario;
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+    for (const file of Array.from(files)) {
+      await uploadAttachment.mutateAsync({
+        opportunityId: opportunity.id,
+        file,
+        uploadedBy: profile?.id,
+      });
+    }
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleReject = async () => {
+    await updateOpportunity.mutateAsync({
+      id: opportunity.id,
+      data: {
+        stage: 'fechado_perdeu',
+        observacoes: (opportunity.observacoes || '') + `\n[Rejeitada] ${rejectReason}`.trim(),
+      } as any,
+    });
+    setShowRejectDialog(false);
+    setRejectReason('');
+  };
+
+  const isRejected = opportunity.stage === 'fechado_perdeu';
 
   return (
     <div className="mt-6 space-y-6">
@@ -97,7 +140,17 @@ export function OpportunityDetail({ opportunity }: OpportunityDetailProps) {
               : company?.razao_social}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap justify-end">
+          {!isRejected && (
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => setShowRejectDialog(true)}
+            >
+              <XCircle className="h-4 w-4 mr-1" />
+              Rejeitar
+            </Button>
+          )}
           <Button
             variant="outline"
             size="sm"
@@ -118,11 +171,21 @@ export function OpportunityDetail({ opportunity }: OpportunityDetailProps) {
             <FileText className="h-4 w-4 mr-1" />
             Gerar Proposta
           </Button>
-          <Badge variant="outline" className="text-sm">
+          <Badge variant={isRejected ? 'destructive' : 'outline'} className="text-sm">
             {stage?.label || opportunity.stage}
           </Badge>
         </div>
       </div>
+
+      {/* Rejection reason */}
+      {isRejected && (opportunity as any).motivo_rejeicao && (
+        <Card className="border-destructive/30 bg-destructive/5">
+          <CardContent className="py-3">
+            <p className="text-sm text-destructive font-medium">Motivo da rejeição:</p>
+            <p className="text-sm text-muted-foreground">{(opportunity as any).motivo_rejeicao}</p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Key Metrics */}
       <div className="grid grid-cols-2 gap-4">
@@ -145,10 +208,11 @@ export function OpportunityDetail({ opportunity }: OpportunityDetailProps) {
       <Separator />
 
       <Tabs defaultValue="info" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="info">Informações</TabsTrigger>
-          <TabsTrigger value="spin">SPIN Selling</TabsTrigger>
+          <TabsTrigger value="spin">SPIN</TabsTrigger>
           <TabsTrigger value="activities">Atividades ({activities.length})</TabsTrigger>
+          <TabsTrigger value="attachments">Arquivos ({attachments.length})</TabsTrigger>
         </TabsList>
 
         <TabsContent value="info" className="space-y-4 mt-4">
@@ -226,7 +290,7 @@ export function OpportunityDetail({ opportunity }: OpportunityDetailProps) {
                 <CardTitle className="text-sm">Observações</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-muted-foreground">{opportunity.observacoes}</p>
+                <p className="text-sm text-muted-foreground whitespace-pre-wrap">{opportunity.observacoes}</p>
               </CardContent>
             </Card>
           )}
@@ -356,7 +420,111 @@ export function OpportunityDetail({ opportunity }: OpportunityDetailProps) {
             </Card>
           )}
         </TabsContent>
+
+        <TabsContent value="attachments" className="mt-4">
+          <div className="flex justify-between items-center mb-4">
+            <h4 className="text-sm font-medium">Propostas e Materiais</h4>
+            <div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                className="hidden"
+                onChange={handleFileUpload}
+              />
+              <Button size="sm" onClick={() => fileInputRef.current?.click()} disabled={uploadAttachment.isPending}>
+                {uploadAttachment.isPending ? (
+                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                ) : (
+                  <Upload className="h-4 w-4 mr-1" />
+                )}
+                Enviar Arquivo
+              </Button>
+            </div>
+          </div>
+
+          {attachmentsLoading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : attachments.length > 0 ? (
+            <div className="space-y-2">
+              {attachments.map(att => {
+                const uploader = profiles.find(p => p.id === att.uploaded_by);
+                return (
+                  <Card key={att.id}>
+                    <CardContent className="py-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <Paperclip className="h-4 w-4 text-muted-foreground shrink-0" />
+                          <div className="min-w-0">
+                            <p className="font-medium text-sm truncate">{att.file_name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {formatFileSize(att.file_size)} • {uploader?.name || 'Usuário'} • {format(new Date(att.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => window.open(getAttachmentUrl(att.file_path), '_blank')}
+                          >
+                            <Download className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive"
+                            onClick={() => deleteAttachment.mutate({ id: att.id, filePath: att.file_path, opportunityId: opportunity.id })}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          ) : (
+            <Card>
+              <CardContent className="py-8 text-center">
+                <Paperclip className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                <p className="text-muted-foreground">Nenhum arquivo anexado</p>
+                <p className="text-xs text-muted-foreground mt-1">Anexe propostas, contratos e outros materiais</p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
       </Tabs>
+
+      {/* Reject Dialog */}
+      <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Rejeitar Oportunidade</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Informe o motivo da rejeição desta oportunidade. Ela será movida para "Fechado Perdeu".
+            </p>
+            <Textarea
+              placeholder="Motivo da rejeição..."
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              rows={4}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowRejectDialog(false)}>Cancelar</Button>
+            <Button variant="destructive" onClick={handleReject} disabled={!rejectReason.trim() || updateOpportunity.isPending}>
+              Confirmar Rejeição
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Activity Dialog */}
       <ActivityDialog 
