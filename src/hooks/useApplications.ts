@@ -287,3 +287,39 @@ export function useDeleteApplication() {
     },
   });
 }
+
+export function useApplicationHistory(applicationId: string | undefined) {
+  return useQuery({
+    queryKey: ['application-history', applicationId],
+    enabled: !!applicationId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('application_history')
+        .select('*')
+        .eq('application_id', applicationId!)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+
+      // Fetch stage names
+      const stageIds = [...new Set([
+        ...data.map(h => h.from_stage_id).filter(Boolean),
+        ...data.map(h => h.to_stage_id).filter(Boolean),
+      ])] as string[];
+
+      let stageMap = new Map<string, string>();
+      if (stageIds.length > 0) {
+        const { data: stages } = await supabase
+          .from('job_pipeline_stages')
+          .select('id, name')
+          .in('id', stageIds);
+        stageMap = new Map((stages || []).map(s => [s.id, s.name]));
+      }
+
+      return data.map(h => ({
+        ...h,
+        _from_stage_name: h.from_stage_id ? stageMap.get(h.from_stage_id) || null : null,
+        _to_stage_name: h.to_stage_id ? stageMap.get(h.to_stage_id) || null : null,
+      }));
+    },
+  });
+}
