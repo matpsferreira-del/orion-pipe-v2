@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Globe, Mail, Phone, User, Target, Receipt, Building2, Plus, Calendar, Clock, MessageSquare, PhoneCall, Send, FileText, MoreHorizontal, CheckCircle2, Network } from 'lucide-react';
+import { Globe, Mail, Phone, User, Target, Receipt, Building2, Plus, Calendar, Clock, MessageSquare, PhoneCall, Send, FileText, MoreHorizontal, CheckCircle2, Network, Paperclip } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { pipelineStages } from '@/data/mockData';
 import { format, isToday, isTomorrow, isPast } from 'date-fns';
@@ -410,24 +410,35 @@ export function CompanyDetail({ company, contacts, opportunities, invoices, prof
             <div className="space-y-3">
               {companyOpportunities.map(opp => {
                 const stage = pipelineStages.find(s => s.key === opp.stage);
+                const oppResponsavel = profiles.find(p => p.id === opp.responsavel_id);
+                const isLost = opp.stage === 'fechado_perdeu';
+                const isWon = opp.stage === 'fechado_ganhou';
                 return (
-                  <Card key={opp.id}>
+                  <Card key={opp.id} className={cn(isLost && 'opacity-60')}>
                     <CardContent className="py-4">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <Target className="h-5 w-5 text-primary" />
+                          <Target className={cn("h-5 w-5", isWon ? "text-success" : isLost ? "text-destructive" : "text-primary")} />
                           <div>
                             <p className="font-medium">{formatCurrency(Number(opp.valor_potencial))}</p>
-                            <p className="text-sm text-muted-foreground">{opp.probabilidade}% de probabilidade</p>
+                            <p className="text-sm text-muted-foreground">{opp.probabilidade}% • {opp.tipo_servico}</p>
                           </div>
                         </div>
                         <div className="text-right">
-                          <Badge variant="outline">{stage?.label || opp.stage}</Badge>
+                          <Badge variant={isLost ? 'destructive' : isWon ? 'default' : 'outline'}>
+                            {stage?.label || opp.stage}
+                          </Badge>
                           <p className="text-xs text-muted-foreground mt-1">
-                            Previsão: {formatDate(opp.data_previsao_fechamento)}
+                            {formatDate(opp.data_previsao_fechamento)}
                           </p>
+                          {oppResponsavel && (
+                            <p className="text-xs text-muted-foreground">{oppResponsavel.name}</p>
+                          )}
                         </div>
                       </div>
+                      {opp.observacoes && (
+                        <p className="text-xs text-muted-foreground mt-2 line-clamp-2">{opp.observacoes}</p>
+                      )}
                     </CardContent>
                   </Card>
                 );
