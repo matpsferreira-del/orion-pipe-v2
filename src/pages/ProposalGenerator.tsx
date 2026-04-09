@@ -92,6 +92,9 @@ export default function ProposalGenerator() {
   const [feeP3, setFeeP3] = useState('40%');
   const [isExporting, setIsExporting] = useState(false);
   const [proposalMode, setProposalMode] = useState<'simples' | 'completa'>('simples');
+  const [showSimulation, setShowSimulation] = useState(false);
+  const [simSalary, setSimSalary] = useState('');
+  const [simBonus, setSimBonus] = useState('');
 
   // ── Editable content for complete mode ──
   const [aboutText1, setAboutText1] = useState('Somos uma consultoria especializada em recrutamento estratégico com atuação nacional. Unimos inteligência de mercado, hunting ativo e tecnologia para conectar empresas aos profissionais certos — com velocidade, precisão e confidencialidade.');
