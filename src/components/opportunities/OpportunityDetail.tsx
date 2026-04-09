@@ -1,5 +1,4 @@
-import { useState, useRef } from 'react';
-import { createPortal } from 'react-dom';
+import { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -15,16 +14,16 @@ import { useContacts } from '@/hooks/useContacts';
 import { useProfiles } from '@/hooks/useProfiles';
 import { useActivitiesByOpportunity } from '@/hooks/useActivities';
 import { useOpportunityAttachments, useUploadOpportunityAttachment, useDeleteOpportunityAttachment, getAttachmentUrl } from '@/hooks/useOpportunityAttachments';
-import { ActivityDialog } from '@/components/activities/ActivityDialog';
-import { JobDialog } from '@/components/jobs/JobDialog';
 import { pipelineStages } from '@/data/mockData';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useAuth } from '@/contexts/AuthContext';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 
 interface OpportunityDetailProps {
   opportunity: OpportunityRow;
+  onOpenActivityDialog?: () => void;
+  onOpenJobDialog?: () => void;
+  onOpenRejectDialog?: () => void;
 }
 
 const sourceLabels: Record<string, string> = {
@@ -61,11 +60,7 @@ function formatFileSize(bytes: number | null) {
   return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
 }
 
-export function OpportunityDetail({ opportunity }: OpportunityDetailProps) {
-  const [showActivityDialog, setShowActivityDialog] = useState(false);
-  const [showJobDialog, setShowJobDialog] = useState(false);
-  const [showRejectDialog, setShowRejectDialog] = useState(false);
-  const [rejectReason, setRejectReason] = useState('');
+export function OpportunityDetail({ opportunity, onOpenActivityDialog, onOpenJobDialog, onOpenRejectDialog }: OpportunityDetailProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const { profile } = useAuth();
@@ -111,18 +106,6 @@ export function OpportunityDetail({ opportunity }: OpportunityDetailProps) {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const handleReject = async () => {
-    await updateOpportunity.mutateAsync({
-      id: opportunity.id,
-      data: {
-        stage: 'fechado_perdeu',
-        observacoes: (opportunity.observacoes || '') + `\n[Rejeitada] ${rejectReason}`.trim(),
-      } as any,
-    });
-    setShowRejectDialog(false);
-    setRejectReason('');
-  };
-
   const isRejected = opportunity.stage === 'fechado_perdeu';
 
   return (
@@ -146,7 +129,7 @@ export function OpportunityDetail({ opportunity }: OpportunityDetailProps) {
             <Button
               variant="destructive"
               size="sm"
-              onClick={() => setShowRejectDialog(true)}
+              onClick={() => onOpenRejectDialog?.()}
             >
               <XCircle className="h-4 w-4 mr-1" />
               Rejeitar
@@ -155,7 +138,7 @@ export function OpportunityDetail({ opportunity }: OpportunityDetailProps) {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setShowJobDialog(true)}
+            onClick={() => onOpenJobDialog?.()}
           >
             <Briefcase className="h-4 w-4 mr-1" />
             {isOutplacement ? 'Criar Projeto' : 'Criar Vaga'}
@@ -376,7 +359,7 @@ export function OpportunityDetail({ opportunity }: OpportunityDetailProps) {
         <TabsContent value="activities" className="mt-4">
           <div className="flex justify-between items-center mb-4">
             <h4 className="text-sm font-medium">Histórico de Atividades</h4>
-            <Button size="sm" onClick={() => setShowActivityDialog(true)}>
+            <Button size="sm" onClick={() => onOpenActivityDialog?.()}>
               <Plus className="h-4 w-4 mr-1" />
               Nova Atividade
             </Button>
@@ -501,57 +484,6 @@ export function OpportunityDetail({ opportunity }: OpportunityDetailProps) {
         </TabsContent>
       </Tabs>
 
-      {/* Portaled dialogs to prevent Sheet nesting infinite loop */}
-      {createPortal(
-        <>
-          <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Rejeitar Oportunidade</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  Informe o motivo da rejeição desta oportunidade. Ela será movida para "Fechado Perdeu".
-                </p>
-                <Textarea
-                  placeholder="Motivo da rejeição..."
-                  value={rejectReason}
-                  onChange={(e) => setRejectReason(e.target.value)}
-                  rows={4}
-                />
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setShowRejectDialog(false)}>Cancelar</Button>
-                <Button variant="destructive" onClick={handleReject} disabled={!rejectReason.trim() || updateOpportunity.isPending}>
-                  Confirmar Rejeição
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-
-          <ActivityDialog 
-            open={showActivityDialog} 
-            onOpenChange={setShowActivityDialog}
-            preSelectedCompanyId={opportunity.company_id}
-            preSelectedOpportunityId={opportunity.id}
-          />
-
-          <JobDialog
-            open={showJobDialog}
-            onOpenChange={setShowJobDialog}
-            preSelectedCompanyId={opportunity.company_id || undefined}
-            preSelectedContactId={opportunity.contact_id || undefined}
-            preSelectedResponsavelId={opportunity.responsavel_id}
-            preSelectedOpportunityId={opportunity.id}
-            isOutplacementProject={isOutplacement}
-            outplacementClientName={isOutplacement && !opportunity.company_id
-              ? (opportunity.observacoes?.match(/\[PF: (.+?)\]/)?.[1] || '')
-              : undefined
-            }
-          />
-        </>,
-        document.body
-      )}
     </div>
   );
 }
