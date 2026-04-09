@@ -309,10 +309,80 @@ export default function Oportunidades() {
             <SheetTitle>Detalhes da Oportunidade</SheetTitle>
           </SheetHeader>
           {selectedOpportunity && (
-            <OpportunityDetail opportunity={selectedOpportunity} />
+            <OpportunityDetail
+              opportunity={selectedOpportunity}
+              onOpenActivityDialog={() => setShowActivityDialog(true)}
+              onOpenJobDialog={() => setShowJobDialog(true)}
+              onOpenRejectDialog={() => setShowRejectDialog(true)}
+            />
           )}
         </SheetContent>
       </Sheet>
+
+      {/* Dialogs rendered outside Sheet to prevent Radix nesting issues */}
+      <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Rejeitar Oportunidade</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Informe o motivo da rejeição desta oportunidade. Ela será movida para "Fechado Perdeu".
+            </p>
+            <Textarea
+              placeholder="Motivo da rejeição..."
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              rows={4}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowRejectDialog(false)}>Cancelar</Button>
+            <Button
+              variant="destructive"
+              disabled={!rejectReason.trim() || updateOpportunity.isPending}
+              onClick={async () => {
+                if (!selectedOpportunity) return;
+                await updateOpportunity.mutateAsync({
+                  id: selectedOpportunity.id,
+                  data: {
+                    stage: 'fechado_perdeu',
+                    observacoes: (selectedOpportunity.observacoes || '') + `\n[Rejeitada] ${rejectReason}`.trim(),
+                  } as any,
+                });
+                setShowRejectDialog(false);
+                setRejectReason('');
+              }}
+            >
+              Confirmar Rejeição
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {selectedOpportunity && (
+        <>
+          <ActivityDialog
+            open={showActivityDialog}
+            onOpenChange={setShowActivityDialog}
+            preSelectedCompanyId={selectedOpportunity.company_id}
+            preSelectedOpportunityId={selectedOpportunity.id}
+          />
+          <JobDialog
+            open={showJobDialog}
+            onOpenChange={setShowJobDialog}
+            preSelectedCompanyId={selectedOpportunity.company_id || undefined}
+            preSelectedContactId={selectedOpportunity.contact_id || undefined}
+            preSelectedResponsavelId={selectedOpportunity.responsavel_id}
+            preSelectedOpportunityId={selectedOpportunity.id}
+            isOutplacementProject={selectedOpportunity.tipo_servico === 'outplacement'}
+            outplacementClientName={selectedOpportunity.tipo_servico === 'outplacement' && !selectedOpportunity.company_id
+              ? (selectedOpportunity.observacoes?.match(/\[PF: (.+?)\]/)?.[1] || '')
+              : undefined
+            }
+          />
+        </>
+      )}
 
       <OpportunityDialog open={showNewDialog} onOpenChange={setShowNewDialog} />
       <OpportunityDialog
