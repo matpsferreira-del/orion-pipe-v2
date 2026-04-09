@@ -62,6 +62,8 @@ export default function Oportunidades() {
   const [showJobDialog, setShowJobDialog] = useState(false);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
+
+  const { data: opportunities = [], isLoading } = useOpportunities();
   const { data: companies = [] } = useCompanies();
   const { data: contacts = [] } = useContacts();
   const { data: profiles = [] } = useProfiles();
