@@ -321,6 +321,27 @@ export default function ProposalGenerator() {
                 {paymentModel === 'retainer' && <RetainerInputs retainerType={retainerType} onRetainerChange={handleRetainerChange} feeP1={feeP1} setFeeP1={setFeeP1} feeP2={feeP2} setFeeP2={setFeeP2} feeP3={feeP3} setFeeP3={setFeeP3} />}
               </div>
             )}
+
+            {/* ── Simulação de Valores ── */}
+            <div className="space-y-3 mt-2">
+              <div className="flex items-center justify-between">
+                <label className="text-xs text-slate-400">Mostrar Simulação com Valores</label>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" checked={showSimulation} onChange={e => setShowSimulation(e.target.checked)} className="sr-only peer" />
+                  <div className="w-9 h-5 bg-slate-700 peer-checked:bg-cyan-600 rounded-full peer after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-full"></div>
+                </label>
+              </div>
+              {showSimulation && (
+                <div className="space-y-2">
+                  <div><label className="text-xs text-slate-400 mb-1 block">Remuneração Mensal (R$)</label>
+                    <input type="text" value={simSalary} onChange={e => setSimSalary(e.target.value)} className={inputCls} placeholder="Ex: 15000" />
+                  </div>
+                  <div><label className="text-xs text-slate-400 mb-1 block">Bônus Anual (R$)</label>
+                    <input type="text" value={simBonus} onChange={e => setSimBonus(e.target.value)} className={inputCls} placeholder="Ex: 30000 (opcional)" />
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           <hr className="border-slate-700/50" />
