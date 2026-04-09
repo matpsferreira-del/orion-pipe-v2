@@ -14,9 +14,9 @@ Deno.serve(async (req) => {
     const {
       job_slug, full_name, email, phone, linkedin_url, city, state,
       salary_expectation, notes,
-      // CV structured data from external site
       cv_experiences, cv_skills, cv_education,
       parsed_summary, total_exp_years, current_title, current_company,
+      questionnaire_answers,
     } = await req.json();
 
     // Validação básica
@@ -189,6 +189,27 @@ Deno.serve(async (req) => {
         JSON.stringify({ error: 'Erro ao registrar candidatura' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+
+    // 7. Save questionnaire answers if provided
+    if (questionnaire_answers && Array.isArray(questionnaire_answers) && questionnaire_answers.length > 0) {
+      const rows = questionnaire_answers
+        .filter((a: any) => a.question_id && (a.answer_text || a.answer_option))
+        .map((a: any) => ({
+          application_id: application.id,
+          question_id: a.question_id,
+          answer_text: a.answer_text || null,
+          answer_option: a.answer_option || null,
+        }));
+
+      if (rows.length > 0) {
+        const { error: qrError } = await supabaseAdmin
+          .from('questionnaire_responses')
+          .insert(rows);
+        if (qrError) {
+          console.error('questionnaire_responses insert error:', qrError);
+        }
+      }
     }
 
     return new Response(
