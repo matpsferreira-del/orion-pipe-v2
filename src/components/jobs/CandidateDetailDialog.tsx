@@ -51,8 +51,8 @@ function QuestionnaireResponsesSection({ applicationId }: { applicationId: strin
   );
 }
 
-
-  interface CandidateDetailDialogProps {
+interface CandidateDetailDialogProps {
+  open: boolean;
   onOpenChange: (open: boolean) => void;
   application: ApplicationWithRelations | null;
   stages: JobPipelineStage[];
