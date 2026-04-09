@@ -15,3 +15,5 @@ project_id = "ocrsfcjiutvojzdfotou"
     verify_jwt = false
   [functions.send-gmail]
     verify_jwt = false
+  [functions.get-job-questions]
+    verify_jwt = false

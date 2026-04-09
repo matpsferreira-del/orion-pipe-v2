@@ -22,6 +22,7 @@ import RecrutamentoDashboard from "./pages/RecrutamentoDashboard";
 import MapeamentoVagas from "./pages/MapeamentoVagas";
 import MapComercial from "./pages/MapComercial";
 import ShortlistPresentation from "./pages/ShortlistPresentation";
+import QuestionnaireBuilder from "./pages/QuestionnaireBuilder";
 import PostGenerator from "./pages/PostGenerator";
 // @ts-ignore
 import FormatacaoCV from "./pages/FormatacaoCV";
@@ -113,6 +114,7 @@ const App = () => (
               <Route path="/recrutamento" element={<RecrutamentoDashboard />} />
               <Route path="/vagas" element={<Vagas />} />
               <Route path="/jobs/:id/shortlist-presentation" element={<ShortlistPresentation />} />
+              <Route path="/vagas/:jobId/questionario" element={<QuestionnaireBuilder />} />
               <Route path="/formatacao-cv" element={<FormatacaoCV />} />
               <Route path="/oportunidades" element={<Oportunidades />} />
               <Route path="/oportunidades/:id/proposta" element={<ProposalGenerator />} />

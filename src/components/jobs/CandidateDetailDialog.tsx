@@ -11,8 +11,9 @@ import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
   Mail, Phone, Linkedin, Star, ExternalLink, 
-  CheckCircle, XCircle, UserMinus, DollarSign, FileText, RotateCcw, ImageIcon
+  CheckCircle, XCircle, UserMinus, DollarSign, FileText, RotateCcw, ImageIcon, ClipboardList
 } from 'lucide-react';
+import { useQuestionnaireResponses } from '@/hooks/useJobQuestions';
 import { 
   ApplicationWithRelations, JobPipelineStage, 
   applicationStatusLabels, ApplicationStatus, sourceLabels 
@@ -22,6 +23,33 @@ import { useUpdateApplication, useUpdateApplicationStatus, useUpdateApplicationS
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { ComposeEmailDialog } from '@/components/email/ComposeEmailDialog';
+
+function QuestionnaireResponsesSection({ applicationId }: { applicationId: string }) {
+  const { data: responses, isLoading } = useQuestionnaireResponses(applicationId);
+
+  if (isLoading) return null;
+  if (!responses || responses.length === 0) return null;
+
+  return (
+    <div>
+      <div className="flex items-center gap-2 mb-3">
+        <ClipboardList className="h-4 w-4 text-primary" />
+        <Label className="text-sm font-semibold">Respostas do Questionário</Label>
+      </div>
+      <div className="space-y-3 text-sm">
+        {responses.map((r: any) => (
+          <div key={r.id} className="space-y-1">
+            <p className="font-medium text-foreground">{r.job_questions?.question_text}</p>
+            <p className="text-muted-foreground pl-3 border-l-2 border-primary/20">
+              {r.answer_text || (r.answer_option ? (Array.isArray(r.answer_option) ? r.answer_option.join(', ') : String(r.answer_option)) : '—')}
+            </p>
+          </div>
+        ))}
+      </div>
+      <Separator className="mt-3" />
+    </div>
+  );
+}
 
 interface CandidateDetailDialogProps {
   open: boolean;
@@ -336,6 +364,9 @@ export function CandidateDetailDialog({
               Salvar Dados
             </Button>
           </div>
+
+          {/* Questionnaire Responses */}
+          <QuestionnaireResponsesSection applicationId={application.id} />
 
           {/* CV Data */}
           <div>
