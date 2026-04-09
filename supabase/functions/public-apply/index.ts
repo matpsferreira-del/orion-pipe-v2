@@ -194,7 +194,7 @@ Deno.serve(async (req) => {
           source: 'website',
           status: 'new',
           stage_id: candidaturaStage?.id || null,
-          salary_expectation: salary_expectation || null,
+          salary_expectation: salary_expectation ? (isNaN(Number(String(salary_expectation).replace(/[^\d.,]/g, '').replace(',', '.'))) ? null : Number(String(salary_expectation).replace(/[^\d.,]/g, '').replace(',', '.'))) : null,
           notes: notes || null,
         })
         .select('id')
