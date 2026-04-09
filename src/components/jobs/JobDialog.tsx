@@ -226,7 +226,7 @@ export function JobDialog({ open, onOpenChange, job, preSelectedCompanyId, preSe
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange} modal={false}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{isEditing ? (isOutplacementProject ? 'Editar Projeto' : 'Editar Vaga') : (isOutplacementProject ? 'Novo Projeto de Outplacement' : 'Nova Vaga')}</DialogTitle>
