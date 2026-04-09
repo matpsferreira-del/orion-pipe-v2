@@ -232,8 +232,10 @@ Deno.serve(async (req) => {
       JSON.stringify({
         success: true,
         application_id: application.id,
-        already_applied: false,
-        message: 'Candidatura enviada com sucesso!'
+        already_applied: !!existing,
+        message: existing
+          ? 'Seus dados foram atualizados com sucesso!'
+          : 'Candidatura enviada com sucesso!'
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
