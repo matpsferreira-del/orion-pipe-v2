@@ -12,6 +12,10 @@ import { useCompanies } from '@/hooks/useCompanies';
 import { useContacts } from '@/hooks/useContacts';
 import { useProfiles } from '@/hooks/useProfiles';
 import { OpportunityDialog } from '@/components/opportunities/OpportunityDialog';
+import { ActivityDialog } from '@/components/activities/ActivityDialog';
+import { JobDialog } from '@/components/jobs/JobDialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 import { Plus, Search, Filter, MoreHorizontal, Target, Eye, Pencil, Trash2, Download, Loader2, Presentation, XCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -54,8 +58,10 @@ export default function Oportunidades() {
   const [selectedOpportunity, setSelectedOpportunity] = useState<OpportunityRow | null>(null);
   const [editingOpportunity, setEditingOpportunity] = useState<OpportunityRow | null>(null);
   const [showNewDialog, setShowNewDialog] = useState(false);
-
-  const { data: opportunities = [], isLoading } = useOpportunities();
+  const [showActivityDialog, setShowActivityDialog] = useState(false);
+  const [showJobDialog, setShowJobDialog] = useState(false);
+  const [showRejectDialog, setShowRejectDialog] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
   const { data: companies = [] } = useCompanies();
   const { data: contacts = [] } = useContacts();
   const { data: profiles = [] } = useProfiles();
