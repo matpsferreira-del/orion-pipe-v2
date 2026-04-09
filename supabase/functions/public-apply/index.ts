@@ -170,7 +170,10 @@ Deno.serve(async (req) => {
     if (existing) {
       // Atualiza dados da candidatura existente SEM alterar a etapa
       const updatePayload: Record<string, unknown> = {};
-      if (salary_expectation) updatePayload.salary_expectation = salary_expectation;
+      if (salary_expectation) {
+        const parsed = Number(String(salary_expectation).replace(/[^\d.,]/g, '').replace(',', '.'));
+        updatePayload.salary_expectation = isNaN(parsed) ? null : parsed;
+      }
       if (notes) updatePayload.notes = notes;
 
       if (Object.keys(updatePayload).length > 0) {
@@ -191,7 +194,7 @@ Deno.serve(async (req) => {
           source: 'website',
           status: 'new',
           stage_id: candidaturaStage?.id || null,
-          salary_expectation: salary_expectation || null,
+          salary_expectation: salary_expectation ? (isNaN(Number(String(salary_expectation).replace(/[^\d.,]/g, '').replace(',', '.'))) ? null : Number(String(salary_expectation).replace(/[^\d.,]/g, '').replace(',', '.'))) : null,
           notes: notes || null,
         })
         .select('id')
