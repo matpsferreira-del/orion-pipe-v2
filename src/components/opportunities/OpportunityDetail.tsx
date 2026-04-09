@@ -60,11 +60,7 @@ function formatFileSize(bytes: number | null) {
   return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
 }
 
-export function OpportunityDetail({ opportunity }: OpportunityDetailProps) {
-  const [showActivityDialog, setShowActivityDialog] = useState(false);
-  const [showJobDialog, setShowJobDialog] = useState(false);
-  const [showRejectDialog, setShowRejectDialog] = useState(false);
-  const [rejectReason, setRejectReason] = useState('');
+export function OpportunityDetail({ opportunity, onOpenActivityDialog, onOpenJobDialog, onOpenRejectDialog }: OpportunityDetailProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const { profile } = useAuth();
