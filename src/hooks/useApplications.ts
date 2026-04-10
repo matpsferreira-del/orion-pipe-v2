@@ -15,12 +15,27 @@ export function useApplications(jobId?: string) {
       if (jobId) {
         return await fetchAllApplications(jobId) as ApplicationRow[];
       }
-      const { data, error } = await supabase
-        .from('applications')
-        .select('*')
-        .order('applied_at', { ascending: false });
-      if (error) throw error;
-      return data as ApplicationRow[];
+      // Fetch ALL applications with pagination
+      const allData: any[] = [];
+      let offset = 0;
+      const batchSize = 1000;
+      let hasMore = true;
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from('applications')
+          .select('*')
+          .order('applied_at', { ascending: false })
+          .range(offset, offset + batchSize - 1);
+        if (error) throw error;
+        if (data && data.length > 0) {
+          allData.push(...data);
+          offset += batchSize;
+          hasMore = data.length === batchSize;
+        } else {
+          hasMore = false;
+        }
+      }
+      return allData as ApplicationRow[];
     },
   });
 }
