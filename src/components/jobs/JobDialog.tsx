@@ -242,7 +242,7 @@ export function JobDialog({ open, onOpenChange, job, preSelectedCompanyId, preSe
 
             {/* Company */}
             <div>
-              <Label htmlFor="company_id">Empresa {isOutplacementProject ? '' : '*'}</Label>
+              <Label htmlFor="company_id">Empresa</Label>
               <Select
                 value={formData.company_id || 'none'}
                 onValueChange={(value) => setFormData({ ...formData, company_id: value === 'none' ? '' : value, contact_id: '' })}
