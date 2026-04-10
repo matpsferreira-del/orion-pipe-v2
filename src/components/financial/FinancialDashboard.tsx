@@ -41,19 +41,19 @@ export function FinancialDashboard({ year }: { year: number }) {
     if (filterMode === 'year') return transactions;
     if (filterMode === 'month') {
       return transactions.filter(t => {
-        const d = new Date(t.data_referencia);
+        const d = new Date(t[dateField]);
         return d.getMonth() === selectedMonth;
       });
     }
     // range
     if (!dateFrom && !dateTo) return transactions;
     return transactions.filter(t => {
-      const ref = t.data_referencia;
+      const ref = t[dateField];
       if (dateFrom && ref < dateFrom.toISOString().split('T')[0]) return false;
       if (dateTo && ref > dateTo.toISOString().split('T')[0]) return false;
       return true;
     });
-  }, [transactions, filterMode, selectedMonth, dateFrom, dateTo]);
+  }, [transactions, filterMode, selectedMonth, dateFrom, dateTo, dateField]);
 
   const kpis = useMemo(() => {
     const receita = filtered.filter(t => t.valor > 0).reduce((s, t) => s + Number(t.valor), 0);
