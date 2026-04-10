@@ -21,14 +21,18 @@ const formatCurrency = (value: number) =>
 const COLORS = ['hsl(189, 95%, 38%)', 'hsl(142, 71%, 45%)', 'hsl(38, 92%, 50%)', 'hsl(0, 72%, 50%)', 'hsl(262, 52%, 47%)', 'hsl(210, 40%, 50%)', 'hsl(330, 60%, 50%)', 'hsl(170, 60%, 40%)'];
 
 type FilterMode = 'year' | 'month' | 'range';
+type ViewMode = 'competencia' | 'caixa';
 
 export function FinancialDashboard({ year }: { year: number }) {
   const { data: transactions = [], isLoading } = useFinancialTransactions(year);
 
   const [filterMode, setFilterMode] = useState<FilterMode>('year');
+  const [viewMode, setViewMode] = useState<ViewMode>('competencia');
   const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth());
   const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
   const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
+
+  const dateField = viewMode === 'competencia' ? 'data_referencia' : 'data_vencimento';
 
   const today = new Date().toISOString().split('T')[0];
 
@@ -37,19 +41,19 @@ export function FinancialDashboard({ year }: { year: number }) {
     if (filterMode === 'year') return transactions;
     if (filterMode === 'month') {
       return transactions.filter(t => {
-        const d = new Date(t.data_referencia);
+        const d = new Date(t[dateField]);
         return d.getMonth() === selectedMonth;
       });
     }
     // range
     if (!dateFrom && !dateTo) return transactions;
     return transactions.filter(t => {
-      const ref = t.data_referencia;
+      const ref = t[dateField];
       if (dateFrom && ref < dateFrom.toISOString().split('T')[0]) return false;
       if (dateTo && ref > dateTo.toISOString().split('T')[0]) return false;
       return true;
     });
-  }, [transactions, filterMode, selectedMonth, dateFrom, dateTo]);
+  }, [transactions, filterMode, selectedMonth, dateFrom, dateTo, dateField]);
 
   const kpis = useMemo(() => {
     const receita = filtered.filter(t => t.valor > 0).reduce((s, t) => s + Number(t.valor), 0);
@@ -69,22 +73,22 @@ export function FinancialDashboard({ year }: { year: number }) {
 
   const barData = useMemo(() => {
     return MONTHS.map((m, i) => {
-      const monthTx = transactions.filter(t => new Date(t.data_referencia).getMonth() === i);
+      const monthTx = transactions.filter(t => new Date(t[dateField]).getMonth() === i);
       const receita = monthTx.filter(t => t.valor > 0).reduce((s, t) => s + Number(t.valor), 0);
       const despesas = monthTx.filter(t => t.valor < 0).reduce((s, t) => s + Math.abs(Number(t.valor)), 0);
       return { name: m, Receita: receita, Despesas: despesas };
     });
-  }, [transactions]);
+  }, [transactions, dateField]);
 
   const lineData = useMemo(() => {
     let acumulado = 0;
     return MONTHS.map((m, i) => {
-      const monthTx = transactions.filter(t => new Date(t.data_referencia).getMonth() === i);
+      const monthTx = transactions.filter(t => new Date(t[dateField]).getMonth() === i);
       const resultado = monthTx.reduce((s, t) => s + Number(t.valor), 0);
       acumulado += resultado;
       return { name: m, Acumulado: acumulado };
     });
-  }, [transactions]);
+  }, [transactions, dateField]);
 
   const pieData = useMemo(() => {
     const expenseTx = filtered.filter(t => t.valor < 0);
@@ -117,6 +121,24 @@ export function FinancialDashboard({ year }: { year: number }) {
       {/* Filter bar */}
       <Card>
         <CardContent className="py-3 flex flex-wrap items-center gap-3">
+          <div className="flex items-center rounded-md border border-input overflow-hidden">
+            <Button
+              variant={viewMode === 'competencia' ? 'default' : 'ghost'}
+              size="sm"
+              className="rounded-none"
+              onClick={() => setViewMode('competencia')}
+            >
+              Competência
+            </Button>
+            <Button
+              variant={viewMode === 'caixa' ? 'default' : 'ghost'}
+              size="sm"
+              className="rounded-none"
+              onClick={() => setViewMode('caixa')}
+            >
+              Caixa
+            </Button>
+          </div>
           <span className="text-sm font-medium text-muted-foreground">Filtrar por:</span>
           <Select value={filterMode} onValueChange={(v) => setFilterMode(v as FilterMode)}>
             <SelectTrigger className="w-[140px]">
