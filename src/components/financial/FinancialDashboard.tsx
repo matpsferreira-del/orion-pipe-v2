@@ -21,14 +21,18 @@ const formatCurrency = (value: number) =>
 const COLORS = ['hsl(189, 95%, 38%)', 'hsl(142, 71%, 45%)', 'hsl(38, 92%, 50%)', 'hsl(0, 72%, 50%)', 'hsl(262, 52%, 47%)', 'hsl(210, 40%, 50%)', 'hsl(330, 60%, 50%)', 'hsl(170, 60%, 40%)'];
 
 type FilterMode = 'year' | 'month' | 'range';
+type ViewMode = 'competencia' | 'caixa';
 
 export function FinancialDashboard({ year }: { year: number }) {
   const { data: transactions = [], isLoading } = useFinancialTransactions(year);
 
   const [filterMode, setFilterMode] = useState<FilterMode>('year');
+  const [viewMode, setViewMode] = useState<ViewMode>('competencia');
   const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth());
   const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
   const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
+
+  const dateField = viewMode === 'competencia' ? 'data_referencia' : 'data_vencimento';
 
   const today = new Date().toISOString().split('T')[0];
 
