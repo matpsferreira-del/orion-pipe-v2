@@ -178,11 +178,6 @@ export function JobDialog({ open, onOpenChange, job, preSelectedCompanyId, preSe
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!isOutplacementProject && !formData.company_id) {
-      toast.error('Preencha os campos obrigatórios');
-      return;
-    }
     if (!formData.title) {
       toast.error('Preencha o título');
       return;
@@ -195,7 +190,7 @@ export function JobDialog({ open, onOpenChange, job, preSelectedCompanyId, preSe
 
     try {
       const payload = {
-        company_id: isOutplacementProject ? (formData.company_id || null) : formData.company_id,
+        company_id: formData.company_id || null,
         contact_id: formData.contact_id || null,
         responsavel_id: formData.responsavel_id || null,
         title: formData.title,
@@ -247,7 +242,7 @@ export function JobDialog({ open, onOpenChange, job, preSelectedCompanyId, preSe
 
             {/* Company */}
             <div>
-              <Label htmlFor="company_id">Empresa {isOutplacementProject ? '' : '*'}</Label>
+              <Label htmlFor="company_id">Empresa</Label>
               <Select
                 value={formData.company_id || 'none'}
                 onValueChange={(value) => setFormData({ ...formData, company_id: value === 'none' ? '' : value, contact_id: '' })}
