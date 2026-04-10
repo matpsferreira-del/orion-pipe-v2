@@ -73,22 +73,22 @@ export function FinancialDashboard({ year }: { year: number }) {
 
   const barData = useMemo(() => {
     return MONTHS.map((m, i) => {
-      const monthTx = transactions.filter(t => new Date(t.data_referencia).getMonth() === i);
+      const monthTx = transactions.filter(t => new Date(t[dateField]).getMonth() === i);
       const receita = monthTx.filter(t => t.valor > 0).reduce((s, t) => s + Number(t.valor), 0);
       const despesas = monthTx.filter(t => t.valor < 0).reduce((s, t) => s + Math.abs(Number(t.valor)), 0);
       return { name: m, Receita: receita, Despesas: despesas };
     });
-  }, [transactions]);
+  }, [transactions, dateField]);
 
   const lineData = useMemo(() => {
     let acumulado = 0;
     return MONTHS.map((m, i) => {
-      const monthTx = transactions.filter(t => new Date(t.data_referencia).getMonth() === i);
+      const monthTx = transactions.filter(t => new Date(t[dateField]).getMonth() === i);
       const resultado = monthTx.reduce((s, t) => s + Number(t.valor), 0);
       acumulado += resultado;
       return { name: m, Acumulado: acumulado };
     });
-  }, [transactions]);
+  }, [transactions, dateField]);
 
   const pieData = useMemo(() => {
     const expenseTx = filtered.filter(t => t.valor < 0);
