@@ -121,6 +121,24 @@ export function FinancialDashboard({ year }: { year: number }) {
       {/* Filter bar */}
       <Card>
         <CardContent className="py-3 flex flex-wrap items-center gap-3">
+          <div className="flex items-center rounded-md border border-input overflow-hidden">
+            <Button
+              variant={viewMode === 'competencia' ? 'default' : 'ghost'}
+              size="sm"
+              className="rounded-none"
+              onClick={() => setViewMode('competencia')}
+            >
+              Competência
+            </Button>
+            <Button
+              variant={viewMode === 'caixa' ? 'default' : 'ghost'}
+              size="sm"
+              className="rounded-none"
+              onClick={() => setViewMode('caixa')}
+            >
+              Caixa
+            </Button>
+          </div>
           <span className="text-sm font-medium text-muted-foreground">Filtrar por:</span>
           <Select value={filterMode} onValueChange={(v) => setFilterMode(v as FilterMode)}>
             <SelectTrigger className="w-[140px]">
