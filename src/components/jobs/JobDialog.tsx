@@ -190,7 +190,7 @@ export function JobDialog({ open, onOpenChange, job, preSelectedCompanyId, preSe
 
     try {
       const payload = {
-        company_id: isOutplacementProject ? (formData.company_id || null) : formData.company_id,
+        company_id: formData.company_id || null,
         contact_id: formData.contact_id || null,
         responsavel_id: formData.responsavel_id || null,
         title: formData.title,
