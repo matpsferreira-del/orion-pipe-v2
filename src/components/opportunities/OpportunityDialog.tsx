@@ -50,8 +50,11 @@ export function OpportunityDialog({ open, onOpenChange, defaultCompanyId, opport
   const [tipoServico, setTipoServico] = useState('recrutamento_pontual');
   const [observacoes, setObservacoes] = useState('');
   const [nomeClientePF, setNomeClientePF] = useState('');
+  const [outplacementTipo, setOutplacementTipo] = useState<'pf' | 'pj'>('pf');
 
   const isOutplacement = tipoServico === 'outplacement';
+  const isOutplacementPF = isOutplacement && outplacementTipo === 'pf';
+  const isOutplacementPJ = isOutplacement && outplacementTipo === 'pj';
 
   const { profile } = useAuth();
   const { data: companies = [] } = useCompanies();
@@ -71,10 +74,14 @@ export function OpportunityDialog({ open, onOpenChange, defaultCompanyId, opport
       setOrigemLead(opportunity.origem_lead);
       setTipoServico(opportunity.tipo_servico);
       setObservacoes(opportunity.observacoes ?? '');
-      // For outplacement without company, extract name from observacoes if stored
-      if (opportunity.tipo_servico === 'outplacement' && !opportunity.company_id) {
-        const match = opportunity.observacoes?.match(/\[PF: (.+?)\]/);
-        if (match) setNomeClientePF(match[1]);
+      if (opportunity.tipo_servico === 'outplacement') {
+        if (opportunity.company_id) {
+          setOutplacementTipo('pj');
+        } else {
+          setOutplacementTipo('pf');
+          const match = opportunity.observacoes?.match(/\[PF: (.+?)\]/);
+          if (match) setNomeClientePF(match[1]);
+        }
       }
     } else {
       resetForm();
@@ -100,28 +107,27 @@ export function OpportunityDialog({ open, onOpenChange, defaultCompanyId, opport
     }
   }, [companyId, isEditing]);
 
-  // Clear company/contact when switching to outplacement
+  // Clear company/contact when switching to outplacement PF
   useEffect(() => {
-    if (isOutplacement && !isEditing) {
+    if (isOutplacementPF && !isEditing) {
       setCompanyId('');
       setContactId('');
     }
-  }, [tipoServico]);
+  }, [tipoServico, outplacementTipo]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
     // Build observacoes with PF name tag for outplacement
     let finalObs = observacoes || '';
-    if (isOutplacement && nomeClientePF) {
-      // Remove old PF tag if present
+    if (isOutplacementPF && nomeClientePF) {
       finalObs = finalObs.replace(/\[PF: .+?\]\s*/g, '').trim();
       finalObs = `[PF: ${nomeClientePF}] ${finalObs}`.trim();
     }
 
     const data: any = {
-      company_id: isOutplacement ? null : (companyId || null),
-      contact_id: isOutplacement ? null : (contactId || null),
+      company_id: isOutplacementPF ? null : (companyId || null),
+      contact_id: isOutplacementPF ? null : (contactId || null),
       responsavel_id: responsavelId,
       valor_potencial: parseFloat(valorPotencial) || 0,
       probabilidade: parseInt(probabilidade) || 0,
@@ -155,6 +161,7 @@ export function OpportunityDialog({ open, onOpenChange, defaultCompanyId, opport
     setTipoServico('recrutamento_pontual');
     setObservacoes('');
     setNomeClientePF('');
+    setOutplacementTipo('pf');
   };
 
   const isPending = createOpportunity.isPending || updateOpportunity.isPending;
@@ -201,22 +208,38 @@ export function OpportunityDialog({ open, onOpenChange, defaultCompanyId, opport
             </div>
           </div>
 
-          {/* Outplacement: Nome da Pessoa Física */}
+          {/* Outplacement: PF ou PJ */}
           {isOutplacement && (
-            <div className="space-y-2">
-              <Label htmlFor="nomeClientePF">Nome do Cliente (Pessoa Física) *</Label>
-              <Input
-                id="nomeClientePF"
-                placeholder="Nome completo do profissional"
-                value={nomeClientePF}
-                onChange={(e) => setNomeClientePF(e.target.value)}
-                required
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Tipo de Cliente *</Label>
+                <Select value={outplacementTipo} onValueChange={(v: 'pf' | 'pj') => setOutplacementTipo(v)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pf">Pessoa Física</SelectItem>
+                    <SelectItem value="pj">Pessoa Jurídica</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {isOutplacementPF && (
+                <div className="space-y-2">
+                  <Label htmlFor="nomeClientePF">Nome do Cliente (PF) *</Label>
+                  <Input
+                    id="nomeClientePF"
+                    placeholder="Nome completo do profissional"
+                    value={nomeClientePF}
+                    onChange={(e) => setNomeClientePF(e.target.value)}
+                    required
+                  />
+                </div>
+              )}
             </div>
           )}
 
-          {/* Company & Contact - hidden for outplacement */}
-          {!isOutplacement && (
+          {/* Company & Contact - hidden for outplacement PF */}
+          {!isOutplacementPF && (
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="company">Empresa *</Label>
