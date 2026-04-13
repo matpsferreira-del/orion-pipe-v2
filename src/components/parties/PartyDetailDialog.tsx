@@ -341,7 +341,10 @@ export function PartyDetailDialog({ partyId, open, onOpenChange }: PartyDetailDi
             )}
           </TabsContent>
 
-          <TabsContent value="ats" className="mt-4">
+          <TabsContent value="historico" className="mt-4">
+            <PartyHistoryTab partyId={party.id} email={party.email_raw} />
+          </TabsContent>
+
             {appsLoading ? (
               <div className="text-center py-8 text-muted-foreground">Carregando candidaturas...</div>
             ) : partyApplications && partyApplications.length > 0 ? (
