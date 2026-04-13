@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Printer, Upload, Trash2, FileDown, ArrowLeft } from 'lucide-react';
+import { Printer, Upload, Trash2, FileDown, ArrowLeft, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,6 +12,8 @@ import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import { toPng } from 'html-to-image';
 import jsPDF from 'jspdf';
+import { ComposeEmailDialog } from '@/components/email/ComposeEmailDialog';
+import type { EmailAttachment } from '@/hooks/useSendEmail';
 
 export default function CartaOferta() {
   const location = useLocation();
@@ -22,6 +24,7 @@ export default function CartaOferta() {
     companyName?: string;
     remuneration?: string;
     admissionDate?: string;
+    candidateEmail?: string;
   } | null;
 
   const [formData, setFormData] = useState({
@@ -40,6 +43,8 @@ export default function CartaOferta() {
 
   const [logo, setLogo] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+  const [emailAttachment, setEmailAttachment] = useState<EmailAttachment | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const documentRef = useRef<HTMLDivElement>(null);
 
@@ -61,22 +66,39 @@ export default function CartaOferta() {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const generatePDF = async () => {
-    if (!documentRef.current) return;
-    setIsGenerating(true);
+  const generatePDFDataUrl = async (): Promise<string | null> => {
+    if (!documentRef.current) return null;
 
+    const dataUrl = await toPng(documentRef.current, {
+      quality: 1,
+      pixelRatio: 2,
+      width: documentRef.current.scrollWidth,
+      height: documentRef.current.scrollHeight,
+    });
+
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const pdfW = 210;
+    const pdfH = 297;
+    pdf.addImage(dataUrl, 'PNG', 0, 0, pdfW, pdfH);
+    
+    // Return base64 of PDF
+    return pdf.output('datauristring');
+  };
+
+  const generatePDF = async () => {
+    setIsGenerating(true);
     try {
-      const dataUrl = await toPng(documentRef.current, {
-        quality: 1,
-        pixelRatio: 2,
-        width: documentRef.current.scrollWidth,
-        height: documentRef.current.scrollHeight,
-      });
+      const dataUri = await generatePDFDataUrl();
+      if (!dataUri) throw new Error('Falha na geração');
 
       const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-      const pdfW = 210;
-      const pdfH = 297;
-      pdf.addImage(dataUrl, 'PNG', 0, 0, pdfW, pdfH);
+      const imgDataUrl = await toPng(documentRef.current!, {
+        quality: 1,
+        pixelRatio: 2,
+        width: documentRef.current!.scrollWidth,
+        height: documentRef.current!.scrollHeight,
+      });
+      pdf.addImage(imgDataUrl, 'PNG', 0, 0, 210, 297);
       pdf.save(`Carta_Oferta_${formData.candidateName.replace(/\s+/g, '_')}.pdf`);
       toast.success('PDF gerado com sucesso!');
     } catch (error) {
@@ -86,6 +108,40 @@ export default function CartaOferta() {
       setIsGenerating(false);
     }
   };
+
+  const handleSendEmail = async () => {
+    setIsGenerating(true);
+    try {
+      if (!documentRef.current) throw new Error('Documento não encontrado');
+
+      const imgDataUrl = await toPng(documentRef.current, {
+        quality: 1,
+        pixelRatio: 2,
+        width: documentRef.current.scrollWidth,
+        height: documentRef.current.scrollHeight,
+      });
+
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      pdf.addImage(imgDataUrl, 'PNG', 0, 0, 210, 297);
+      const pdfBase64 = pdf.output('datauristring').split(',')[1];
+
+      const filename = `Carta_Oferta_${formData.candidateName.replace(/\s+/g, '_')}.pdf`;
+
+      setEmailAttachment({
+        filename,
+        mimeType: 'application/pdf',
+        base64Data: pdfBase64,
+      });
+      setEmailDialogOpen(true);
+    } catch (error) {
+      console.error('Erro ao preparar email:', error);
+      toast.error('Erro ao preparar carta oferta para envio.');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const candidateEmail = state?.candidateEmail || '';
 
   return (
     <div className="flex h-full print:block">
@@ -246,6 +302,10 @@ export default function CartaOferta() {
               )}
               Gerar PDF
             </Button>
+            <Button variant="secondary" onClick={handleSendEmail} disabled={isGenerating} className="w-full">
+              <Mail className="h-4 w-4 mr-2" />
+              Enviar por Email
+            </Button>
             <Button variant="outline" onClick={() => window.print()} className="w-full">
               <Printer className="h-4 w-4 mr-2" />
               Imprimir
@@ -376,6 +436,16 @@ export default function CartaOferta() {
           </div>
         </div>
       </div>
+
+      {/* Email Dialog */}
+      <ComposeEmailDialog
+        open={emailDialogOpen}
+        onOpenChange={setEmailDialogOpen}
+        defaultRecipients={candidateEmail ? [candidateEmail] : []}
+        defaultSubject={`Carta Oferta - ${formData.candidateName} - ${formData.companyName}`}
+        defaultBody={`<p>Prezado(a) ${formData.candidateName},</p><p>Segue em anexo a carta oferta para a posição de <strong>${formData.jobTitle}</strong> na <strong>${formData.companyName}</strong>.</p><p>Por favor, analise a proposta e nos retorne.</p><p>Atenciosamente,</p>`}
+        defaultAttachments={emailAttachment ? [emailAttachment] : []}
+      />
     </div>
   );
 }
