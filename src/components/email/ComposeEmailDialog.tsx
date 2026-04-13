@@ -320,10 +320,7 @@ export function ComposeEmailDialog({
                 <SelectItem value="none">Sem template</SelectItem>
                 {templates.map((template) => (
                   <SelectItem key={template.id} value={template.id}>
-                    <span className="flex items-center gap-2">
-                      {template.name}
-                      <Badge variant="outline" className="text-[10px]">{template.category}</Badge>
-                    </span>
+                    {template.name} ({template.category})
                   </SelectItem>
                 ))}
               </SelectContent>
