@@ -20,7 +20,8 @@ import {
 } from '@/components/ui/select';
 import { 
   Mail, Phone, Linkedin, MapPin, Calendar, Edit2, Save, X, 
-  UserPlus, Building2, Briefcase, FileText, Globe, ChevronDown, ChevronUp, ArrowRight
+  UserPlus, Building2, Briefcase, FileText, Globe, ChevronDown, ChevronUp, ArrowRight,
+  History, Send, GitBranch, UserCheck
 } from 'lucide-react';
 import { useParty, useUpdateParty, useAddPartyRole, useRemovePartyRole } from '@/hooks/useParties';
 import { PartyRoleType, partyRoleLabels, partyStatusLabels } from '@/types/party';
@@ -29,6 +30,7 @@ import { applicationStatusLabels, sourceLabels } from '@/types/ats';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { ComposeEmailDialog } from '@/components/email/ComposeEmailDialog';
+import { usePartyHistory, type PartyHistoryEvent } from '@/hooks/usePartyHistory';
 
 interface PartyDetailDialogProps {
   partyId: string | null;
