@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog';
@@ -11,10 +11,10 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Send, X, FileText, Eye, Edit } from 'lucide-react';
+import { Loader2, Send, X, FileText, Eye, Edit, Paperclip, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useEmailTemplates } from '@/hooks/useEmailTemplates';
-import { useSendEmail } from '@/hooks/useSendEmail';
+import { useSendEmail, type EmailAttachment } from '@/hooks/useSendEmail';
 import { useGmailConnection } from '@/hooks/useGmailConnection';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -26,6 +26,7 @@ interface ComposeEmailDialogProps {
   defaultBody?: string;
   variables?: Record<string, string>;
   recipientVariables?: Record<string, Record<string, string>>;
+  defaultAttachments?: EmailAttachment[];
 }
 
 function replaceVariables(text: string, vars: Record<string, string>): string {
@@ -40,6 +41,20 @@ function toHtmlBody(text: string): string {
   return text.includes('<') ? text : `<p>${text.replace(/\n/g, '<br/>')}</p>`;
 }
 
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      // Remove data URI prefix
+      const base64 = result.split(',')[1];
+      resolve(base64);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 export function ComposeEmailDialog({
   open,
   onOpenChange,
@@ -48,6 +63,7 @@ export function ComposeEmailDialog({
   defaultBody = '',
   variables = {},
   recipientVariables = {},
+  defaultAttachments = [],
 }: ComposeEmailDialogProps) {
   const [recipients, setRecipients] = useState<string[]>(defaultRecipients);
   const [recipientInput, setRecipientInput] = useState('');
@@ -56,6 +72,8 @@ export function ComposeEmailDialog({
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('none');
   const [activeTab, setActiveTab] = useState<string>('edit');
   const [previewRecipient, setPreviewRecipient] = useState(defaultRecipients[0] ?? '');
+  const [attachments, setAttachments] = useState<EmailAttachment[]>(defaultAttachments);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: templates = [] } = useEmailTemplates();
   const sendEmail = useSendEmail();
@@ -90,8 +108,9 @@ export function ComposeEmailDialog({
       setRecipientInput('');
       setActiveTab('edit');
       setPreviewRecipient(defaultRecipients[0] ?? '');
+      setAttachments(defaultAttachments);
     }
-  }, [open, defaultRecipients, defaultSubject, defaultBody]);
+  }, [open, defaultRecipients, defaultSubject, defaultBody, defaultAttachments]);
 
   useEffect(() => {
     if (!recipients.length) {
@@ -152,8 +171,42 @@ export function ComposeEmailDialog({
     setRecipients(recipients.filter((recipient) => recipient !== email));
   };
 
+  const handleFileAttach = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+
+    const maxSize = 20 * 1024 * 1024; // 20MB limit per file
+
+    for (const file of Array.from(files)) {
+      if (file.size > maxSize) {
+        toast.error(`Arquivo "${file.name}" excede o limite de 20MB.`);
+        continue;
+      }
+
+      try {
+        const base64Data = await fileToBase64(file);
+        setAttachments(prev => [...prev, {
+          filename: file.name,
+          mimeType: file.type || 'application/octet-stream',
+          base64Data,
+        }]);
+      } catch {
+        toast.error(`Erro ao ler arquivo "${file.name}".`);
+      }
+    }
+
+    // Reset input
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const removeAttachment = (index: number) => {
+    setAttachments(prev => prev.filter((_, i) => i !== index));
+  };
+
   const handleSend = async () => {
     if (!recipients.length) return;
+
+    const attachmentPayload = attachments.length > 0 ? attachments : undefined;
 
     if (hasRecipientSpecificVariables) {
       const payloads = recipients.map((recipient) => {
@@ -166,6 +219,7 @@ export function ComposeEmailDialog({
           subject: personalizedSubject,
           html_body: toHtmlBody(personalizedBody),
           template_id: selectedTemplateId !== 'none' ? selectedTemplateId : undefined,
+          attachments: attachmentPayload,
           valid: Boolean(personalizedSubject.trim() && plainBody),
         };
       });
@@ -210,6 +264,7 @@ export function ComposeEmailDialog({
         subject: resolvedSubject,
         html_body: toHtmlBody(resolvedBody),
         template_id: selectedTemplateId !== 'none' ? selectedTemplateId : undefined,
+        attachments: attachmentPayload,
       },
       { onSuccess: () => onOpenChange(false) },
     );
@@ -376,9 +431,62 @@ export function ComposeEmailDialog({
                     className="prose prose-sm max-w-none text-foreground [&_p]:my-1 [&_br]:leading-relaxed"
                     dangerouslySetInnerHTML={{ __html: previewHtml }}
                   />
+                  {attachments.length > 0 && (
+                    <div className="mt-3 pt-3 border-t space-y-1">
+                      <p className="text-xs text-muted-foreground font-medium">Anexos:</p>
+                      {attachments.map((att, i) => (
+                        <div key={i} className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <Paperclip className="h-3 w-3" />
+                          {att.filename}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </TabsContent>
             </Tabs>
+          </div>
+
+          {/* Attachments section */}
+          <div className="space-y-1.5">
+            <Label className="flex items-center gap-1">
+              <Paperclip className="h-3.5 w-3.5" />
+              Anexos
+            </Label>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              className="hidden"
+              onChange={handleFileAttach}
+            />
+            <div className="space-y-1">
+              {attachments.map((att, i) => (
+                <div key={i} className="flex items-center gap-2 rounded-md border border-input px-3 py-1.5 text-sm">
+                  <Paperclip className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                  <span className="truncate flex-1">{att.filename}</span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 text-destructive"
+                    onClick={() => removeAttachment(i)}
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <Paperclip className="h-3.5 w-3.5 mr-1.5" />
+              Anexar Arquivo
+            </Button>
+            <p className="text-[10px] text-muted-foreground">Máx. 20MB por arquivo.</p>
           </div>
         </div>
 

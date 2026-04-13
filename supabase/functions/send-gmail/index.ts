@@ -24,24 +24,44 @@ async function refreshAccessToken(refreshToken: string): Promise<{ access_token:
   return await res.json();
 }
 
-function buildRawEmail(from: string, to: string[], subject: string, htmlBody: string): string {
+interface Attachment {
+  filename: string;
+  mimeType: string;
+  base64Data: string;
+}
+
+function buildRawEmail(from: string, to: string[], subject: string, htmlBody: string, attachments?: Attachment[]): string {
   const boundary = "boundary_" + Date.now();
   const toHeader = to.join(", ");
 
-  const raw = [
+  const parts: string[] = [
     `From: ${from}`,
     `To: ${toHeader}`,
     `Subject: =?UTF-8?B?${btoa(unescape(encodeURIComponent(subject)))}?=`,
     `MIME-Version: 1.0`,
-    `Content-Type: multipart/alternative; boundary="${boundary}"`,
+    `Content-Type: multipart/mixed; boundary="${boundary}"`,
     ``,
     `--${boundary}`,
     `Content-Type: text/html; charset=UTF-8`,
     `Content-Transfer-Encoding: base64`,
     ``,
     btoa(unescape(encodeURIComponent(htmlBody))),
-    `--${boundary}--`,
-  ].join("\r\n");
+  ];
+
+  if (attachments && attachments.length > 0) {
+    for (const att of attachments) {
+      parts.push(`--${boundary}`);
+      parts.push(`Content-Type: ${att.mimeType}; name="=?UTF-8?B?${btoa(unescape(encodeURIComponent(att.filename)))}?="`);
+      parts.push(`Content-Disposition: attachment; filename="=?UTF-8?B?${btoa(unescape(encodeURIComponent(att.filename)))}?="`);
+      parts.push(`Content-Transfer-Encoding: base64`);
+      parts.push(``);
+      parts.push(att.base64Data);
+    }
+  }
+
+  parts.push(`--${boundary}--`);
+
+  const raw = parts.join("\r\n");
 
   // URL-safe base64
   return btoa(unescape(encodeURIComponent(raw)))
@@ -84,7 +104,7 @@ Deno.serve(async (req) => {
     const userId = claimsData.claims.sub;
 
     const body = await req.json();
-    const { recipients, subject, html_body, template_id } = body;
+    const { recipients, subject, html_body, template_id, attachments } = body;
 
     if (!recipients?.length || !subject || !html_body) {
       return new Response(
@@ -140,7 +160,7 @@ Deno.serve(async (req) => {
     const senderEmail = tokens.gmail_email || claimsData.claims.email;
 
     // Send email via Gmail API
-    const rawMessage = buildRawEmail(senderEmail, recipients, subject, html_body);
+    const rawMessage = buildRawEmail(senderEmail, recipients, subject, html_body, attachments);
 
     const gmailRes = await fetch(
       "https://gmail.googleapis.com/gmail/v1/users/me/messages/send",
@@ -169,7 +189,7 @@ Deno.serve(async (req) => {
       template_id: template_id || null,
       status,
       error_message: errorMessage,
-      metadata: JSON.stringify({ gmail_message_id: gmailData.id }),
+      metadata: JSON.stringify({ gmail_message_id: gmailData.id, has_attachments: !!(attachments?.length) }),
     });
 
     if (!gmailRes.ok) {
