@@ -40,6 +40,7 @@ export function OfferLetterPrompt({
           ? `R$ ${Number(application.salary_expectation).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
           : '',
         admissionDate: '',
+        candidateEmail: application?._party?.email_raw || '',
       },
     });
   };
