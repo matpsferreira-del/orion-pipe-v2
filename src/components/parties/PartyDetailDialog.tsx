@@ -192,6 +192,7 @@ export function PartyDetailDialog({ partyId, open, onOpenChange }: PartyDetailDi
         <Tabs defaultValue="info" className="mt-4">
           <TabsList>
             <TabsTrigger value="info">Informações</TabsTrigger>
+            <TabsTrigger value="historico">Histórico</TabsTrigger>
             <TabsTrigger value="ats">ATS</TabsTrigger>
             <TabsTrigger value="crm">CRM</TabsTrigger>
             <TabsTrigger value="files">Arquivos</TabsTrigger>
