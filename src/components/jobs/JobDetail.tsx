@@ -215,6 +215,7 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
     closingCandidateId: string | null;
     admissionDate: string | null;
     closingNotes: string;
+    bonusAnualFinal: number | null;
   }) => {
     try {
       // Update job with closing info + status
@@ -224,7 +225,39 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
         closing_candidate_id: data.closingCandidateId,
         admission_date: data.admissionDate,
         closing_notes: data.closingNotes,
+        bonus_anual_final: data.bonusAnualFinal,
       } as any);
+
+      // Create financial milestone if contract is configured
+      if (modeloContrato && (job as any).fee_percentual && data.closingSalary) {
+        const fee = Number((job as any).fee_percentual);
+        const salFinal = data.closingSalary;
+        const bonusFinal = data.bonusAnualFinal || 0;
+        const valorTotalFinal = calcTotal(modeloContrato, salFinal, bonusFinal, fee);
+        const totalJaFaturado = milestones
+          .filter(m => m.milestone_type !== 'ajuste_reconciliacao' && m.status !== 'cancelado')
+          .reduce((sum, m) => sum + m.valor, 0);
+
+        const faturaValor = needsReconciliation(modeloContrato)
+          ? valorTotalFinal - totalJaFaturado
+          : valorTotalFinal;
+
+        if (faturaValor !== 0) {
+          const today = new Date().toISOString().split('T')[0];
+          const milestoneType = needsReconciliation(modeloContrato) ? 'ajuste_reconciliacao' : 'finalizacao_vaga';
+          await createMilestone.mutateAsync({
+            job_id: job.id,
+            milestone_type: milestoneType as any,
+            valor: faturaValor,
+            description: `${needsReconciliation(modeloContrato) ? 'Ajuste de reconciliação' : 'Pagamento único'} — ${company?.nome_fantasia || ''}: ${job.title}`,
+            pacote: 'Receita de Serviços',
+            conta_contabil: isOutplacementProject ? 'Honorários de Outplacement' : 'Honorários de Recrutamento',
+            data_referencia: today,
+            data_vencimento: today,
+          });
+        }
+      }
+
       await updateStatus.mutateAsync({ id: job.id, status: 'filled' });
       setShowClosingDialog(false);
       toast.success('Vaga marcada como preenchida!');
