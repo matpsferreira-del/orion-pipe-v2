@@ -803,7 +803,19 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
         onConfirm={handleClosingConfirm}
         applications={applications}
         stages={stages}
-        isPending={updateJob.isPending || updateStatus.isPending}
+        isPending={updateJob.isPending || updateStatus.isPending || createMilestone.isPending}
+        modeloContrato={modeloContrato}
+        salarioMeta={(job as any).salario_meta}
+        bonusAnualMeta={(job as any).bonus_anual_meta}
+        feePercentual={(job as any).fee_percentual}
+        milestones={milestones}
+      />
+      {/* Contract Config Dialog */}
+      <ContractConfigDialog
+        open={showContractConfig}
+        onOpenChange={setShowContractConfig}
+        job={job}
+        companyName={company?.nome_fantasia}
       />
       {/* Offer Letter Prompt */}
       <OfferLetterPrompt
