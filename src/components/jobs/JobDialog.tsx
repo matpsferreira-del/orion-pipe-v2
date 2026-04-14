@@ -112,7 +112,7 @@ export function JobDialog({ open, onOpenChange, job, preSelectedCompanyId, preSe
     if (job) {
       const loc = parseLocation(job.location);
       setFormData({
-        company_id: job.company_id,
+        company_id: job.company_id || '',
         contact_id: job.contact_id || '',
         responsavel_id: job.responsavel_id || '',
         title: job.title,
