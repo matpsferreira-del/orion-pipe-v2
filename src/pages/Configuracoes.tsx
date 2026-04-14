@@ -9,15 +9,75 @@ import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Building2, Bell, Shield, Database, Mail, Settings, FileText, Plus, Pencil, Trash2 } from 'lucide-react';
+import { Building2, Bell, Shield, Database, Mail, Settings, FileText, Plus, Pencil, Trash2, GripVertical, Save, X, Check } from 'lucide-react';
 import { GmailConnectButton } from '@/components/email/GmailConnectButton';
 import { EmailTemplateDialog } from '@/components/email/EmailTemplateDialog';
 import { useEmailTemplates, useDeleteEmailTemplate, EmailTemplate } from '@/hooks/useEmailTemplates';
 import { useGmailConnection } from '@/hooks/useGmailConnection';
+import { toast } from 'sonner';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from '@/components/ui/dialog';
+
+// ---- Company Settings (localStorage-based) ----
+interface CompanySettings {
+  razaoSocial: string;
+  nomeFantasia: string;
+  cnpj: string;
+  telefone: string;
+  endereco: string;
+}
+
+const DEFAULT_COMPANY: CompanySettings = {
+  razaoSocial: '',
+  nomeFantasia: '',
+  cnpj: '',
+  telefone: '',
+  endereco: '',
+};
+
+function loadCompanySettings(): CompanySettings {
+  try {
+    const saved = localStorage.getItem('company_settings');
+    return saved ? { ...DEFAULT_COMPANY, ...JSON.parse(saved) } : DEFAULT_COMPANY;
+  } catch { return DEFAULT_COMPANY; }
+}
+
+function saveCompanySettings(s: CompanySettings) {
+  localStorage.setItem('company_settings', JSON.stringify(s));
+}
+
+// ---- Funnel Stages (localStorage-based) ----
+interface FunnelStage {
+  id: string;
+  name: string;
+}
+
+const DEFAULT_STAGES: FunnelStage[] = [
+  { id: '1', name: 'Lead Identificado' },
+  { id: '2', name: 'Contato Inicial' },
+  { id: '3', name: 'Diagnóstico (SPIN)' },
+  { id: '4', name: 'Proposta Enviada' },
+  { id: '5', name: 'Negociação' },
+  { id: '6', name: 'Fechado - Ganhou' },
+  { id: '7', name: 'Fechado - Perdeu' },
+  { id: '8', name: 'Pós-venda' },
+];
+
+function loadFunnelStages(): FunnelStage[] {
+  try {
+    const saved = localStorage.getItem('funnel_stages');
+    return saved ? JSON.parse(saved) : DEFAULT_STAGES;
+  } catch { return DEFAULT_STAGES; }
+}
+
+function saveFunnelStages(stages: FunnelStage[]) {
+  localStorage.setItem('funnel_stages', JSON.stringify(stages));
+}
 
 export default function Configuracoes() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -29,6 +89,16 @@ export default function Configuracoes() {
   const [templateToEdit, setTemplateToEdit] = useState<EmailTemplate | null>(null);
   const [templateToDelete, setTemplateToDelete] = useState<EmailTemplate | null>(null);
 
+  // Company settings
+  const [company, setCompany] = useState<CompanySettings>(loadCompanySettings);
+
+  // Funnel stages
+  const [stages, setStages] = useState<FunnelStage[]>(loadFunnelStages);
+  const [editingStageId, setEditingStageId] = useState<string | null>(null);
+  const [editingStageName, setEditingStageName] = useState('');
+  const [stageDialogOpen, setStageDialogOpen] = useState(false);
+  const [newStageName, setNewStageName] = useState('');
+
   // Handle Gmail OAuth callback
   useEffect(() => {
     const code = searchParams.get('code');
@@ -39,6 +109,46 @@ export default function Configuracoes() {
       });
     }
   }, [searchParams, handleCallback, setSearchParams]);
+
+  const handleSaveCompany = () => {
+    saveCompanySettings(company);
+    toast.success('Dados da empresa salvos com sucesso!');
+  };
+
+  const handleAddStage = () => {
+    if (!newStageName.trim()) return;
+    const newStage: FunnelStage = {
+      id: Date.now().toString(),
+      name: newStageName.trim(),
+    };
+    const updated = [...stages, newStage];
+    setStages(updated);
+    saveFunnelStages(updated);
+    setNewStageName('');
+    setStageDialogOpen(false);
+    toast.success('Etapa adicionada!');
+  };
+
+  const handleEditStage = (stage: FunnelStage) => {
+    setEditingStageId(stage.id);
+    setEditingStageName(stage.name);
+  };
+
+  const handleSaveStageEdit = (id: string) => {
+    if (!editingStageName.trim()) return;
+    const updated = stages.map(s => s.id === id ? { ...s, name: editingStageName.trim() } : s);
+    setStages(updated);
+    saveFunnelStages(updated);
+    setEditingStageId(null);
+    toast.success('Etapa atualizada!');
+  };
+
+  const handleDeleteStage = (id: string) => {
+    const updated = stages.filter(s => s.id !== id);
+    setStages(updated);
+    saveFunnelStages(updated);
+    toast.success('Etapa removida!');
+  };
 
   const categoryLabels: Record<string, string> = {
     recrutamento: 'Recrutamento',
@@ -77,28 +187,56 @@ export default function Configuracoes() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="razaoSocial">Razão Social</Label>
-                  <Input id="razaoSocial" defaultValue="Consultoria R&S Ltda" />
+                  <Input
+                    id="razaoSocial"
+                    value={company.razaoSocial}
+                    onChange={(e) => setCompany({ ...company, razaoSocial: e.target.value })}
+                    placeholder="Razão Social da empresa"
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="nomeFantasia">Nome Fantasia</Label>
-                  <Input id="nomeFantasia" defaultValue="RecruitCRM" />
+                  <Input
+                    id="nomeFantasia"
+                    value={company.nomeFantasia}
+                    onChange={(e) => setCompany({ ...company, nomeFantasia: e.target.value })}
+                    placeholder="Nome Fantasia"
+                  />
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="cnpj">CNPJ</Label>
-                  <Input id="cnpj" defaultValue="12.345.678/0001-90" />
+                  <Input
+                    id="cnpj"
+                    value={company.cnpj}
+                    onChange={(e) => setCompany({ ...company, cnpj: e.target.value })}
+                    placeholder="00.000.000/0001-00"
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="telefone">Telefone</Label>
-                  <Input id="telefone" defaultValue="(11) 99999-0000" />
+                  <Input
+                    id="telefone"
+                    value={company.telefone}
+                    onChange={(e) => setCompany({ ...company, telefone: e.target.value })}
+                    placeholder="(11) 99999-0000"
+                  />
                 </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="endereco">Endereço</Label>
-                <Input id="endereco" defaultValue="Av. Paulista, 1000 - São Paulo/SP" />
+                <Input
+                  id="endereco"
+                  value={company.endereco}
+                  onChange={(e) => setCompany({ ...company, endereco: e.target.value })}
+                  placeholder="Av. Paulista, 1000 - São Paulo/SP"
+                />
               </div>
-              <Button>Salvar Alterações</Button>
+              <Button onClick={handleSaveCompany}>
+                <Save className="h-4 w-4 mr-2" />
+                Salvar Alterações
+              </Button>
             </CardContent>
           </Card>
         </TabsContent>
@@ -115,19 +253,56 @@ export default function Configuracoes() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-3">
-                {['Lead Identificado', 'Contato Inicial', 'Diagnóstico (SPIN)', 'Proposta Enviada', 'Negociação', 'Fechado - Ganhou', 'Fechado - Perdeu', 'Pós-venda'].map((stage, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <span className="flex items-center justify-center w-6 h-6 bg-primary/10 text-primary rounded-full text-sm font-medium">
+                {stages.map((stage, index) => (
+                  <div key={stage.id} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <GripVertical className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                      <span className="flex items-center justify-center w-6 h-6 bg-primary/10 text-primary rounded-full text-sm font-medium flex-shrink-0">
                         {index + 1}
                       </span>
-                      <span className="text-sm sm:text-base">{stage}</span>
+                      {editingStageId === stage.id ? (
+                        <Input
+                          value={editingStageName}
+                          onChange={(e) => setEditingStageName(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleSaveStageEdit(stage.id);
+                            if (e.key === 'Escape') setEditingStageId(null);
+                          }}
+                          className="h-8 flex-1"
+                          autoFocus
+                        />
+                      ) : (
+                        <span className="text-sm sm:text-base">{stage.name}</span>
+                      )}
                     </div>
-                    <Button variant="ghost" size="sm">Editar</Button>
+                    <div className="flex items-center gap-1 ml-2">
+                      {editingStageId === stage.id ? (
+                        <>
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleSaveStageEdit(stage.id)}>
+                            <Check className="h-4 w-4 text-primary" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditingStageId(null)}>
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEditStage(stage)}>
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDeleteStage(stage.id)}>
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
-              <Button variant="outline">+ Adicionar Etapa</Button>
+              <Button variant="outline" onClick={() => setStageDialogOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Adicionar Etapa
+              </Button>
             </CardContent>
           </Card>
         </TabsContent>
@@ -233,7 +408,6 @@ export default function Configuracoes() {
 
         {/* ===== Integrações ===== */}
         <TabsContent value="integracao" className="mt-4 sm:mt-6 space-y-6">
-          {/* Gmail Integration Card */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -339,7 +513,7 @@ export default function Configuracoes() {
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir template?</AlertDialogTitle>
             <AlertDialogDescription>
-              O template "{templateToDelete?.name}" será excluído permanentemente.
+              O template &quot;{templateToDelete?.name}&quot; será excluído permanentemente.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -356,6 +530,29 @@ export default function Configuracoes() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Add Stage Dialog */}
+      <Dialog open={stageDialogOpen} onOpenChange={setStageDialogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Nova Etapa do Funil</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Label>Nome da Etapa</Label>
+            <Input
+              value={newStageName}
+              onChange={(e) => setNewStageName(e.target.value)}
+              placeholder="Ex: Qualificação"
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddStage(); } }}
+              autoFocus
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setStageDialogOpen(false)}>Cancelar</Button>
+            <Button onClick={handleAddStage} disabled={!newStageName.trim()}>Adicionar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

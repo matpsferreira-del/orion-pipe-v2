@@ -76,6 +76,7 @@ export function CandidateDetailDialog({
   const [phoneInput, setPhoneInput] = useState('');
   const [photoUrlInput, setPhotoUrlInput] = useState('');
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+  const [parentClosedForEmail, setParentClosedForEmail] = useState(false);
 
   // Reset state when application changes
   useEffect(() => {
@@ -186,7 +187,7 @@ export function CandidateDetailDialog({
               <div className="flex flex-wrap gap-2 mt-2">
                 {party?.email_raw && (
                   <button 
-                    onClick={() => setEmailDialogOpen(true)}
+                    onClick={() => { setParentClosedForEmail(true); onOpenChange(false); setTimeout(() => setEmailDialogOpen(true), 100); }}
                     className="flex items-center gap-1 text-xs text-primary hover:underline"
                   >
                     <Mail className="h-3 w-3" />
@@ -454,7 +455,13 @@ export function CandidateDetailDialog({
     {party?.email_raw && (
       <ComposeEmailDialog
         open={emailDialogOpen}
-        onOpenChange={setEmailDialogOpen}
+        onOpenChange={(isOpen) => {
+          setEmailDialogOpen(isOpen);
+          if (!isOpen && parentClosedForEmail) {
+            setParentClosedForEmail(false);
+            onOpenChange(true);
+          }
+        }}
         defaultRecipients={[party.email_raw]}
         variables={{ nome_candidato: party.full_name, nome_vaga: jobTitle }}
       />
