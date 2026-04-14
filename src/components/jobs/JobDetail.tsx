@@ -13,7 +13,10 @@ import * as XLSX from 'xlsx';
 import { JobRow, useUpdateJobStatus, useUpdateJob, useJobStages, usePublishJob } from '@/hooks/useJobs';
 import { useApplicationsWithParties, useUpdateApplicationStage } from '@/hooks/useApplications';
 import { JobClosingDialog } from './JobClosingDialog';
+import { ContractConfigDialog } from './ContractConfigDialog';
 import { useCompanies } from '@/hooks/useCompanies';
+import { useContractMilestones, useCreateMilestoneWithTransaction } from '@/hooks/useContractMilestones';
+import { ContractModel, contractModelLabels, calcTotal, needsReconciliation } from '@/types/contract';
 import { useProfiles } from '@/hooks/useProfiles';
 import { CandidateKanban } from './CandidateKanban';
 import { CandidateListView } from './CandidateListView';
@@ -46,6 +49,7 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
   const [selectedApplication, setSelectedApplication] = useState<ApplicationWithRelations | null>(null);
   const [showLinkedInPost, setShowLinkedInPost] = useState(false);
   const [showClosingDialog, setShowClosingDialog] = useState(false);
+  const [showContractConfig, setShowContractConfig] = useState(false);
   const [offerLetterApp, setOfferLetterApp] = useState<ApplicationWithRelations | null>(null);
   const [generatingShortlist, setGeneratingShortlist] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -68,6 +72,8 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
   const { data: profiles = [] } = useProfiles();
   const { data: stages = [] } = useJobStages(job.id);
   const { data: applications = [], isLoading: loadingApps } = useApplicationsWithParties(job.id);
+  const { data: milestones = [] } = useContractMilestones(job.id);
+  const createMilestone = useCreateMilestoneWithTransaction();
 
   const mapeadoStage = useMemo(() => stages.find(s => s.name.toLowerCase() === 'mapeado'), [stages]);
 
@@ -142,6 +148,7 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
   const company = companies.find(c => c.id === job.company_id);
   const responsavel = profiles.find(p => p.id === job.responsavel_id);
   const isOutplacementProject = !job.company_id;
+  const modeloContrato = (job as any).modelo_contrato as ContractModel | null;
 
   // Campos extras que vêm do banco mas não estão no tipo antigo
   const jobPublished = (job as any).published as boolean | undefined;
@@ -208,6 +215,7 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
     closingCandidateId: string | null;
     admissionDate: string | null;
     closingNotes: string;
+    bonusAnualFinal: number | null;
   }) => {
     try {
       // Update job with closing info + status
@@ -217,7 +225,39 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
         closing_candidate_id: data.closingCandidateId,
         admission_date: data.admissionDate,
         closing_notes: data.closingNotes,
+        bonus_anual_final: data.bonusAnualFinal,
       } as any);
+
+      // Create financial milestone if contract is configured
+      if (modeloContrato && (job as any).fee_percentual && data.closingSalary) {
+        const fee = Number((job as any).fee_percentual);
+        const salFinal = data.closingSalary;
+        const bonusFinal = data.bonusAnualFinal || 0;
+        const valorTotalFinal = calcTotal(modeloContrato, salFinal, bonusFinal, fee);
+        const totalJaFaturado = milestones
+          .filter(m => m.milestone_type !== 'ajuste_reconciliacao' && m.status !== 'cancelado')
+          .reduce((sum, m) => sum + m.valor, 0);
+
+        const faturaValor = needsReconciliation(modeloContrato)
+          ? valorTotalFinal - totalJaFaturado
+          : valorTotalFinal;
+
+        if (faturaValor !== 0) {
+          const today = new Date().toISOString().split('T')[0];
+          const milestoneType = needsReconciliation(modeloContrato) ? 'ajuste_reconciliacao' : 'finalizacao_vaga';
+          await createMilestone.mutateAsync({
+            job_id: job.id,
+            milestone_type: milestoneType as any,
+            valor: faturaValor,
+            description: `${needsReconciliation(modeloContrato) ? 'Ajuste de reconciliação' : 'Pagamento único'} — ${company?.nome_fantasia || ''}: ${job.title}`,
+            pacote: 'Receita de Serviços',
+            conta_contabil: isOutplacementProject ? 'Honorários de Outplacement' : 'Honorários de Recrutamento',
+            data_referencia: today,
+            data_vencimento: today,
+          });
+        }
+      }
+
       await updateStatus.mutateAsync({ id: job.id, status: 'filled' });
       setShowClosingDialog(false);
       toast.success('Vaga marcada como preenchida!');
@@ -333,6 +373,33 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
           : 'A Combinar',
       }));
 
+      // Trigger shortlist milestone if retainer configured with envio_shortlist
+      if (modeloContrato && (modeloContrato === 'retainer_mensal' || modeloContrato === 'retainer_anual')) {
+        const marcos = [
+          { marco: (job as any).retainer_marco_1, perc: Number((job as any).retainer_perc_1) },
+          { marco: (job as any).retainer_marco_2, perc: Number((job as any).retainer_perc_2) },
+          ...(((job as any).retainer_parcelas === '3x') ? [{ marco: (job as any).retainer_marco_3, perc: Number((job as any).retainer_perc_3) }] : []),
+        ];
+        const shortlistMarco = marcos.find(m => m.marco === 'envio_shortlist');
+        const alreadyExists = milestones.some(m => m.milestone_type === 'envio_shortlist');
+        if (shortlistMarco && !alreadyExists && (job as any).fee_percentual) {
+          const valorTotal = calcTotal(modeloContrato, Number((job as any).salario_meta) || 0, Number((job as any).bonus_anual_meta) || 0, Number((job as any).fee_percentual));
+          const parcelaValor = valorTotal * (shortlistMarco.perc / 100);
+          const today = new Date().toISOString().split('T')[0];
+          await createMilestone.mutateAsync({
+            job_id: job.id,
+            milestone_type: 'envio_shortlist',
+            percentage: shortlistMarco.perc,
+            valor: parcelaValor,
+            description: `Parcela Shortlist (${shortlistMarco.perc}%) — ${company?.nome_fantasia || ''}: ${job.title}`,
+            pacote: 'Receita de Serviços',
+            conta_contabil: 'Honorários de Recrutamento',
+            data_referencia: today,
+            data_vencimento: today,
+          });
+        }
+      }
+
       navigate(`/jobs/${job.id}/shortlist-presentation`, {
         state: {
           candidates: processedCandidates,
@@ -382,6 +449,12 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
             <Badge variant="outline" className={cn('text-xs', priorityColors[job.priority as JobPriority])}>
               {priorityLabels[job.priority as JobPriority]}
             </Badge>
+            {modeloContrato && (
+              <Badge variant="outline" className="text-xs border-blue-300 text-blue-700 bg-blue-50 dark:border-blue-700 dark:text-blue-400 dark:bg-blue-900/30 gap-1">
+                <FileText className="h-3 w-3" />
+                {contractModelLabels[modeloContrato]}
+              </Badge>
+            )}
             {jobPublished ? (
               <Badge variant="outline" className="text-xs border-primary/30 text-primary bg-primary/5 gap-1">
                 <Globe className="h-3 w-3" />
@@ -439,6 +512,10 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
               </Button>
             </>
           )}
+          <Button variant="outline" size="sm" onClick={() => setShowContractConfig(true)}>
+            <FileText className="h-4 w-4 mr-1" />
+            {modeloContrato ? contractModelLabels[modeloContrato] : 'Contrato'}
+          </Button>
           <Button variant="outline" size="sm" onClick={() => navigate(`/vagas/${job.id}/questionario`)}>
             <ClipboardList className="h-4 w-4 mr-1" />
             Questionário
@@ -759,7 +836,19 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
         onConfirm={handleClosingConfirm}
         applications={applications}
         stages={stages}
-        isPending={updateJob.isPending || updateStatus.isPending}
+        isPending={updateJob.isPending || updateStatus.isPending || createMilestone.isPending}
+        modeloContrato={modeloContrato}
+        salarioMeta={(job as any).salario_meta}
+        bonusAnualMeta={(job as any).bonus_anual_meta}
+        feePercentual={(job as any).fee_percentual}
+        milestones={milestones}
+      />
+      {/* Contract Config Dialog */}
+      <ContractConfigDialog
+        open={showContractConfig}
+        onOpenChange={setShowContractConfig}
+        job={job}
+        companyName={company?.nome_fantasia}
       />
       {/* Offer Letter Prompt */}
       <OfferLetterPrompt
