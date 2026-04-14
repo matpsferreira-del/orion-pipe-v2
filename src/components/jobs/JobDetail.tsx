@@ -449,6 +449,12 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
             <Badge variant="outline" className={cn('text-xs', priorityColors[job.priority as JobPriority])}>
               {priorityLabels[job.priority as JobPriority]}
             </Badge>
+            {modeloContrato && (
+              <Badge variant="outline" className="text-xs border-blue-300 text-blue-700 bg-blue-50 dark:border-blue-700 dark:text-blue-400 dark:bg-blue-900/30 gap-1">
+                <FileText className="h-3 w-3" />
+                {contractModelLabels[modeloContrato]}
+              </Badge>
+            )}
             {jobPublished ? (
               <Badge variant="outline" className="text-xs border-primary/30 text-primary bg-primary/5 gap-1">
                 <Globe className="h-3 w-3" />
