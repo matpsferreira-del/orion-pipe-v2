@@ -49,6 +49,7 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
   const [selectedApplication, setSelectedApplication] = useState<ApplicationWithRelations | null>(null);
   const [showLinkedInPost, setShowLinkedInPost] = useState(false);
   const [showClosingDialog, setShowClosingDialog] = useState(false);
+  const [showContractConfig, setShowContractConfig] = useState(false);
   const [offerLetterApp, setOfferLetterApp] = useState<ApplicationWithRelations | null>(null);
   const [generatingShortlist, setGeneratingShortlist] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
