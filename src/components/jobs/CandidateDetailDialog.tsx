@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -23,7 +23,6 @@ import { CandidateCVSection } from './CandidateCVSection';
 import { useUpdateApplication, useUpdateApplicationStatus, useUpdateApplicationStage } from '@/hooks/useApplications';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { ComposeEmailDialog } from '@/components/email/ComposeEmailDialog';
 import { PartyHistoryTimeline } from '@/components/parties/PartyHistoryTimeline';
 
 function QuestionnaireResponsesSection({ applicationId }: { applicationId: string }) {
@@ -53,6 +52,12 @@ function QuestionnaireResponsesSection({ applicationId }: { applicationId: strin
   );
 }
 
+export interface EmailRequest {
+  email: string;
+  candidateName: string;
+  jobTitle: string;
+}
+
 interface CandidateDetailDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -60,6 +65,7 @@ interface CandidateDetailDialogProps {
   stages: JobPipelineStage[];
   jobId: string;
   jobTitle?: string;
+  onRequestEmail?: (req: EmailRequest) => void;
 }
 
 export function CandidateDetailDialog({ 
@@ -68,15 +74,14 @@ export function CandidateDetailDialog({
   application, 
   stages,
   jobId,
-  jobTitle = '' 
+  jobTitle = '',
+  onRequestEmail
 }: CandidateDetailDialogProps) {
   const [notes, setNotes] = useState('');
   const [rating, setRating] = useState(0);
   const [salaryExpectation, setSalaryExpectation] = useState('');
   const [phoneInput, setPhoneInput] = useState('');
   const [photoUrlInput, setPhotoUrlInput] = useState('');
-  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
-  const [parentClosedForEmail, setParentClosedForEmail] = useState(false);
 
   // Reset state when application changes
   useEffect(() => {
@@ -187,7 +192,16 @@ export function CandidateDetailDialog({
               <div className="flex flex-wrap gap-2 mt-2">
                 {party?.email_raw && (
                   <button 
-                    onClick={() => { setParentClosedForEmail(true); onOpenChange(false); setTimeout(() => setEmailDialogOpen(true), 100); }}
+                    onClick={() => {
+                      if (onRequestEmail && party?.email_raw) {
+                        onRequestEmail({
+                          email: party.email_raw,
+                          candidateName: party.full_name,
+                          jobTitle,
+                        });
+                        onOpenChange(false);
+                      }
+                    }}
                     className="flex items-center gap-1 text-xs text-primary hover:underline"
                   >
                     <Mail className="h-3 w-3" />
@@ -451,21 +465,6 @@ export function CandidateDetailDialog({
         </div>
       </DialogContent>
     </Dialog>
-
-    {party?.email_raw && (
-      <ComposeEmailDialog
-        open={emailDialogOpen}
-        onOpenChange={(isOpen) => {
-          setEmailDialogOpen(isOpen);
-          if (!isOpen && parentClosedForEmail) {
-            setParentClosedForEmail(false);
-            onOpenChange(true);
-          }
-        }}
-        defaultRecipients={[party.email_raw]}
-        variables={{ nome_candidato: party.full_name, nome_vaga: jobTitle }}
-      />
-    )}
     </>
   );
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog';
@@ -74,6 +74,7 @@ export function ComposeEmailDialog({
   const [previewRecipient, setPreviewRecipient] = useState(defaultRecipients[0] ?? '');
   const [attachments, setAttachments] = useState<EmailAttachment[]>(defaultAttachments);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const prevOpenRef = useRef(false);
 
   const { data: templates = [] } = useEmailTemplates();
   const sendEmail = useSendEmail();
@@ -100,7 +101,8 @@ export function ComposeEmailDialog({
   );
 
   useEffect(() => {
-    if (open) {
+    // Only reset state when dialog OPENS (transition from closed to open)
+    if (open && !prevOpenRef.current) {
       setRecipients(defaultRecipients);
       setSubject(defaultSubject);
       setBody(defaultBody);
@@ -110,7 +112,8 @@ export function ComposeEmailDialog({
       setPreviewRecipient(defaultRecipients[0] ?? '');
       setAttachments(defaultAttachments);
     }
-  }, [open, defaultRecipients, defaultSubject, defaultBody, defaultAttachments]);
+    prevOpenRef.current = open;
+  }, [open]);
 
   useEffect(() => {
     if (!recipients.length) {
