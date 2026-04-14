@@ -216,6 +216,7 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
     admissionDate: string | null;
     closingNotes: string;
     bonusAnualFinal: number | null;
+    veiculoProprio: boolean;
   }) => {
     try {
       // Update job with closing info + status
@@ -226,6 +227,7 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
         admission_date: data.admissionDate,
         closing_notes: data.closingNotes,
         bonus_anual_final: data.bonusAnualFinal,
+        veiculo_proprio: data.veiculoProprio,
       } as any);
 
       // Create financial milestone if contract is configured

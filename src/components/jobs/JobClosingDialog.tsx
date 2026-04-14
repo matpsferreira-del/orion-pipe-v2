@@ -1,13 +1,14 @@
 import { useState, useMemo } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { CalendarIcon, CheckCircle, DollarSign, User, FileText } from 'lucide-react';
+import { CalendarIcon, CheckCircle, DollarSign, User, FileText, Car } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Badge } from '@/components/ui/badge';
@@ -26,6 +27,7 @@ interface JobClosingDialogProps {
     admissionDate: string | null;
     closingNotes: string;
     bonusAnualFinal: number | null;
+    veiculoProprio: boolean;
   }) => void;
   applications: ApplicationWithRelations[];
   stages: JobPipelineStage[];
@@ -55,6 +57,7 @@ export function JobClosingDialog({
   const [bonusAnualFinal, setBonusAnualFinal] = useState('');
   const [admissionDate, setAdmissionDate] = useState<Date>();
   const [closingNotes, setClosingNotes] = useState('');
+  const [veiculoProprio, setVeiculoProprio] = useState(false);
 
   const fechamentoStage = useMemo(
     () => stages.find(s => s.name.toLowerCase() === 'fechamento' || s.name.toLowerCase() === 'finalizado'),
@@ -90,6 +93,7 @@ export function JobClosingDialog({
       admissionDate: admissionDate ? format(admissionDate, 'yyyy-MM-dd') : null,
       closingNotes,
       bonusAnualFinal: bonusAnualFinal ? parseCurrency(bonusAnualFinal) : null,
+      veiculoProprio,
     });
   };
 
@@ -167,7 +171,7 @@ export function JobClosingDialog({
           <div className="space-y-2">
             <Label htmlFor="closing-salary" className="flex items-center gap-1.5 text-sm font-medium">
               <DollarSign className="h-4 w-4 text-muted-foreground" />
-              Remuneração Acordada (Mensal)
+              Salário Final (Mensal)
             </Label>
             <Input
               id="closing-salary"
@@ -177,21 +181,19 @@ export function JobClosingDialog({
             />
           </div>
 
-          {/* Bonus Anual Final — show when contract exists */}
-          {hasContract && (
-            <div className="space-y-2">
-              <Label htmlFor="bonus-anual-final" className="flex items-center gap-1.5 text-sm font-medium">
-                <DollarSign className="h-4 w-4 text-muted-foreground" />
-                Bônus Anual Final
-              </Label>
-              <Input
-                id="bonus-anual-final"
-                placeholder="R$ 0,00"
-                value={bonusAnualFinal}
-                onChange={e => setBonusAnualFinal(formatCurrencyInput(e.target.value))}
-              />
-            </div>
-          )}
+          {/* Bonus Anual Final — always visible */}
+          <div className="space-y-2">
+            <Label htmlFor="bonus-anual-final" className="flex items-center gap-1.5 text-sm font-medium">
+              <DollarSign className="h-4 w-4 text-muted-foreground" />
+              Bônus Alvo Anual (R$)
+            </Label>
+            <Input
+              id="bonus-anual-final"
+              placeholder="R$ 0,00"
+              value={bonusAnualFinal}
+              onChange={e => setBonusAnualFinal(formatCurrencyInput(e.target.value))}
+            />
+          </div>
 
           {/* Reconciliation Summary */}
           {hasContract && salarioFinalNum > 0 && (
@@ -237,6 +239,19 @@ export function JobClosingDialog({
                 />
               </PopoverContent>
             </Popover>
+          </div>
+
+          {/* Veículo Próprio */}
+          <div className="flex items-center justify-between rounded-lg border p-3">
+            <Label htmlFor="veiculo-proprio" className="flex items-center gap-1.5 text-sm font-medium cursor-pointer">
+              <Car className="h-4 w-4 text-muted-foreground" />
+              Possui Veículo Próprio
+            </Label>
+            <Switch
+              id="veiculo-proprio"
+              checked={veiculoProprio}
+              onCheckedChange={setVeiculoProprio}
+            />
           </div>
 
           {/* Notes */}
