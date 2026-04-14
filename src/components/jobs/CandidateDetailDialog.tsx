@@ -1,18 +1,24 @@
 import { useState, useEffect, useCallback } from 'react';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
 import { supabase } from '@/integrations/supabase/client';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { 
   Mail, Phone, Linkedin, Star, ExternalLink, 
-  CheckCircle, XCircle, UserMinus, DollarSign, FileText, RotateCcw, ImageIcon, ClipboardList
+  CheckCircle, XCircle, UserMinus, DollarSign, FileText, RotateCcw, ImageIcon, ClipboardList,
+  CalendarIcon, Car
 } from 'lucide-react';
 import { useQuestionnaireResponses } from '@/hooks/useJobQuestions';
 import { 
