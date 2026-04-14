@@ -743,7 +743,7 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
         open={!!emailRequest}
         onOpenChange={(isOpen) => { if (!isOpen) setEmailRequest(null); }}
         defaultRecipients={emailRequest ? [emailRequest.email] : []}
-        variables={emailRequest ? { nome_candidato: emailRequest.candidateName, nome_vaga: emailRequest.jobTitle } : {}}
+        variables={emailRequest ? { nome_candidato: emailRequest.candidateName, nome_vaga: emailRequest.jobTitle, nome_empresa: company?.nome_fantasia || '' } : {}}
       />
 
       {/* LinkedIn Post Generator */}
