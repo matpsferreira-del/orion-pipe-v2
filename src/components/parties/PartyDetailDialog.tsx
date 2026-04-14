@@ -21,7 +21,6 @@ import {
 import { 
   Mail, Phone, Linkedin, MapPin, Calendar, Edit2, Save, X, 
   UserPlus, Building2, Briefcase, FileText, Globe, ChevronDown, ChevronUp, ArrowRight,
-  History, Send, GitBranch, UserCheck
 } from 'lucide-react';
 import { useParty, useUpdateParty, useAddPartyRole, useRemovePartyRole } from '@/hooks/useParties';
 import { PartyRoleType, partyRoleLabels, partyStatusLabels } from '@/types/party';
@@ -30,7 +29,7 @@ import { applicationStatusLabels, sourceLabels } from '@/types/ats';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { ComposeEmailDialog } from '@/components/email/ComposeEmailDialog';
-import { usePartyHistory, type PartyHistoryEvent } from '@/hooks/usePartyHistory';
+import { PartyHistoryTimeline } from '@/components/parties/PartyHistoryTimeline';
 
 interface PartyDetailDialogProps {
   partyId: string | null;
@@ -342,7 +341,7 @@ export function PartyDetailDialog({ partyId, open, onOpenChange }: PartyDetailDi
           </TabsContent>
 
           <TabsContent value="historico" className="mt-4">
-            <PartyHistoryTab partyId={party.id} email={party.email_raw} />
+            <PartyHistoryTimeline partyId={party.id} email={party.email_raw} />
           </TabsContent>
 
           <TabsContent value="ats" className="mt-4">
@@ -483,59 +482,6 @@ function ApplicationHistoryCard({ app }: { app: any }) {
           )}
         </div>
       )}
-    </div>
-  );
-}
-
-const eventTypeConfig: Record<PartyHistoryEvent['type'], { icon: typeof Mail; label: string; color: string }> = {
-  email: { icon: Send, label: 'Email', color: 'text-blue-600 bg-blue-100' },
-  stage_change: { icon: GitBranch, label: 'Etapa', color: 'text-purple-600 bg-purple-100' },
-  status_change: { icon: UserCheck, label: 'Status', color: 'text-orange-600 bg-orange-100' },
-  application_created: { icon: Briefcase, label: 'Candidatura', color: 'text-green-600 bg-green-100' },
-};
-
-function PartyHistoryTab({ partyId, email }: { partyId: string; email?: string | null }) {
-  const { data: events = [], isLoading } = usePartyHistory(partyId, email);
-
-  if (isLoading) {
-    return <div className="text-center py-8 text-muted-foreground">Carregando histórico...</div>;
-  }
-
-  if (events.length === 0) {
-    return (
-      <div className="text-center py-8 text-muted-foreground">
-        <History className="h-8 w-8 mx-auto mb-2 opacity-50" />
-        <p>Nenhum evento registrado.</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1">
-      {events.map((event) => {
-        const config = eventTypeConfig[event.type];
-        const Icon = config.icon;
-        return (
-          <div key={event.id} className="flex gap-3 items-start">
-            <div className={`p-1.5 rounded-md mt-0.5 ${config.color}`}>
-              <Icon className="h-3.5 w-3.5" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium">{event.title}</span>
-                <Badge variant="outline" className="text-[10px] py-0">{config.label}</Badge>
-              </div>
-              <p className="text-xs text-muted-foreground mt-0.5 truncate">{event.description}</p>
-              {event.metadata?.note && (
-                <p className="text-xs text-muted-foreground mt-0.5 italic">"{event.metadata.note}"</p>
-              )}
-              <p className="text-[10px] text-muted-foreground mt-1">
-                {format(new Date(event.date), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-              </p>
-            </div>
-          </div>
-        );
-      })}
     </div>
   );
 }

@@ -183,13 +183,13 @@ Deno.serve(async (req) => {
     await serviceClient.from("email_log").insert({
       sender_user_id: userId,
       sender_email: senderEmail,
-      recipients: JSON.stringify(recipients),
+      recipients,
       subject,
       body: html_body,
       template_id: template_id || null,
       status,
       error_message: errorMessage,
-      metadata: JSON.stringify({ gmail_message_id: gmailData.id, has_attachments: !!(attachments?.length) }),
+      metadata: { gmail_message_id: gmailData.id, has_attachments: !!(attachments?.length) },
     });
 
     if (!gmailRes.ok) {
