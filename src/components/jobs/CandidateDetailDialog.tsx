@@ -64,6 +64,14 @@ export interface EmailRequest {
   jobTitle: string;
 }
 
+export interface HireData {
+  closingSalary: number | null;
+  bonusAnualFinal: number | null;
+  admissionDate: string | null;
+  veiculoProprio: boolean;
+  candidateId: string;
+}
+
 interface CandidateDetailDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -72,6 +80,7 @@ interface CandidateDetailDialogProps {
   jobId: string;
   jobTitle?: string;
   onRequestEmail?: (req: EmailRequest) => void;
+  onHire?: (data: HireData) => void;
 }
 
 export function CandidateDetailDialog({ 
@@ -81,13 +90,19 @@ export function CandidateDetailDialog({
   stages,
   jobId,
   jobTitle = '',
-  onRequestEmail
+  onRequestEmail,
+  onHire
 }: CandidateDetailDialogProps) {
   const [notes, setNotes] = useState('');
   const [rating, setRating] = useState(0);
   const [salaryExpectation, setSalaryExpectation] = useState('');
   const [phoneInput, setPhoneInput] = useState('');
   const [photoUrlInput, setPhotoUrlInput] = useState('');
+  const [showHiringForm, setShowHiringForm] = useState(false);
+  const [hireSalary, setHireSalary] = useState('');
+  const [hireBonus, setHireBonus] = useState('');
+  const [hireAdmissionDate, setHireAdmissionDate] = useState<Date>();
+  const [hireVeiculo, setHireVeiculo] = useState(false);
 
   // Reset state when application changes
   useEffect(() => {
@@ -99,6 +114,11 @@ export function CandidateDetailDialog({
       );
       setPhoneInput(application._party?.phone_raw || '');
       setPhotoUrlInput(application._party?.photo_url || '');
+      setShowHiringForm(false);
+      setHireSalary('');
+      setHireBonus('');
+      setHireAdmissionDate(undefined);
+      setHireVeiculo(false);
     }
   }, [application?.id]);
 
