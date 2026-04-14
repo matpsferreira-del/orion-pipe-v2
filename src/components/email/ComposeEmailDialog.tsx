@@ -308,23 +308,23 @@ export function ComposeEmailDialog({
           </div>
 
           <div className="space-y-1.5">
-            <Label className="flex items-center gap-1">
+            <Label htmlFor="email-template-select" className="flex items-center gap-1">
               <FileText className="h-3.5 w-3.5" />
               Template
             </Label>
-            <Select value={selectedTemplateId} onValueChange={applyTemplate}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione um template (opcional)" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Sem template</SelectItem>
-                {templates.map((template) => (
-                  <SelectItem key={template.id} value={template.id}>
-                    {template.name} ({template.category})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <select
+              id="email-template-select"
+              value={selectedTemplateId}
+              onChange={(event) => applyTemplate(event.target.value)}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+            >
+              <option value="none">Sem template</option>
+              {templates.map((template) => (
+                <option key={template.id} value={template.id}>
+                  {template.name} ({template.category})
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className="space-y-1.5">

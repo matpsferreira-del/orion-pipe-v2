@@ -10,30 +10,80 @@ export interface PartyHistoryEvent {
   metadata?: Record<string, any>;
 }
 
+function normalizeRecipients(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.filter((recipient): recipient is string => typeof recipient === 'string');
+  }
+
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed)) {
+        return parsed.filter((recipient): recipient is string => typeof recipient === 'string');
+      }
+    } catch {
+      return value.includes('@') ? [value] : [];
+    }
+  }
+
+  return [];
+}
+
 export function usePartyHistory(partyId: string | undefined, email?: string | null) {
   return useQuery({
-    queryKey: ['party-history', partyId],
+    queryKey: ['party-history', partyId, email],
     enabled: !!partyId,
     queryFn: async () => {
       const events: PartyHistoryEvent[] = [];
 
-      // 1. Fetch applications for this party
-      const { data: applications } = await supabase
-        .from('applications')
-        .select('id, job_id, status, source, applied_at, stage_id')
-        .eq('party_id', partyId!)
-        .order('applied_at', { ascending: false });
+      const [applicationsResult, emailLogsResult] = await Promise.all([
+        supabase
+          .from('applications')
+          .select('id, job_id, status, source, applied_at, stage_id')
+          .eq('party_id', partyId!)
+          .order('applied_at', { ascending: false }),
+        email
+          ? supabase
+              .from('email_log')
+              .select('id, subject, recipients, created_at, status, sender_email')
+              .order('created_at', { ascending: false })
+              .limit(250)
+          : Promise.resolve({ data: [], error: null }),
+      ]);
+
+      if (applicationsResult.error) throw applicationsResult.error;
+      if (emailLogsResult.error) throw emailLogsResult.error;
+
+      const applications = applicationsResult.data || [];
+      const emails = emailLogsResult.data || [];
 
       if (applications && applications.length > 0) {
-        // Fetch job names
         const jobIds = [...new Set(applications.map(a => a.job_id))];
-        const { data: jobs } = await supabase
-          .from('jobs')
-          .select('id, title')
-          .in('id', jobIds);
+        const appIds = applications.map(a => a.id);
+
+        const [jobsResult, historyBatches] = await Promise.all([
+          supabase
+            .from('jobs')
+            .select('id, title')
+            .in('id', jobIds),
+          Promise.all(
+            Array.from({ length: Math.ceil(appIds.length / 500) }, (_, index) => {
+              const batch = appIds.slice(index * 500, index * 500 + 500);
+
+              return supabase
+                .from('application_history')
+                .select('*')
+                .in('application_id', batch)
+                .order('created_at', { ascending: false });
+            }),
+          ),
+        ]);
+
+        if (jobsResult.error) throw jobsResult.error;
+
+        const jobs = jobsResult.data || [];
         const jobMap = new Map((jobs || []).map(j => [j.id, j.title]));
 
-        // Add application creation events
         for (const app of applications) {
           events.push({
             id: `app-${app.id}`,
@@ -44,21 +94,7 @@ export function usePartyHistory(partyId: string | undefined, email?: string | nu
           });
         }
 
-        // Fetch application history (stage/status changes)
-        const appIds = applications.map(a => a.id);
-        const batchSize = 500;
-        const allHistory: any[] = [];
-        for (let i = 0; i < appIds.length; i += batchSize) {
-          const batch = appIds.slice(i, i + batchSize);
-          const { data: history } = await supabase
-            .from('application_history')
-            .select('*')
-            .in('application_id', batch)
-            .order('created_at', { ascending: false });
-          if (history) allHistory.push(...history);
-        }
-
-        // Fetch stage names
+        const allHistory = historyBatches.flatMap((result) => result.data || []);
         const stageIds = [...new Set([
           ...allHistory.map(h => h.from_stage_id).filter(Boolean),
           ...allHistory.map(h => h.to_stage_id).filter(Boolean),
@@ -66,14 +102,15 @@ export function usePartyHistory(partyId: string | undefined, email?: string | nu
 
         let stageMap = new Map<string, string>();
         if (stageIds.length > 0) {
-          const { data: stages } = await supabase
+          const { data: stages, error: stagesError } = await supabase
             .from('job_pipeline_stages')
             .select('id, name')
             .in('id', stageIds);
+
+          if (stagesError) throw stagesError;
           stageMap = new Map((stages || []).map(s => [s.id, s.name]));
         }
 
-        // Map application to job
         const appJobMap = new Map(applications.map(a => [a.id, a.job_id]));
 
         for (const h of allHistory) {
@@ -107,22 +144,12 @@ export function usePartyHistory(partyId: string | undefined, email?: string | nu
         }
       }
 
-      // 2. Fetch email log for this party's email
       if (email) {
-        const { data: emails } = await supabase
-          .from('email_log')
-          .select('id, subject, recipients, created_at, status, sender_email')
-          .order('created_at', { ascending: false })
-          .limit(100);
-
         if (emails) {
           for (const e of emails) {
-            const recipientsList = Array.isArray(e.recipients) ? e.recipients : [];
-            const isRecipient = recipientsList.some((r: any) =>
-              typeof r === 'string'
-                ? r.toLowerCase() === email.toLowerCase()
-                : false
-            );
+            const recipientsList = normalizeRecipients(e.recipients);
+            const isRecipient = recipientsList.some((recipient) => recipient.toLowerCase() === email.toLowerCase());
+
             if (isRecipient) {
               events.push({
                 id: `email-${e.id}`,
@@ -137,7 +164,6 @@ export function usePartyHistory(partyId: string | undefined, email?: string | nu
         }
       }
 
-      // Sort by date descending
       events.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
       return events;

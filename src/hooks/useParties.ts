@@ -3,6 +3,26 @@ import { supabase } from '@/integrations/supabase/client';
 import { Party, PartyRole, PartyDuplicateSuggestion, PartyCreatedFrom, PartyRoleType } from '@/types/party';
 import { useToast } from '@/hooks/use-toast';
 
+const PARTY_LIST_FIELDS = `
+  id,
+  full_name,
+  email_raw,
+  email_norm,
+  phone_raw,
+  phone_e164,
+  headline,
+  linkedin_url,
+  photo_url,
+  city,
+  state,
+  status,
+  created_from,
+  tags,
+  current_title,
+  current_company,
+  party_role (*)
+`;
+
 // Fetch all active parties (paginated to bypass 1000-row limit)
 export function useParties(filters?: { 
   role?: PartyRoleType; 
@@ -19,12 +39,11 @@ export function useParties(filters?: {
       let hasMore = true;
 
       while (hasMore) {
+        const partyRoleSelect = filters?.role ? PARTY_LIST_FIELDS.replace('party_role (*)', 'party_role!inner (*)') : PARTY_LIST_FIELDS;
+
         let query = supabase
           .from('party')
-          .select(`
-            *,
-            party_role (*)
-          `)
+          .select(partyRoleSelect)
           .order('full_name', { ascending: true })
           .range(offset, offset + batchSize - 1);
 
@@ -42,6 +61,10 @@ export function useParties(filters?: {
           query = query.eq('created_from', filters.createdFrom);
         }
 
+        if (filters?.role) {
+          query = query.eq('party_role.role', filters.role);
+        }
+
         const { data, error } = await query;
         if (error) throw error;
 
@@ -54,16 +77,7 @@ export function useParties(filters?: {
         }
       }
 
-      // Filter by role if specified
-      let result = allData as (Party & { party_role: PartyRole[] })[];
-      
-      if (filters?.role) {
-        result = result.filter(p => 
-          p.party_role?.some(r => r.role === filters.role)
-        );
-      }
-
-      return result;
+      return allData as (Party & { party_role: PartyRole[] })[];
     },
   });
 }
