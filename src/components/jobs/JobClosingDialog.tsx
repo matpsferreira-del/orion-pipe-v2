@@ -13,6 +13,9 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ApplicationWithRelations, JobPipelineStage } from '@/types/ats';
+import { ContractModel, needsReconciliation, calcTotal } from '@/types/contract';
+import { ContractMilestone } from '@/types/contract';
+import { ReconciliationSummary } from './ReconciliationSummary';
 
 interface JobClosingDialogProps {
   open: boolean;
@@ -22,10 +25,17 @@ interface JobClosingDialogProps {
     closingCandidateId: string | null;
     admissionDate: string | null;
     closingNotes: string;
+    bonusAnualFinal: number | null;
   }) => void;
   applications: ApplicationWithRelations[];
   stages: JobPipelineStage[];
   isPending?: boolean;
+  // Contract data
+  modeloContrato?: ContractModel | null;
+  salarioMeta?: number | null;
+  bonusAnualMeta?: number | null;
+  feePercentual?: number | null;
+  milestones?: ContractMilestone[];
 }
 
 export function JobClosingDialog({
@@ -35,14 +45,19 @@ export function JobClosingDialog({
   applications,
   stages,
   isPending,
+  modeloContrato,
+  salarioMeta,
+  bonusAnualMeta,
+  feePercentual,
+  milestones = [],
 }: JobClosingDialogProps) {
   const [closingSalary, setClosingSalary] = useState('');
+  const [bonusAnualFinal, setBonusAnualFinal] = useState('');
   const [admissionDate, setAdmissionDate] = useState<Date>();
   const [closingNotes, setClosingNotes] = useState('');
 
-  // Find candidates in the "Fechamento" stage
   const fechamentoStage = useMemo(
-    () => stages.find(s => s.name.toLowerCase() === 'fechamento'),
+    () => stages.find(s => s.name.toLowerCase() === 'fechamento' || s.name.toLowerCase() === 'finalizado'),
     [stages]
   );
 
@@ -55,16 +70,26 @@ export function JobClosingDialog({
   );
 
   const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(null);
-
-  // Auto-select if there's only one
   const effectiveSelected = selectedCandidateId ?? (fechamentoCandidates.length === 1 ? fechamentoCandidates[0]._party?.id ?? null : null);
+
+  const parseCurrency = (val: string) => {
+    const digits = val.replace(/\D/g, '');
+    return digits ? parseInt(digits, 10) / 100 : 0;
+  };
+
+  const salarioFinalNum = parseCurrency(closingSalary);
+  const bonusFinalNum = parseCurrency(bonusAnualFinal);
+
+  const hasContract = !!modeloContrato && !!feePercentual;
+  const showReconciliation = hasContract && needsReconciliation(modeloContrato!);
 
   const handleSubmit = () => {
     onConfirm({
-      closingSalary: closingSalary ? parseFloat(closingSalary.replace(/\D/g, '')) / 100 : null,
+      closingSalary: closingSalary ? parseCurrency(closingSalary) : null,
       closingCandidateId: effectiveSelected,
       admissionDate: admissionDate ? format(admissionDate, 'yyyy-MM-dd') : null,
       closingNotes,
+      bonusAnualFinal: bonusAnualFinal ? parseCurrency(bonusAnualFinal) : null,
     });
   };
 
@@ -77,7 +102,7 @@ export function JobClosingDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <CheckCircle className="h-5 w-5 text-green-600" />
@@ -142,7 +167,7 @@ export function JobClosingDialog({
           <div className="space-y-2">
             <Label htmlFor="closing-salary" className="flex items-center gap-1.5 text-sm font-medium">
               <DollarSign className="h-4 w-4 text-muted-foreground" />
-              Remuneração Acordada
+              Remuneração Acordada (Mensal)
             </Label>
             <Input
               id="closing-salary"
@@ -151,6 +176,35 @@ export function JobClosingDialog({
               onChange={e => setClosingSalary(formatCurrencyInput(e.target.value))}
             />
           </div>
+
+          {/* Bonus Anual Final — show when contract exists */}
+          {hasContract && (
+            <div className="space-y-2">
+              <Label htmlFor="bonus-anual-final" className="flex items-center gap-1.5 text-sm font-medium">
+                <DollarSign className="h-4 w-4 text-muted-foreground" />
+                Bônus Anual Final
+              </Label>
+              <Input
+                id="bonus-anual-final"
+                placeholder="R$ 0,00"
+                value={bonusAnualFinal}
+                onChange={e => setBonusAnualFinal(formatCurrencyInput(e.target.value))}
+              />
+            </div>
+          )}
+
+          {/* Reconciliation Summary */}
+          {hasContract && salarioFinalNum > 0 && (
+            <ReconciliationSummary
+              modelo={modeloContrato!}
+              salarioMeta={salarioMeta || 0}
+              bonusAnualMeta={bonusAnualMeta || 0}
+              salarioFinal={salarioFinalNum}
+              bonusAnualFinal={bonusFinalNum}
+              feePercentual={feePercentual!}
+              milestones={milestones}
+            />
+          )}
 
           {/* Admission date */}
           <div className="space-y-2">
@@ -206,7 +260,7 @@ export function JobClosingDialog({
             Cancelar
           </Button>
           <Button onClick={handleSubmit} disabled={isPending}>
-            {isPending ? 'Salvando...' : 'Confirmar Fechamento'}
+            {isPending ? 'Salvando...' : hasContract ? 'Confirmar e Lançar Fatura' : 'Confirmar Fechamento'}
           </Button>
         </DialogFooter>
       </DialogContent>
