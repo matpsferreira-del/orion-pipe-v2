@@ -72,6 +72,8 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
   const { data: profiles = [] } = useProfiles();
   const { data: stages = [] } = useJobStages(job.id);
   const { data: applications = [], isLoading: loadingApps } = useApplicationsWithParties(job.id);
+  const { data: milestones = [] } = useContractMilestones(job.id);
+  const createMilestone = useCreateMilestoneWithTransaction();
 
   const mapeadoStage = useMemo(() => stages.find(s => s.name.toLowerCase() === 'mapeado'), [stages]);
 
