@@ -22,7 +22,7 @@ import { CandidateKanban } from './CandidateKanban';
 import { CandidateListView } from './CandidateListView';
 import { AddCandidateDialog } from './AddCandidateDialog';
 import { LinkedInPostDialog } from './LinkedInPostDialog';
-import { CandidateDetailDialog } from './CandidateDetailDialog';
+import { CandidateDetailDialog, HireData } from './CandidateDetailDialog';
 import { EmailRequest } from './CandidateDetailDialog';
 import { ComposeEmailDialog } from '@/components/email/ComposeEmailDialog';
 import { OfferLetterPrompt } from './OfferLetterPrompt';
@@ -814,6 +814,21 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
         onRequestEmail={(req) => {
           setSelectedApplication(null);
           setTimeout(() => setEmailRequest(req), 150);
+        }}
+        onHire={async (data: HireData) => {
+          try {
+            await updateJob.mutateAsync({
+              id: job.id,
+              closing_salary: data.closingSalary,
+              closing_candidate_id: data.candidateId,
+              admission_date: data.admissionDate,
+              bonus_anual_final: data.bonusAnualFinal,
+              veiculo_proprio: data.veiculoProprio,
+            } as any);
+            toast.success('Dados da contratação salvos');
+          } catch {
+            toast.error('Erro ao salvar dados da contratação');
+          }
         }}
       />
 

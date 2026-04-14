@@ -1,18 +1,24 @@
 import { useState, useEffect, useCallback } from 'react';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
 import { supabase } from '@/integrations/supabase/client';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { 
   Mail, Phone, Linkedin, Star, ExternalLink, 
-  CheckCircle, XCircle, UserMinus, DollarSign, FileText, RotateCcw, ImageIcon, ClipboardList
+  CheckCircle, XCircle, UserMinus, DollarSign, FileText, RotateCcw, ImageIcon, ClipboardList,
+  CalendarIcon, Car
 } from 'lucide-react';
 import { useQuestionnaireResponses } from '@/hooks/useJobQuestions';
 import { 
@@ -58,6 +64,14 @@ export interface EmailRequest {
   jobTitle: string;
 }
 
+export interface HireData {
+  closingSalary: number | null;
+  bonusAnualFinal: number | null;
+  admissionDate: string | null;
+  veiculoProprio: boolean;
+  candidateId: string;
+}
+
 interface CandidateDetailDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -66,6 +80,7 @@ interface CandidateDetailDialogProps {
   jobId: string;
   jobTitle?: string;
   onRequestEmail?: (req: EmailRequest) => void;
+  onHire?: (data: HireData) => void;
 }
 
 export function CandidateDetailDialog({ 
@@ -75,13 +90,19 @@ export function CandidateDetailDialog({
   stages,
   jobId,
   jobTitle = '',
-  onRequestEmail
+  onRequestEmail,
+  onHire
 }: CandidateDetailDialogProps) {
   const [notes, setNotes] = useState('');
   const [rating, setRating] = useState(0);
   const [salaryExpectation, setSalaryExpectation] = useState('');
   const [phoneInput, setPhoneInput] = useState('');
   const [photoUrlInput, setPhotoUrlInput] = useState('');
+  const [showHiringForm, setShowHiringForm] = useState(false);
+  const [hireSalary, setHireSalary] = useState('');
+  const [hireBonus, setHireBonus] = useState('');
+  const [hireAdmissionDate, setHireAdmissionDate] = useState<Date>();
+  const [hireVeiculo, setHireVeiculo] = useState(false);
 
   // Reset state when application changes
   useEffect(() => {
@@ -93,6 +114,11 @@ export function CandidateDetailDialog({
       );
       setPhoneInput(application._party?.phone_raw || '');
       setPhotoUrlInput(application._party?.photo_url || '');
+      setShowHiringForm(false);
+      setHireSalary('');
+      setHireBonus('');
+      setHireAdmissionDate(undefined);
+      setHireVeiculo(false);
     }
   }, [application?.id]);
 
@@ -427,6 +453,7 @@ export function CandidateDetailDialog({
                   </Button>
                 </div>
               ) : (
+                <>
                 <div className="flex justify-between">
                   <Button
                     variant="outline"
@@ -447,14 +474,56 @@ export function CandidateDetailDialog({
                     Candidato Desistiu
                   </Button>
 
-                  <Button
-                    size="sm"
-                    onClick={() => handleStatusChange('hired')}
-                  >
-                    <CheckCircle className="h-4 w-4 mr-1" />
-                    Contratar
-                  </Button>
+                  {!showHiringForm ? (
+                    <Button
+                      size="sm"
+                      onClick={() => setShowHiringForm(true)}
+                    >
+                      <CheckCircle className="h-4 w-4 mr-1" />
+                      Contratar
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setShowHiringForm(false)}
+                    >
+                      Cancelar
+                    </Button>
+                  )}
                 </div>
+
+                {showHiringForm && (
+                  <HiringForm
+                    hireSalary={hireSalary}
+                    setHireSalary={setHireSalary}
+                    hireBonus={hireBonus}
+                    setHireBonus={setHireBonus}
+                    hireAdmissionDate={hireAdmissionDate}
+                    setHireAdmissionDate={setHireAdmissionDate}
+                    hireVeiculo={hireVeiculo}
+                    setHireVeiculo={setHireVeiculo}
+                    onConfirm={async () => {
+                      const parseCurrency = (val: string) => {
+                        const digits = val.replace(/\D/g, '');
+                        return digits ? parseInt(digits, 10) / 100 : null;
+                      };
+                      if (onHire && party) {
+                        onHire({
+                          closingSalary: parseCurrency(hireSalary),
+                          bonusAnualFinal: parseCurrency(hireBonus),
+                          admissionDate: hireAdmissionDate ? format(hireAdmissionDate, 'yyyy-MM-dd') : null,
+                          veiculoProprio: hireVeiculo,
+                          candidateId: party.id,
+                        });
+                      }
+                      await handleStatusChange('hired');
+                      setShowHiringForm(false);
+                    }}
+                    isPending={updateStatus.isPending}
+                  />
+                )}
+                </>
               )}
             </TabsContent>
 
@@ -466,5 +535,112 @@ export function CandidateDetailDialog({
       </DialogContent>
     </Dialog>
     </>
+  );
+}
+
+function HiringForm({
+  hireSalary,
+  setHireSalary,
+  hireBonus,
+  setHireBonus,
+  hireAdmissionDate,
+  setHireAdmissionDate,
+  hireVeiculo,
+  setHireVeiculo,
+  onConfirm,
+  isPending,
+}: {
+  hireSalary: string;
+  setHireSalary: (v: string) => void;
+  hireBonus: string;
+  setHireBonus: (v: string) => void;
+  hireAdmissionDate: Date | undefined;
+  setHireAdmissionDate: (v: Date | undefined) => void;
+  hireVeiculo: boolean;
+  setHireVeiculo: (v: boolean) => void;
+  onConfirm: () => void;
+  isPending: boolean;
+}) {
+  const formatCurrencyInput = (value: string) => {
+    const digits = value.replace(/\D/g, '');
+    if (!digits) return '';
+    const num = parseInt(digits, 10) / 100;
+    return num.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  };
+
+  return (
+    <div className="mt-3 space-y-3 p-3 rounded-lg border border-primary/20 bg-primary/5">
+      <p className="text-sm font-semibold text-primary">Dados da Contratação</p>
+      
+      <div className="space-y-1.5">
+        <Label className="text-xs">Salário Final (Mensal)</Label>
+        <Input
+          placeholder="R$ 0,00"
+          value={hireSalary}
+          onChange={e => setHireSalary(formatCurrencyInput(e.target.value))}
+          className="h-8 text-sm"
+        />
+      </div>
+
+      <div className="space-y-1.5">
+        <Label className="text-xs">Bônus Alvo Anual (R$)</Label>
+        <Input
+          placeholder="R$ 0,00"
+          value={hireBonus}
+          onChange={e => setHireBonus(formatCurrencyInput(e.target.value))}
+          className="h-8 text-sm"
+        />
+      </div>
+
+      <div className="space-y-1.5">
+        <Label className="text-xs">Data de Admissão</Label>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              className={cn(
+                'w-full justify-start text-left font-normal h-8 text-sm',
+                !hireAdmissionDate && 'text-muted-foreground'
+              )}
+            >
+              <CalendarIcon className="mr-2 h-3 w-3" />
+              {hireAdmissionDate
+                ? format(hireAdmissionDate, "dd/MM/yyyy")
+                : 'Selecionar data'}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar
+              mode="single"
+              selected={hireAdmissionDate}
+              onSelect={setHireAdmissionDate}
+              initialFocus
+              className="p-3 pointer-events-auto"
+            />
+          </PopoverContent>
+        </Popover>
+      </div>
+
+      <div className="flex items-center justify-between rounded-md border p-2">
+        <Label className="flex items-center gap-1.5 text-xs cursor-pointer">
+          <Car className="h-3.5 w-3.5 text-muted-foreground" />
+          Veículo Próprio
+        </Label>
+        <Switch
+          checked={hireVeiculo}
+          onCheckedChange={setHireVeiculo}
+        />
+      </div>
+
+      <Button 
+        size="sm" 
+        className="w-full" 
+        onClick={onConfirm}
+        disabled={isPending}
+      >
+        <CheckCircle className="h-4 w-4 mr-1" />
+        {isPending ? 'Salvando...' : 'Confirmar Contratação'}
+      </Button>
+    </div>
   );
 }
