@@ -815,6 +815,21 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
           setSelectedApplication(null);
           setTimeout(() => setEmailRequest(req), 150);
         }}
+        onHire={async (data: HireData) => {
+          try {
+            await updateJob.mutateAsync({
+              id: job.id,
+              closing_salary: data.closingSalary,
+              closing_candidate_id: data.candidateId,
+              admission_date: data.admissionDate,
+              bonus_anual_final: data.bonusAnualFinal,
+              veiculo_proprio: data.veiculoProprio,
+            } as any);
+            toast.success('Dados da contratação salvos');
+          } catch {
+            toast.error('Erro ao salvar dados da contratação');
+          }
+        }}
       />
 
       {/* Email Dialog - lifted out of candidate detail to survive unmount */}
