@@ -535,3 +535,110 @@ export function CandidateDetailDialog({
     </>
   );
 }
+
+function HiringForm({
+  hireSalary,
+  setHireSalary,
+  hireBonus,
+  setHireBonus,
+  hireAdmissionDate,
+  setHireAdmissionDate,
+  hireVeiculo,
+  setHireVeiculo,
+  onConfirm,
+  isPending,
+}: {
+  hireSalary: string;
+  setHireSalary: (v: string) => void;
+  hireBonus: string;
+  setHireBonus: (v: string) => void;
+  hireAdmissionDate: Date | undefined;
+  setHireAdmissionDate: (v: Date | undefined) => void;
+  hireVeiculo: boolean;
+  setHireVeiculo: (v: boolean) => void;
+  onConfirm: () => void;
+  isPending: boolean;
+}) {
+  const formatCurrencyInput = (value: string) => {
+    const digits = value.replace(/\D/g, '');
+    if (!digits) return '';
+    const num = parseInt(digits, 10) / 100;
+    return num.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  };
+
+  return (
+    <div className="mt-3 space-y-3 p-3 rounded-lg border border-primary/20 bg-primary/5">
+      <p className="text-sm font-semibold text-primary">Dados da Contratação</p>
+      
+      <div className="space-y-1.5">
+        <Label className="text-xs">Salário Final (Mensal)</Label>
+        <Input
+          placeholder="R$ 0,00"
+          value={hireSalary}
+          onChange={e => setHireSalary(formatCurrencyInput(e.target.value))}
+          className="h-8 text-sm"
+        />
+      </div>
+
+      <div className="space-y-1.5">
+        <Label className="text-xs">Bônus Alvo Anual (R$)</Label>
+        <Input
+          placeholder="R$ 0,00"
+          value={hireBonus}
+          onChange={e => setHireBonus(formatCurrencyInput(e.target.value))}
+          className="h-8 text-sm"
+        />
+      </div>
+
+      <div className="space-y-1.5">
+        <Label className="text-xs">Data de Admissão</Label>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              className={cn(
+                'w-full justify-start text-left font-normal h-8 text-sm',
+                !hireAdmissionDate && 'text-muted-foreground'
+              )}
+            >
+              <CalendarIcon className="mr-2 h-3 w-3" />
+              {hireAdmissionDate
+                ? format(hireAdmissionDate, "dd/MM/yyyy")
+                : 'Selecionar data'}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar
+              mode="single"
+              selected={hireAdmissionDate}
+              onSelect={setHireAdmissionDate}
+              initialFocus
+              className="p-3 pointer-events-auto"
+            />
+          </PopoverContent>
+        </Popover>
+      </div>
+
+      <div className="flex items-center justify-between rounded-md border p-2">
+        <Label className="flex items-center gap-1.5 text-xs cursor-pointer">
+          <Car className="h-3.5 w-3.5 text-muted-foreground" />
+          Veículo Próprio
+        </Label>
+        <Switch
+          checked={hireVeiculo}
+          onCheckedChange={setHireVeiculo}
+        />
+      </div>
+
+      <Button 
+        size="sm" 
+        className="w-full" 
+        onClick={onConfirm}
+        disabled={isPending}
+      >
+        <CheckCircle className="h-4 w-4 mr-1" />
+        {isPending ? 'Salvando...' : 'Confirmar Contratação'}
+      </Button>
+    </div>
+  );
+}
