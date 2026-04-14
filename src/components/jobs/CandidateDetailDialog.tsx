@@ -453,6 +453,7 @@ export function CandidateDetailDialog({
                   </Button>
                 </div>
               ) : (
+                <>
                 <div className="flex justify-between">
                   <Button
                     variant="outline"
@@ -522,6 +523,7 @@ export function CandidateDetailDialog({
                     isPending={updateStatus.isPending}
                   />
                 )}
+                </>
               )}
             </TabsContent>
 
