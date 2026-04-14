@@ -705,6 +705,7 @@ export type Database = {
           descricao: string | null
           id: string
           invoice_id: string | null
+          job_id: string | null
           pacote: string
           recorrencia_meses: number | null
           recorrente: boolean | null
@@ -721,6 +722,7 @@ export type Database = {
           descricao?: string | null
           id?: string
           invoice_id?: string | null
+          job_id?: string | null
           pacote: string
           recorrencia_meses?: number | null
           recorrente?: boolean | null
@@ -737,6 +739,7 @@ export type Database = {
           descricao?: string | null
           id?: string
           invoice_id?: string | null
+          job_id?: string | null
           pacote?: string
           recorrencia_meses?: number | null
           recorrente?: boolean | null
@@ -750,6 +753,13 @@ export type Database = {
             columns: ["invoice_id"]
             isOneToOne: false
             referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_transactions_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
             referencedColumns: ["id"]
           },
         ]
@@ -843,6 +853,66 @@ export type Database = {
             columns: ["opportunity_id"]
             isOneToOne: false
             referencedRelation: "opportunities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      job_contract_milestones: {
+        Row: {
+          created_at: string
+          description: string | null
+          financial_transaction_id: string | null
+          id: string
+          job_id: string
+          milestone_type: Database["public"]["Enums"]["contract_milestone_type"]
+          percentage: number | null
+          rpo_cycle_month: string | null
+          status: Database["public"]["Enums"]["milestone_status"]
+          triggered_at: string | null
+          updated_at: string
+          valor: number
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          financial_transaction_id?: string | null
+          id?: string
+          job_id: string
+          milestone_type: Database["public"]["Enums"]["contract_milestone_type"]
+          percentage?: number | null
+          rpo_cycle_month?: string | null
+          status?: Database["public"]["Enums"]["milestone_status"]
+          triggered_at?: string | null
+          updated_at?: string
+          valor?: number
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          financial_transaction_id?: string | null
+          id?: string
+          job_id?: string
+          milestone_type?: Database["public"]["Enums"]["contract_milestone_type"]
+          percentage?: number | null
+          rpo_cycle_month?: string | null
+          status?: Database["public"]["Enums"]["milestone_status"]
+          triggered_at?: string | null
+          updated_at?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_contract_milestones_financial_transaction_id_fkey"
+            columns: ["financial_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "financial_transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_contract_milestones_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
             referencedColumns: ["id"]
           },
         ]
@@ -963,6 +1033,8 @@ export type Database = {
         Row: {
           admission_date: string | null
           area: string | null
+          bonus_anual_final: number | null
+          bonus_anual_meta: number | null
           closing_candidate_id: string | null
           closing_notes: string | null
           closing_salary: number | null
@@ -972,16 +1044,38 @@ export type Database = {
           created_by: string
           deadline: string | null
           description: string | null
+          fee_percentual: number | null
           filled_at: string | null
+          garantia_dias: number | null
           id: string
           job_code: number | null
           location: string | null
+          modelo_contrato: Database["public"]["Enums"]["contract_model"] | null
           opportunity_id: string | null
+          outplacement_perc_inicio: number | null
+          outplacement_perc_sucesso: number | null
           priority: string
           published: boolean
           published_at: string | null
           requirements: string | null
           responsavel_id: string | null
+          retainer_marco_1: string | null
+          retainer_marco_2: string | null
+          retainer_marco_3: string | null
+          retainer_parcelas: string | null
+          retainer_perc_1: number | null
+          retainer_perc_2: number | null
+          retainer_perc_3: number | null
+          rpo_custo_consultor_complexo: number | null
+          rpo_custo_consultor_inicial: number | null
+          rpo_custo_consultor_medio: number | null
+          rpo_duracao_meses: number | null
+          rpo_media_vagas_mes: number | null
+          rpo_vagas_complexas_mes: number | null
+          rpo_vagas_iniciais_mes: number | null
+          rpo_vagas_medias_mes: number | null
+          rpo_valor_mensal_cliente: number | null
+          salario_meta: number | null
           salary_max: number | null
           salary_min: number | null
           slug: string | null
@@ -992,6 +1086,8 @@ export type Database = {
         Insert: {
           admission_date?: string | null
           area?: string | null
+          bonus_anual_final?: number | null
+          bonus_anual_meta?: number | null
           closing_candidate_id?: string | null
           closing_notes?: string | null
           closing_salary?: number | null
@@ -1001,16 +1097,38 @@ export type Database = {
           created_by: string
           deadline?: string | null
           description?: string | null
+          fee_percentual?: number | null
           filled_at?: string | null
+          garantia_dias?: number | null
           id?: string
           job_code?: number | null
           location?: string | null
+          modelo_contrato?: Database["public"]["Enums"]["contract_model"] | null
           opportunity_id?: string | null
+          outplacement_perc_inicio?: number | null
+          outplacement_perc_sucesso?: number | null
           priority?: string
           published?: boolean
           published_at?: string | null
           requirements?: string | null
           responsavel_id?: string | null
+          retainer_marco_1?: string | null
+          retainer_marco_2?: string | null
+          retainer_marco_3?: string | null
+          retainer_parcelas?: string | null
+          retainer_perc_1?: number | null
+          retainer_perc_2?: number | null
+          retainer_perc_3?: number | null
+          rpo_custo_consultor_complexo?: number | null
+          rpo_custo_consultor_inicial?: number | null
+          rpo_custo_consultor_medio?: number | null
+          rpo_duracao_meses?: number | null
+          rpo_media_vagas_mes?: number | null
+          rpo_vagas_complexas_mes?: number | null
+          rpo_vagas_iniciais_mes?: number | null
+          rpo_vagas_medias_mes?: number | null
+          rpo_valor_mensal_cliente?: number | null
+          salario_meta?: number | null
           salary_max?: number | null
           salary_min?: number | null
           slug?: string | null
@@ -1021,6 +1139,8 @@ export type Database = {
         Update: {
           admission_date?: string | null
           area?: string | null
+          bonus_anual_final?: number | null
+          bonus_anual_meta?: number | null
           closing_candidate_id?: string | null
           closing_notes?: string | null
           closing_salary?: number | null
@@ -1030,16 +1150,38 @@ export type Database = {
           created_by?: string
           deadline?: string | null
           description?: string | null
+          fee_percentual?: number | null
           filled_at?: string | null
+          garantia_dias?: number | null
           id?: string
           job_code?: number | null
           location?: string | null
+          modelo_contrato?: Database["public"]["Enums"]["contract_model"] | null
           opportunity_id?: string | null
+          outplacement_perc_inicio?: number | null
+          outplacement_perc_sucesso?: number | null
           priority?: string
           published?: boolean
           published_at?: string | null
           requirements?: string | null
           responsavel_id?: string | null
+          retainer_marco_1?: string | null
+          retainer_marco_2?: string | null
+          retainer_marco_3?: string | null
+          retainer_parcelas?: string | null
+          retainer_perc_1?: number | null
+          retainer_perc_2?: number | null
+          retainer_perc_3?: number | null
+          rpo_custo_consultor_complexo?: number | null
+          rpo_custo_consultor_inicial?: number | null
+          rpo_custo_consultor_medio?: number | null
+          rpo_duracao_meses?: number | null
+          rpo_media_vagas_mes?: number | null
+          rpo_vagas_complexas_mes?: number | null
+          rpo_vagas_iniciais_mes?: number | null
+          rpo_vagas_medias_mes?: number | null
+          rpo_valor_mensal_cliente?: number | null
+          salario_meta?: number | null
           salary_max?: number | null
           salary_min?: number | null
           slug?: string | null
@@ -1928,9 +2070,26 @@ export type Database = {
         | "hired"
         | "rejected"
         | "withdrawn"
+      contract_milestone_type:
+        | "abertura_vaga"
+        | "envio_shortlist"
+        | "finalizacao_vaga"
+        | "inicio_outplacement"
+        | "sucesso_outplacement"
+        | "rpo_ciclo_mensal"
+        | "ajuste_reconciliacao"
+      contract_model:
+        | "sucesso_mensal"
+        | "sucesso_anual"
+        | "retainer_mensal"
+        | "retainer_anual"
+        | "rpo"
+        | "outplacement_mentoria"
+        | "outplacement_sem_mentoria"
       duplicate_reason: "same_email" | "same_phone" | "similar_name" | "manual"
       duplicate_status: "open" | "dismissed" | "merged"
       job_status: "draft" | "open" | "paused" | "filled" | "cancelled"
+      milestone_status: "previsto" | "a_receber" | "recebido" | "cancelado"
       party_created_from: "crm" | "ats" | "site" | "import" | "api"
       party_role_type:
         | "candidate"
@@ -2078,9 +2237,28 @@ export const Constants = {
         "rejected",
         "withdrawn",
       ],
+      contract_milestone_type: [
+        "abertura_vaga",
+        "envio_shortlist",
+        "finalizacao_vaga",
+        "inicio_outplacement",
+        "sucesso_outplacement",
+        "rpo_ciclo_mensal",
+        "ajuste_reconciliacao",
+      ],
+      contract_model: [
+        "sucesso_mensal",
+        "sucesso_anual",
+        "retainer_mensal",
+        "retainer_anual",
+        "rpo",
+        "outplacement_mentoria",
+        "outplacement_sem_mentoria",
+      ],
       duplicate_reason: ["same_email", "same_phone", "similar_name", "manual"],
       duplicate_status: ["open", "dismissed", "merged"],
       job_status: ["draft", "open", "paused", "filled", "cancelled"],
+      milestone_status: ["previsto", "a_receber", "recebido", "cancelado"],
       party_created_from: ["crm", "ats", "site", "import", "api"],
       party_role_type: [
         "candidate",
