@@ -373,6 +373,33 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
           : 'A Combinar',
       }));
 
+      // Trigger shortlist milestone if retainer configured with envio_shortlist
+      if (modeloContrato && (modeloContrato === 'retainer_mensal' || modeloContrato === 'retainer_anual')) {
+        const marcos = [
+          { marco: (job as any).retainer_marco_1, perc: Number((job as any).retainer_perc_1) },
+          { marco: (job as any).retainer_marco_2, perc: Number((job as any).retainer_perc_2) },
+          ...(((job as any).retainer_parcelas === '3x') ? [{ marco: (job as any).retainer_marco_3, perc: Number((job as any).retainer_perc_3) }] : []),
+        ];
+        const shortlistMarco = marcos.find(m => m.marco === 'envio_shortlist');
+        const alreadyExists = milestones.some(m => m.milestone_type === 'envio_shortlist');
+        if (shortlistMarco && !alreadyExists && (job as any).fee_percentual) {
+          const valorTotal = calcTotal(modeloContrato, Number((job as any).salario_meta) || 0, Number((job as any).bonus_anual_meta) || 0, Number((job as any).fee_percentual));
+          const parcelaValor = valorTotal * (shortlistMarco.perc / 100);
+          const today = new Date().toISOString().split('T')[0];
+          await createMilestone.mutateAsync({
+            job_id: job.id,
+            milestone_type: 'envio_shortlist',
+            percentage: shortlistMarco.perc,
+            valor: parcelaValor,
+            description: `Parcela Shortlist (${shortlistMarco.perc}%) — ${company?.nome_fantasia || ''}: ${job.title}`,
+            pacote: 'Receita de Serviços',
+            conta_contabil: 'Honorários de Recrutamento',
+            data_referencia: today,
+            data_vencimento: today,
+          });
+        }
+      }
+
       navigate(`/jobs/${job.id}/shortlist-presentation`, {
         state: {
           candidates: processedCandidates,
