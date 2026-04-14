@@ -473,14 +473,55 @@ export function CandidateDetailDialog({
                     Candidato Desistiu
                   </Button>
 
-                  <Button
-                    size="sm"
-                    onClick={() => handleStatusChange('hired')}
-                  >
-                    <CheckCircle className="h-4 w-4 mr-1" />
-                    Contratar
-                  </Button>
+                  {!showHiringForm ? (
+                    <Button
+                      size="sm"
+                      onClick={() => setShowHiringForm(true)}
+                    >
+                      <CheckCircle className="h-4 w-4 mr-1" />
+                      Contratar
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setShowHiringForm(false)}
+                    >
+                      Cancelar
+                    </Button>
+                  )}
                 </div>
+
+                {showHiringForm && (
+                  <HiringForm
+                    hireSalary={hireSalary}
+                    setHireSalary={setHireSalary}
+                    hireBonus={hireBonus}
+                    setHireBonus={setHireBonus}
+                    hireAdmissionDate={hireAdmissionDate}
+                    setHireAdmissionDate={setHireAdmissionDate}
+                    hireVeiculo={hireVeiculo}
+                    setHireVeiculo={setHireVeiculo}
+                    onConfirm={async () => {
+                      const parseCurrency = (val: string) => {
+                        const digits = val.replace(/\D/g, '');
+                        return digits ? parseInt(digits, 10) / 100 : null;
+                      };
+                      if (onHire && party) {
+                        onHire({
+                          closingSalary: parseCurrency(hireSalary),
+                          bonusAnualFinal: parseCurrency(hireBonus),
+                          admissionDate: hireAdmissionDate ? format(hireAdmissionDate, 'yyyy-MM-dd') : null,
+                          veiculoProprio: hireVeiculo,
+                          candidateId: party.id,
+                        });
+                      }
+                      await handleStatusChange('hired');
+                      setShowHiringForm(false);
+                    }}
+                    isPending={updateStatus.isPending}
+                  />
+                )}
               )}
             </TabsContent>
 
