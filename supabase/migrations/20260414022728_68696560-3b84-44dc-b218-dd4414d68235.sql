@@ -1,0 +1,1 @@
+ALTER TABLE public.jobs ADD COLUMN veiculo_proprio boolean DEFAULT false;

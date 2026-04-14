@@ -1082,6 +1082,7 @@ export type Database = {
           status: Database["public"]["Enums"]["job_status"]
           title: string
           updated_at: string
+          veiculo_proprio: boolean | null
         }
         Insert: {
           admission_date?: string | null
@@ -1135,6 +1136,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["job_status"]
           title: string
           updated_at?: string
+          veiculo_proprio?: boolean | null
         }
         Update: {
           admission_date?: string | null
@@ -1188,6 +1190,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["job_status"]
           title?: string
           updated_at?: string
+          veiculo_proprio?: boolean | null
         }
         Relationships: [
           {
