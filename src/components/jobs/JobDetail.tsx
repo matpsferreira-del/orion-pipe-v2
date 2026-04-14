@@ -479,6 +479,10 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
               </Button>
             </>
           )}
+          <Button variant="outline" size="sm" onClick={() => setShowContractConfig(true)}>
+            <FileText className="h-4 w-4 mr-1" />
+            {modeloContrato ? contractModelLabels[modeloContrato] : 'Contrato'}
+          </Button>
           <Button variant="outline" size="sm" onClick={() => navigate(`/vagas/${job.id}/questionario`)}>
             <ClipboardList className="h-4 w-4 mr-1" />
             Questionário
