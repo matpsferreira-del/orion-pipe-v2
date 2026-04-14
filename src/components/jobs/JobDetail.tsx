@@ -22,7 +22,7 @@ import { CandidateKanban } from './CandidateKanban';
 import { CandidateListView } from './CandidateListView';
 import { AddCandidateDialog } from './AddCandidateDialog';
 import { LinkedInPostDialog } from './LinkedInPostDialog';
-import { CandidateDetailDialog } from './CandidateDetailDialog';
+import { CandidateDetailDialog, HireData } from './CandidateDetailDialog';
 import { EmailRequest } from './CandidateDetailDialog';
 import { ComposeEmailDialog } from '@/components/email/ComposeEmailDialog';
 import { OfferLetterPrompt } from './OfferLetterPrompt';
