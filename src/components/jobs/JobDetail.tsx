@@ -20,6 +20,8 @@ import { CandidateListView } from './CandidateListView';
 import { AddCandidateDialog } from './AddCandidateDialog';
 import { LinkedInPostDialog } from './LinkedInPostDialog';
 import { CandidateDetailDialog } from './CandidateDetailDialog';
+import { EmailRequest } from './CandidateDetailDialog';
+import { ComposeEmailDialog } from '@/components/email/ComposeEmailDialog';
 import { OfferLetterPrompt } from './OfferLetterPrompt';
 import { BulkActionBar } from './BulkActionBar';
 import { ApplicationWithRelations } from '@/types/ats';
@@ -48,6 +50,7 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
   const [generatingShortlist, setGeneratingShortlist] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [advancedFilters, setAdvancedFilters] = useState<AdvancedFilters>(emptyFilters);
+  const [emailRequest, setEmailRequest] = useState<EmailRequest | null>(null);
   const navigate = useNavigate();
 
   const handleToggleSelect = useCallback((id: string) => {
@@ -729,7 +732,20 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
         stages={stages}
         jobId={job.id}
         jobTitle={job.title}
+        onRequestEmail={(req) => {
+          setSelectedApplication(null);
+          setTimeout(() => setEmailRequest(req), 150);
+        }}
       />
+
+      {/* Email Dialog - lifted out of candidate detail to survive unmount */}
+      <ComposeEmailDialog
+        open={!!emailRequest}
+        onOpenChange={(isOpen) => { if (!isOpen) setEmailRequest(null); }}
+        defaultRecipients={emailRequest ? [emailRequest.email] : []}
+        variables={emailRequest ? { nome_candidato: emailRequest.candidateName, nome_vaga: emailRequest.jobTitle } : {}}
+      />
+
       {/* LinkedIn Post Generator */}
       <LinkedInPostDialog
         open={showLinkedInPost}
