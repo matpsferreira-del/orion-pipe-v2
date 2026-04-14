@@ -148,6 +148,7 @@ export function JobDetail({ job, onEdit }: JobDetailProps) {
   const company = companies.find(c => c.id === job.company_id);
   const responsavel = profiles.find(p => p.id === job.responsavel_id);
   const isOutplacementProject = !job.company_id;
+  const modeloContrato = (job as any).modelo_contrato as ContractModel | null;
 
   // Campos extras que vêm do banco mas não estão no tipo antigo
   const jobPublished = (job as any).published as boolean | undefined;
