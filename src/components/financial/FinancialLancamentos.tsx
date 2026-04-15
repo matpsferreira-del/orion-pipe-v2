@@ -478,6 +478,7 @@ export function FinancialLancamentos({ year }: { year: number }) {
               <TableHead>Descrição</TableHead>
               <TableHead className="text-right">Valor</TableHead>
               <TableHead>Vencimento</TableHead>
+              <TableHead>Vaga</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="w-[80px]"></TableHead>
             </TableRow>
@@ -485,7 +486,7 @@ export function FinancialLancamentos({ year }: { year: number }) {
           <TableBody>
             {filteredTransactions.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                   Nenhum lançamento encontrado
                 </TableCell>
               </TableRow>
@@ -500,6 +501,9 @@ export function FinancialLancamentos({ year }: { year: number }) {
                   <TableCell className="max-w-[200px] truncate text-muted-foreground">
                     <div className="flex items-center gap-1">
                       {tx.invoice_id && <Link2 className="h-3 w-3 text-primary flex-shrink-0" />}
+                      {docsCountMap[tx.id] > 0 && (
+                        <FileText className="h-3 w-3 text-primary flex-shrink-0" title={`${docsCountMap[tx.id]} documento(s) anexado(s)`} />
+                      )}
                       {tx.descricao || '—'}
                     </div>
                   </TableCell>
@@ -508,6 +512,16 @@ export function FinancialLancamentos({ year }: { year: number }) {
                   </TableCell>
                   <TableCell className="whitespace-nowrap text-muted-foreground">
                     {new Date(tx.data_vencimento + 'T00:00:00').toLocaleDateString('pt-BR')}
+                  </TableCell>
+                  <TableCell className="max-w-[150px]">
+                    {(tx as any).job_id && jobsMap[(tx as any).job_id] ? (
+                      <Badge variant="outline" className="text-xs bg-primary/5 text-primary border-primary/20 truncate max-w-full">
+                        <Briefcase className="h-3 w-3 mr-1 flex-shrink-0" />
+                        <span className="truncate">{jobsMap[(tx as any).job_id]}</span>
+                      </Badge>
+                    ) : (
+                      <span className="text-muted-foreground text-xs">—</span>
+                    )}
                   </TableCell>
                   <TableCell>
                     <Badge variant="outline" className={cn(
