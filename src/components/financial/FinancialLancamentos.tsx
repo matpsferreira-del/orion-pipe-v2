@@ -58,6 +58,8 @@ export function FinancialLancamentos({ year }: { year: number }) {
   const [statusForm, setStatusForm] = useState<'pendente' | 'pago'>('pendente');
   const [recorrente, setRecorrente] = useState(false);
   const [recorrenciaMeses, setRecorrenciaMeses] = useState('');
+  const [jobId, setJobId] = useState<string>('none');
+  const [pendingDocId, setPendingDocId] = useState<string | null>(null);
 
   // Filters
   const [filterMonth, setFilterMonth] = useState('all');
