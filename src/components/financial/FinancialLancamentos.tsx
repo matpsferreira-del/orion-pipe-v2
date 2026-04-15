@@ -211,13 +211,26 @@ export function FinancialLancamentos({ year }: { year: number }) {
       setDescricao(parts.join(' '));
     }
 
-    // Auto-select pacote based on classificacao
-    if (data.classificacao && chartAccounts.length > 0) {
+    // Auto-select pacote and conta_contabil from AI response
+    if (data.pacote && data.conta_contabil && chartAccounts.length > 0) {
+      // Try exact match from AI
+      const exactMatch = chartAccounts.find(a => a.pacote === data.pacote && a.conta_contabil === data.conta_contabil);
+      if (exactMatch) {
+        setPacote(exactMatch.pacote);
+        setContaContabil(exactMatch.conta_contabil);
+      } else {
+        // Fallback: match by pacote only
+        const pacoteMatch = chartAccounts.find(a => a.pacote === data.pacote);
+        if (pacoteMatch) {
+          setPacote(pacoteMatch.pacote);
+          setContaContabil(pacoteMatch.conta_contabil);
+        }
+      }
+    } else if (data.classificacao && chartAccounts.length > 0) {
       const tipoFilter = data.classificacao === 'receita' ? ['receita'] : [data.classificacao, 'despesa'];
       const matchingAccounts = chartAccounts.filter(a => tipoFilter.includes(a.tipo));
       if (matchingAccounts.length > 0) {
-        const firstPacote = matchingAccounts[0].pacote;
-        setPacote(firstPacote);
+        setPacote(matchingAccounts[0].pacote);
         setContaContabil(matchingAccounts[0].conta_contabil);
       }
     }
