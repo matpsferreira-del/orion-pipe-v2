@@ -184,16 +184,49 @@ export function FinancialLancamentos({ year }: { year: number }) {
   };
 
   const handleDocExtracted = (data: Record<string, any>) => {
-    // Auto-classify tipo based on AI classification
-    if (data.classificacao) {
-      if (data.classificacao === 'receita') {
-        setTipo('receita');
-      } else {
-        setTipo('despesa');
+    const items = data.itens as Array<{ descricao: string; valor: number; numero_po?: string }> | undefined;
+    
+    // If multiple items, auto-create one transaction per item
+    if (items && items.length > 1 && chartAccounts.length > 0) {
+      const isReceita = data.classificacao === 'receita';
+      const tipoFilter = isReceita ? ['receita'] : [data.classificacao || 'despesa', 'despesa'];
+      const matchingAccounts = chartAccounts.filter(a => tipoFilter.includes(a.tipo));
+      const firstAccount = matchingAccounts[0];
+      
+      if (firstAccount) {
+        const txs: FinancialTransactionInsert[] = items.map((item, i) => {
+          const numVal = Math.abs(item.valor);
+          const parts = [item.descricao];
+          if (item.numero_po) parts.push(`(PO: ${item.numero_po})`);
+          if (data.razao_social_emitente) parts.push(`- ${data.razao_social_emitente}`);
+          
+          return {
+            pacote: firstAccount.pacote,
+            conta_contabil: firstAccount.conta_contabil,
+            descricao: parts.join(' '),
+            valor: isReceita ? numVal : -numVal,
+            data_referencia: data.data_emissao || format(new Date(), 'yyyy-MM-dd'),
+            data_vencimento: data.data_vencimento || format(new Date(), 'yyyy-MM-dd'),
+            status: 'pendente' as const,
+            recorrente: false,
+          };
+        });
+        
+        createBulk.mutate(txs, {
+          onSuccess: () => {
+            // Link the uploaded doc to the first transaction if available
+            resetForm();
+          },
+        });
+        return;
       }
     }
+    
+    // Single item or fallback: populate the form
+    if (data.classificacao) {
+      setTipo(data.classificacao === 'receita' ? 'receita' : 'despesa');
+    }
 
-    // Auto-fill form fields from extracted data
     if (data.valor && !valor) setValor(String(data.valor));
     if (data.data_vencimento && !editingId) {
       try {
@@ -217,8 +250,7 @@ export function FinancialLancamentos({ year }: { year: number }) {
       const tipoFilter = data.classificacao === 'receita' ? ['receita'] : [data.classificacao, 'despesa'];
       const matchingAccounts = chartAccounts.filter(a => tipoFilter.includes(a.tipo));
       if (matchingAccounts.length > 0) {
-        const firstPacote = matchingAccounts[0].pacote;
-        setPacote(firstPacote);
+        setPacote(matchingAccounts[0].pacote);
         setContaContabil(matchingAccounts[0].conta_contabil);
       }
     }
