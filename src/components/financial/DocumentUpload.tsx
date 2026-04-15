@@ -1,11 +1,21 @@
 import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useUploadFinancialDocument, useFinancialDocuments, useDeleteFinancialDocument } from '@/hooks/useFinancialDocuments';
-import { Upload, FileText, Loader2, Trash2, ExternalLink, CheckCircle2, AlertCircle } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Upload, FileText, Loader2, Trash2, ExternalLink, CheckCircle2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+
+const classificacaoLabels: Record<string, { label: string; className: string }> = {
+  receita: { label: 'Receita', className: 'bg-success/10 text-success border-success/20' },
+  custo: { label: 'Custo', className: 'bg-warning/10 text-warning border-warning/20' },
+  despesa: { label: 'Despesa', className: 'bg-destructive/10 text-destructive border-destructive/20' },
+  deducao: { label: 'Dedução', className: 'bg-muted text-muted-foreground' },
+};
+
+const docTypeLabels: Record<string, string> = {
+  nf: 'Nota Fiscal',
+  boleto: 'Boleto',
+};
 
 interface DocumentUploadProps {
   transactionId?: string;
@@ -14,7 +24,6 @@ interface DocumentUploadProps {
 }
 
 export function DocumentUpload({ transactionId, onExtracted, compact = false }: DocumentUploadProps) {
-  const [docType, setDocType] = useState<'nf' | 'boleto'>('nf');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const uploadMutation = useUploadFinancialDocument();
   const deleteMutation = useDeleteFinancialDocument();
@@ -28,9 +37,10 @@ export function DocumentUpload({ transactionId, onExtracted, compact = false }: 
       return;
     }
 
+    // AI will auto-detect the type
     const result = await uploadMutation.mutateAsync({
       file,
-      documentType: docType,
+      documentType: 'nf', // placeholder, AI will classify
       transactionId,
     });
 
@@ -38,7 +48,6 @@ export function DocumentUpload({ transactionId, onExtracted, compact = false }: 
       onExtracted(result.extractedData);
     }
 
-    // Reset input
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -59,15 +68,6 @@ export function DocumentUpload({ transactionId, onExtracted, compact = false }: 
     return (
       <div className="space-y-2">
         <div className="flex items-center gap-2">
-          <Select value={docType} onValueChange={(v: 'nf' | 'boleto') => setDocType(v)}>
-            <SelectTrigger className="w-[100px] h-8 text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="nf">NF</SelectItem>
-              <SelectItem value="boleto">Boleto</SelectItem>
-            </SelectContent>
-          </Select>
           <Button
             variant="outline"
             size="sm"
@@ -80,7 +80,7 @@ export function DocumentUpload({ transactionId, onExtracted, compact = false }: 
             ) : (
               <Upload className="h-3 w-3 mr-1" />
             )}
-            {uploadMutation.isPending ? 'Processando...' : 'Upload PDF'}
+            {uploadMutation.isPending ? 'Processando...' : 'Upload NF/Boleto'}
           </Button>
           <input ref={fileInputRef} type="file" accept=".pdf" className="hidden" onChange={handleFileSelect} />
         </div>
@@ -92,7 +92,7 @@ export function DocumentUpload({ transactionId, onExtracted, compact = false }: 
                 <FileText className="h-3 w-3 text-primary flex-shrink-0" />
                 <span className="truncate flex-1">{doc.file_name}</span>
                 <Badge variant="outline" className="text-[10px] px-1">
-                  {doc.document_type === 'nf' ? 'NF' : 'Boleto'}
+                  {docTypeLabels[doc.document_type] || doc.document_type}
                 </Badge>
                 <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => handleDownload(doc.file_path, doc.file_name)}>
                   <ExternalLink className="h-3 w-3" />
@@ -109,20 +109,10 @@ export function DocumentUpload({ transactionId, onExtracted, compact = false }: 
     <div className="border rounded-lg bg-card p-4 space-y-4">
       <h3 className="font-semibold text-sm text-foreground flex items-center gap-2">
         <FileText className="h-4 w-4" />
-        Upload de NF / Boleto
+        Upload de Documento Financeiro
       </h3>
 
       <div className="flex items-center gap-3">
-        <Select value={docType} onValueChange={(v: 'nf' | 'boleto') => setDocType(v)}>
-          <SelectTrigger className="w-[140px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="nf">Nota Fiscal</SelectItem>
-            <SelectItem value="boleto">Boleto</SelectItem>
-          </SelectContent>
-        </Select>
-
         <Button
           variant="outline"
           disabled={uploadMutation.isPending}
@@ -137,18 +127,21 @@ export function DocumentUpload({ transactionId, onExtracted, compact = false }: 
           ) : (
             <>
               <Upload className="h-4 w-4 mr-2" />
-              Selecionar PDF
+              Selecionar PDF (NF ou Boleto)
             </>
           )}
         </Button>
-
         <input ref={fileInputRef} type="file" accept=".pdf" className="hidden" onChange={handleFileSelect} />
       </div>
+
+      <p className="text-xs text-muted-foreground">
+        A IA identifica automaticamente se é nota fiscal ou boleto, e classifica como receita, custo ou despesa.
+      </p>
 
       {uploadMutation.isPending && (
         <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 rounded-md px-3 py-2">
           <Loader2 className="h-4 w-4 animate-spin" />
-          Extraindo dados do documento com inteligência artificial...
+          Extraindo e classificando documento com inteligência artificial...
         </div>
       )}
 
@@ -158,6 +151,18 @@ export function DocumentUpload({ transactionId, onExtracted, compact = false }: 
           <div className="flex items-center gap-2 text-sm font-medium text-success">
             <CheckCircle2 className="h-4 w-4" />
             Dados extraídos automaticamente
+          </div>
+          <div className="flex items-center gap-2 mb-2">
+            {uploadMutation.data.extractedData.document_type && (
+              <Badge variant="outline" className="text-xs">
+                {docTypeLabels[uploadMutation.data.extractedData.document_type] || uploadMutation.data.extractedData.document_type}
+              </Badge>
+            )}
+            {uploadMutation.data.extractedData.classificacao && (
+              <Badge variant="outline" className={classificacaoLabels[uploadMutation.data.extractedData.classificacao]?.className || ''}>
+                {classificacaoLabels[uploadMutation.data.extractedData.classificacao]?.label || uploadMutation.data.extractedData.classificacao}
+              </Badge>
+            )}
           </div>
           <div className="grid grid-cols-2 gap-2 text-sm">
             {uploadMutation.data.extractedData.numero_documento && (
@@ -178,29 +183,23 @@ export function DocumentUpload({ transactionId, onExtracted, compact = false }: 
                 <span className="font-medium">{uploadMutation.data.extractedData.cnpj_emitente}</span>
               </div>
             )}
-            {uploadMutation.data.extractedData.cnpj_tomador && (
+            {uploadMutation.data.extractedData.razao_social_emitente && (
               <div>
-                <span className="text-muted-foreground">CNPJ Tomador:</span>{' '}
-                <span className="font-medium">{uploadMutation.data.extractedData.cnpj_tomador}</span>
-              </div>
-            )}
-            {uploadMutation.data.extractedData.razao_social_tomador && (
-              <div className="col-span-2">
-                <span className="text-muted-foreground">Tomador:</span>{' '}
-                <span className="font-medium">{uploadMutation.data.extractedData.razao_social_tomador}</span>
+                <span className="text-muted-foreground">Emitente:</span>{' '}
+                <span className="font-medium">{uploadMutation.data.extractedData.razao_social_emitente}</span>
               </div>
             )}
             {uploadMutation.data.extractedData.data_vencimento && (
               <div>
                 <span className="text-muted-foreground">Vencimento:</span>{' '}
                 <span className="font-medium">
-                  {new Date(uploadMutation.data.extractedData.data_vencimento + 'T00:00:00').toLocaleDateString('pt-BR')}
+                  {new Date(uploadMutation.data.extractedData.data_vencimento + 'T12:00:00').toLocaleDateString('pt-BR')}
                 </span>
               </div>
             )}
             {uploadMutation.data.extractedData.descricao_servico && (
               <div className="col-span-2">
-                <span className="text-muted-foreground">Serviço:</span>{' '}
+                <span className="text-muted-foreground">Descrição:</span>{' '}
                 <span className="font-medium">{uploadMutation.data.extractedData.descricao_servico}</span>
               </div>
             )}
@@ -225,7 +224,7 @@ export function DocumentUpload({ transactionId, onExtracted, compact = false }: 
                 <p className="text-sm font-medium truncate">{doc.file_name}</p>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <Badge variant="outline" className="text-[10px]">
-                    {doc.document_type === 'nf' ? 'Nota Fiscal' : 'Boleto'}
+                    {docTypeLabels[doc.document_type] || doc.document_type}
                   </Badge>
                   {doc.numero_documento && <span>Nº {doc.numero_documento}</span>}
                   {doc.valor_documento && <span>{formatCurrency(doc.valor_documento)}</span>}
