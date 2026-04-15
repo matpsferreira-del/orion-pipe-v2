@@ -563,7 +563,7 @@ export function FinancialLancamentos({ year }: { year: number }) {
                   <TableCell className="max-w-[200px] truncate text-muted-foreground">
                     <div className="flex items-center gap-1">
                       {tx.invoice_id && <Link2 className="h-3 w-3 text-primary flex-shrink-0" />}
-                      {docsCountMap[tx.id] > 0 && (
+                      {(tx as any).financial_documents?.length > 0 && (
                         <FileText className="h-3 w-3 text-primary flex-shrink-0" />
                       )}
                       {tx.descricao || '—'}
