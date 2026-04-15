@@ -100,6 +100,8 @@ export function FinancialLancamentos({ year }: { year: number }) {
     setStatusForm('pendente');
     setRecorrente(false);
     setRecorrenciaMeses('');
+    setJobId('none');
+    setPendingDocId(null);
     setEditingId(null);
   };
 
