@@ -77,7 +77,6 @@ const tabNavItems = {
     { to: '/contatos', icon: Contact, label: 'Contatos' },
     { to: '/oportunidades', icon: Target, label: 'Oportunidades' },
     { to: '/tarefas', icon: CheckSquare, label: 'Tarefas' },
-    { to: '/faturamento', icon: Receipt, label: 'Faturamento' },
     { to: '/relatorios', icon: BarChart3, label: 'Relatórios' },
     { to: '/map-comercial', icon: Radar, label: 'Map Comercial' },
     { to: '/mapeamento-vagas', icon: Radar, label: 'Mapeamento de Vagas' },
