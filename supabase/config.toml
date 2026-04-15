@@ -17,3 +17,5 @@ project_id = "ocrsfcjiutvojzdfotou"
     verify_jwt = false
   [functions.get-job-questions]
     verify_jwt = false
+  [functions.extract-financial-doc]
+    verify_jwt = false

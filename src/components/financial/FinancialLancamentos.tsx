@@ -17,7 +17,10 @@ import {
   useUpdateFinancialTransaction,
   type FinancialTransactionInsert,
 } from '@/hooks/useFinancial';
-import { Plus, Pencil, Trash2, Link2, CalendarIcon, Loader2 } from 'lucide-react';
+import { useJobs } from '@/hooks/useJobs';
+import { useFinancialDocuments, useLinkDocumentToTransaction } from '@/hooks/useFinancialDocuments';
+import { DocumentUpload } from './DocumentUpload';
+import { Plus, Pencil, Trash2, Link2, CalendarIcon, Loader2, FileText, Briefcase } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, addMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -40,6 +43,9 @@ export function FinancialLancamentos({ year }: { year: number }) {
   const createBulk = useCreateBulkFinancialTransactions();
   const softDelete = useSoftDeleteFinancialTransaction();
   const updateTx = useUpdateFinancialTransaction();
+  const { data: jobs = [] } = useJobs();
+  const { data: allDocs = [] } = useFinancialDocuments();
+  const linkDoc = useLinkDocumentToTransaction();
 
   // Form state
   const [tipo, setTipo] = useState<'receita' | 'despesa'>('despesa');
@@ -52,6 +58,8 @@ export function FinancialLancamentos({ year }: { year: number }) {
   const [statusForm, setStatusForm] = useState<'pendente' | 'pago'>('pendente');
   const [recorrente, setRecorrente] = useState(false);
   const [recorrenciaMeses, setRecorrenciaMeses] = useState('');
+  const [jobId, setJobId] = useState<string>('none');
+  const [pendingDocId, setPendingDocId] = useState<string | null>(null);
 
   // Filters
   const [filterMonth, setFilterMonth] = useState('all');
@@ -92,6 +100,8 @@ export function FinancialLancamentos({ year }: { year: number }) {
     setStatusForm('pendente');
     setRecorrente(false);
     setRecorrenciaMeses('');
+    setJobId('none');
+    setPendingDocId(null);
     setEditingId(null);
   };
 
@@ -102,6 +112,15 @@ export function FinancialLancamentos({ year }: { year: number }) {
 
     const numericVal = Math.abs(parseFloat(valor));
     const finalValor = tipo === 'despesa' ? -numericVal : numericVal;
+    const selectedJobId = jobId !== 'none' ? jobId : undefined;
+
+    const onSuccessWithDocLink = (data: any) => {
+      // If there's a pending document to link
+      if (pendingDocId && data?.id) {
+        linkDoc.mutate({ documentId: pendingDocId, transactionId: data.id });
+      }
+      resetForm();
+    };
 
     if (editingId) {
       updateTx.mutate({
@@ -113,7 +132,8 @@ export function FinancialLancamentos({ year }: { year: number }) {
         data_referencia: format(dataRef, 'yyyy-MM-dd'),
         data_vencimento: format(dataVenc, 'yyyy-MM-dd'),
         status: statusForm,
-      }, { onSuccess: resetForm });
+        job_id: selectedJobId,
+      } as any, { onSuccess: resetForm });
       return;
     }
 
@@ -144,7 +164,8 @@ export function FinancialLancamentos({ year }: { year: number }) {
         data_vencimento: format(dataVenc, 'yyyy-MM-dd'),
         status: statusForm,
         recorrente: false,
-      }, { onSuccess: resetForm });
+        job_id: selectedJobId,
+      } as any, { onSuccess: onSuccessWithDocLink });
     }
   };
 
@@ -158,8 +179,43 @@ export function FinancialLancamentos({ year }: { year: number }) {
     setDataRef(new Date(tx.data_referencia + 'T00:00:00'));
     setDataVenc(new Date(tx.data_vencimento + 'T00:00:00'));
     setStatusForm(tx.status as 'pendente' | 'pago');
+    setJobId((tx as any).job_id || 'none');
     setRecorrente(false);
   };
+
+  const handleDocExtracted = (data: Record<string, any>) => {
+    // Auto-fill form fields from extracted data
+    if (data.valor && !valor) setValor(String(data.valor));
+    if (data.data_vencimento && !editingId) {
+      try {
+        setDataVenc(new Date(data.data_vencimento + 'T00:00:00'));
+      } catch {}
+    }
+    if (data.descricao_servico && !descricao) {
+      const desc = data.numero_po
+        ? `${data.descricao_servico} (PO: ${data.numero_po})`
+        : data.descricao_servico;
+      setDescricao(desc);
+    }
+  };
+
+  // Build a map of transaction_id -> docs count
+  const docsCountMap = useMemo(() => {
+    const map: Record<string, number> = {};
+    allDocs.forEach((d: any) => {
+      if (d.financial_transaction_id) {
+        map[d.financial_transaction_id] = (map[d.financial_transaction_id] || 0) + 1;
+      }
+    });
+    return map;
+  }, [allDocs]);
+
+  // Build job lookup
+  const jobsMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    jobs.forEach((j: any) => { map[j.id] = `#${j.job_code || ''} ${j.title}`; });
+    return map;
+  }, [jobs]);
 
   const handleDelete = () => {
     if (deleteId) {
@@ -317,6 +373,41 @@ export function FinancialLancamentos({ year }: { year: number }) {
           </Button>
         </div>
 
+        {/* Job selector + Document Upload */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div>
+            <label className="text-xs font-medium text-muted-foreground flex items-center gap-1 mb-1.5">
+              <Briefcase className="h-3 w-3" /> Vincular a Vaga
+            </label>
+            <Select value={jobId} onValueChange={setJobId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Nenhuma vaga vinculada" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Nenhuma</SelectItem>
+                {jobs
+                  .filter((j: any) => j.status !== 'cancelled')
+                  .map((j: any) => (
+                    <SelectItem key={j.id} value={j.id}>
+                      {j.job_code ? `#${j.job_code} — ` : ''}{j.title}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <label className="text-xs font-medium text-muted-foreground flex items-center gap-1 mb-1.5">
+              <FileText className="h-3 w-3" /> Anexar NF / Boleto
+            </label>
+            <DocumentUpload
+              transactionId={editingId || undefined}
+              onExtracted={handleDocExtracted}
+              compact
+            />
+          </div>
+        </div>
+
         {/* Recorrente */}
         {!editingId && (
           <div className="flex items-center gap-3">
@@ -387,6 +478,7 @@ export function FinancialLancamentos({ year }: { year: number }) {
               <TableHead>Descrição</TableHead>
               <TableHead className="text-right">Valor</TableHead>
               <TableHead>Vencimento</TableHead>
+              <TableHead>Vaga</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="w-[80px]"></TableHead>
             </TableRow>
@@ -394,7 +486,7 @@ export function FinancialLancamentos({ year }: { year: number }) {
           <TableBody>
             {filteredTransactions.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                   Nenhum lançamento encontrado
                 </TableCell>
               </TableRow>
@@ -409,6 +501,9 @@ export function FinancialLancamentos({ year }: { year: number }) {
                   <TableCell className="max-w-[200px] truncate text-muted-foreground">
                     <div className="flex items-center gap-1">
                       {tx.invoice_id && <Link2 className="h-3 w-3 text-primary flex-shrink-0" />}
+                      {docsCountMap[tx.id] > 0 && (
+                        <FileText className="h-3 w-3 text-primary flex-shrink-0" />
+                      )}
                       {tx.descricao || '—'}
                     </div>
                   </TableCell>
@@ -417,6 +512,16 @@ export function FinancialLancamentos({ year }: { year: number }) {
                   </TableCell>
                   <TableCell className="whitespace-nowrap text-muted-foreground">
                     {new Date(tx.data_vencimento + 'T00:00:00').toLocaleDateString('pt-BR')}
+                  </TableCell>
+                  <TableCell className="max-w-[150px]">
+                    {(tx as any).job_id && jobsMap[(tx as any).job_id] ? (
+                      <Badge variant="outline" className="text-xs bg-primary/5 text-primary border-primary/20 truncate max-w-full">
+                        <Briefcase className="h-3 w-3 mr-1 flex-shrink-0" />
+                        <span className="truncate">{jobsMap[(tx as any).job_id]}</span>
+                      </Badge>
+                    ) : (
+                      <span className="text-muted-foreground text-xs">—</span>
+                    )}
                   </TableCell>
                   <TableCell>
                     <Badge variant="outline" className={cn(
