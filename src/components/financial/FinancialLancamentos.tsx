@@ -112,6 +112,15 @@ export function FinancialLancamentos({ year }: { year: number }) {
 
     const numericVal = Math.abs(parseFloat(valor));
     const finalValor = tipo === 'despesa' ? -numericVal : numericVal;
+    const selectedJobId = jobId !== 'none' ? jobId : undefined;
+
+    const onSuccessWithDocLink = (data: any) => {
+      // If there's a pending document to link
+      if (pendingDocId && data?.id) {
+        linkDoc.mutate({ documentId: pendingDocId, transactionId: data.id });
+      }
+      resetForm();
+    };
 
     if (editingId) {
       updateTx.mutate({
@@ -123,7 +132,8 @@ export function FinancialLancamentos({ year }: { year: number }) {
         data_referencia: format(dataRef, 'yyyy-MM-dd'),
         data_vencimento: format(dataVenc, 'yyyy-MM-dd'),
         status: statusForm,
-      }, { onSuccess: resetForm });
+        job_id: selectedJobId,
+      } as any, { onSuccess: resetForm });
       return;
     }
 
@@ -154,7 +164,8 @@ export function FinancialLancamentos({ year }: { year: number }) {
         data_vencimento: format(dataVenc, 'yyyy-MM-dd'),
         status: statusForm,
         recorrente: false,
-      }, { onSuccess: resetForm });
+        job_id: selectedJobId,
+      } as any, { onSuccess: onSuccessWithDocLink });
     }
   };
 
