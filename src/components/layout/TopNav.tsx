@@ -32,7 +32,7 @@ export const routeToTab: Record<string, TabType> = {
   '/contatos': 'comercial',
   '/oportunidades': 'comercial',
   '/tarefas': 'comercial',
-  '/faturamento': 'comercial',
+  '/faturamento': 'financeiro',
   '/relatorios': 'comercial',
   '/mapeamento-vagas': 'comercial',
   '/map-comercial': 'comercial',

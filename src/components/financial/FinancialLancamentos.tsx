@@ -184,18 +184,43 @@ export function FinancialLancamentos({ year }: { year: number }) {
   };
 
   const handleDocExtracted = (data: Record<string, any>) => {
+    // Auto-classify tipo based on AI classification
+    if (data.classificacao) {
+      if (data.classificacao === 'receita') {
+        setTipo('receita');
+      } else {
+        setTipo('despesa');
+      }
+    }
+
     // Auto-fill form fields from extracted data
     if (data.valor && !valor) setValor(String(data.valor));
     if (data.data_vencimento && !editingId) {
       try {
-        setDataVenc(new Date(data.data_vencimento + 'T00:00:00'));
+        setDataVenc(new Date(data.data_vencimento + 'T12:00:00'));
+      } catch {}
+    }
+    if (data.data_emissao && !editingId) {
+      try {
+        setDataRef(new Date(data.data_emissao + 'T12:00:00'));
       } catch {}
     }
     if (data.descricao_servico && !descricao) {
-      const desc = data.numero_po
-        ? `${data.descricao_servico} (PO: ${data.numero_po})`
-        : data.descricao_servico;
-      setDescricao(desc);
+      const parts = [data.descricao_servico];
+      if (data.numero_po) parts.push(`(PO: ${data.numero_po})`);
+      if (data.razao_social_emitente) parts.push(`- ${data.razao_social_emitente}`);
+      setDescricao(parts.join(' '));
+    }
+
+    // Auto-select pacote based on classificacao
+    if (data.classificacao && chartAccounts.length > 0) {
+      const tipoFilter = data.classificacao === 'receita' ? ['receita'] : [data.classificacao, 'despesa'];
+      const matchingAccounts = chartAccounts.filter(a => tipoFilter.includes(a.tipo));
+      if (matchingAccounts.length > 0) {
+        const firstPacote = matchingAccounts[0].pacote;
+        setPacote(firstPacote);
+        setContaContabil(matchingAccounts[0].conta_contabil);
+      }
     }
   };
 

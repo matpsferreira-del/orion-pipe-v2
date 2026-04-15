@@ -7,6 +7,25 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+function extractJSON(raw: string): any {
+  let cleaned = raw
+    .replace(/^```json\s*/im, "")
+    .replace(/^```\s*/im, "")
+    .replace(/```\s*$/im, "")
+    .trim();
+
+  if (!cleaned.startsWith("{") && !cleaned.startsWith("[")) {
+    const objStart = cleaned.indexOf("{");
+    const end = cleaned.lastIndexOf("}");
+    if (objStart !== -1 && end > objStart) {
+      cleaned = cleaned.slice(objStart, end + 1);
+    } else {
+      throw new Error("No valid JSON found in response");
+    }
+  }
+  return JSON.parse(cleaned);
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -38,7 +57,7 @@ serve(async (req) => {
       });
     }
 
-    const { file_path, document_type } = await req.json();
+    const { file_path } = await req.json();
     if (!file_path) {
       return new Response(JSON.stringify({ error: "file_path is required" }), {
         status: 400,
@@ -59,27 +78,44 @@ serve(async (req) => {
       });
     }
 
-    // Convert to base64 for AI
+    // Convert to base64
     const arrayBuffer = await fileData.arrayBuffer();
     const base64 = btoa(
       new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), "")
     );
 
-    const systemPrompt = `Você é um assistente especializado em extrair dados de documentos financeiros brasileiros (Notas Fiscais de Serviço e Boletos bancários).
+    const systemPrompt = `Você é um assistente especializado em extrair dados de documentos financeiros brasileiros.
 
-Analise o PDF fornecido e extraia os seguintes campos:
-- numero_documento: número da NF ou boleto
-- valor: valor total em reais (apenas o número, ex: 4000.00)
-- cnpj_emitente: CNPJ do prestador/emitente (formato XX.XXX.XXX/XXXX-XX)
-- cnpj_tomador: CNPJ ou CPF do tomador/cliente
-- razao_social_emitente: nome/razão social do emitente
-- razao_social_tomador: nome/razão social do tomador
-- data_emissao: data de emissão (formato YYYY-MM-DD)
-- data_vencimento: data de vencimento (formato YYYY-MM-DD)
-- descricao_servico: descrição resumida do serviço
-- numero_po: número da PO/ordem de compra, se houver
+Analise o PDF fornecido e:
+1. Identifique o TIPO do documento: "nf" (Nota Fiscal de Serviço/Produto) ou "boleto" (Boleto bancário)
+2. Classifique a NATUREZA FINANCEIRA:
+   - "receita": se é uma nota fiscal ou boleto emitido PELA empresa (a empresa está prestando serviço / vendendo)
+   - "custo": se é um custo direto relacionado à operação (ex: fornecedores de serviços essenciais, software operacional)
+   - "despesa": se é uma despesa administrativa/geral (ex: aluguel, luz, internet, material de escritório)
+   - "deducao": se é um imposto retido na fonte ou dedução fiscal
+   Se não for possível determinar com certeza, use "despesa" como padrão.
+3. Extraia os campos estruturados do documento
 
-Tipo de documento esperado: ${document_type === "boleto" ? "Boleto bancário" : "Nota Fiscal de Serviço (NFS-e)"}`;
+Retorne APENAS um JSON válido (sem markdown, sem texto extra) com os campos:
+{
+  "document_type": "nf" ou "boleto",
+  "classificacao": "receita" | "custo" | "despesa" | "deducao",
+  "numero_documento": "número da NF ou boleto",
+  "valor": 0.00,
+  "cnpj_emitente": "CNPJ do emitente",
+  "cnpj_tomador": "CNPJ/CPF do tomador",
+  "razao_social_emitente": "nome do emitente",
+  "razao_social_tomador": "nome do tomador",
+  "data_emissao": "YYYY-MM-DD",
+  "data_vencimento": "YYYY-MM-DD",
+  "descricao_servico": "descrição resumida",
+  "numero_po": "número da PO se houver, senão null"
+}
+
+IMPORTANTE: 
+- valor deve ser numérico (ex: 4000.00), sem formatação
+- datas no formato YYYY-MM-DD
+- campos não encontrados devem ser null`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -102,38 +138,12 @@ Tipo de documento esperado: ${document_type === "boleto" ? "Boleto bancário" : 
               },
               {
                 type: "text",
-                text: "Extraia os dados deste documento financeiro.",
+                text: "Extraia os dados deste documento financeiro e classifique-o. Retorne APENAS o JSON.",
               },
             ],
           },
         ],
-        tools: [
-          {
-            type: "function",
-            function: {
-              name: "extract_financial_data",
-              description: "Extrai dados estruturados de um documento financeiro brasileiro",
-              parameters: {
-                type: "object",
-                properties: {
-                  numero_documento: { type: "string", description: "Número da NF ou boleto" },
-                  valor: { type: "number", description: "Valor total em reais" },
-                  cnpj_emitente: { type: "string", description: "CNPJ do emitente" },
-                  cnpj_tomador: { type: "string", description: "CNPJ/CPF do tomador" },
-                  razao_social_emitente: { type: "string", description: "Razão social do emitente" },
-                  razao_social_tomador: { type: "string", description: "Razão social do tomador" },
-                  data_emissao: { type: "string", description: "Data de emissão YYYY-MM-DD" },
-                  data_vencimento: { type: "string", description: "Data de vencimento YYYY-MM-DD" },
-                  descricao_servico: { type: "string", description: "Descrição do serviço" },
-                  numero_po: { type: "string", description: "Número da PO se houver" },
-                },
-                required: ["numero_documento", "valor"],
-                additionalProperties: false,
-              },
-            },
-          },
-        ],
-        tool_choice: { type: "function", function: { name: "extract_financial_data" } },
+        max_tokens: 2000,
       }),
     });
 
@@ -162,14 +172,29 @@ Tipo de documento esperado: ${document_type === "boleto" ? "Boleto bancário" : 
 
     const aiResult = await response.json();
     
+    // Check for truncation
+    const finishReason = aiResult.choices?.[0]?.finish_reason;
+    if (finishReason === "length" || finishReason === "max_tokens") {
+      console.warn("AI response was truncated");
+    }
+
     let extractedData: Record<string, any> = {};
     try {
-      const toolCall = aiResult.choices?.[0]?.message?.tool_calls?.[0];
-      if (toolCall?.function?.arguments) {
-        extractedData = JSON.parse(toolCall.function.arguments);
+      const content = aiResult.choices?.[0]?.message?.content;
+      if (content) {
+        extractedData = extractJSON(content);
+      }
+      
+      // Also try tool_calls fallback
+      if (Object.keys(extractedData).length === 0) {
+        const toolCall = aiResult.choices?.[0]?.message?.tool_calls?.[0];
+        if (toolCall?.function?.arguments) {
+          extractedData = JSON.parse(toolCall.function.arguments);
+        }
       }
     } catch (e) {
       console.error("Failed to parse AI response:", e);
+      console.error("Raw content:", aiResult.choices?.[0]?.message?.content);
     }
 
     return new Response(JSON.stringify({ extracted: extractedData }), {
