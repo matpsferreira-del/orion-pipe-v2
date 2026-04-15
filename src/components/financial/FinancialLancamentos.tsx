@@ -43,6 +43,9 @@ export function FinancialLancamentos({ year }: { year: number }) {
   const createBulk = useCreateBulkFinancialTransactions();
   const softDelete = useSoftDeleteFinancialTransaction();
   const updateTx = useUpdateFinancialTransaction();
+  const { data: jobs = [] } = useJobs();
+  const { data: allDocs = [] } = useFinancialDocuments();
+  const linkDoc = useLinkDocumentToTransaction();
 
   // Form state
   const [tipo, setTipo] = useState<'receita' | 'despesa'>('despesa');
