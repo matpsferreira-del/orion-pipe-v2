@@ -95,6 +95,7 @@ Analise o PDF fornecido e:
    - "deducao": se é um imposto retido na fonte ou dedução fiscal
    Se não for possível determinar com certeza, use "despesa" como padrão.
 3. Extraia os campos estruturados do documento
+4. IMPORTANTE: Se a nota fiscal contiver MÚLTIPLOS SERVIÇOS ou itens discriminados, extraia CADA UM como um item separado no array "itens".
 
 Retorne APENAS um JSON válido (sem markdown, sem texto extra) com os campos:
 {
@@ -108,9 +109,22 @@ Retorne APENAS um JSON válido (sem markdown, sem texto extra) com os campos:
   "razao_social_tomador": "nome do tomador",
   "data_emissao": "YYYY-MM-DD",
   "data_vencimento": "YYYY-MM-DD",
-  "descricao_servico": "descrição resumida",
-  "numero_po": "número da PO se houver, senão null"
+  "descricao_servico": "descrição resumida geral",
+  "numero_po": "número da PO se houver, senão null",
+  "itens": [
+    {
+      "descricao": "descrição do serviço/item",
+      "valor": 0.00,
+      "numero_po": "PO específico deste item, se houver"
+    }
+  ]
 }
+
+REGRAS PARA "itens":
+- Se houver apenas 1 serviço, retorne um array com 1 item
+- Se houver múltiplos serviços discriminados na NF, cada um deve ser um item separado
+- O "valor" total do documento deve ser a soma dos itens
+- Para boletos simples sem discriminação, retorne 1 item com a descrição e valor total
 
 IMPORTANTE: 
 - valor deve ser numérico (ex: 4000.00), sem formatação
