@@ -265,8 +265,8 @@ export function FinancialLancamentos({ year }: { year: number }) {
       if (ed.razao_social_emitente) parts.push(`- ${ed.razao_social_emitente}`);
 
       txs.push({
-        pacote: firstAccount?.pacote || 'Despesa',
-        conta_contabil: firstAccount?.conta_contabil || 'Outros',
+        pacote: matchedPacote,
+        conta_contabil: matchedConta,
         descricao: parts.join(' '),
         valor: finalVal || 0,
         data_referencia: ed.data_emissao || format(new Date(), 'yyyy-MM-dd'),
