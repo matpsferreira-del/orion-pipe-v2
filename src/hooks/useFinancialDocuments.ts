@@ -82,12 +82,14 @@ export function useUploadFinancialDocument() {
         console.error('AI extraction failed:', e);
       }
 
-      // 3. Save document record
+      // 3. Save document record — use AI-detected type if available
+      const detectedType = extractedData.document_type || documentType;
+
       const { data: doc, error: insertError } = await supabase
         .from('financial_documents' as any)
         .insert({
           financial_transaction_id: transactionId || null,
-          document_type: documentType,
+          document_type: detectedType,
           file_name: file.name,
           file_path: filePath,
           file_size: file.size,
