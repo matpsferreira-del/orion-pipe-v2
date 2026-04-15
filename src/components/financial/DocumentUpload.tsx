@@ -210,20 +210,6 @@ export function DocumentUpload({ transactionId, onExtracted, compact = false }: 
               </div>
             )}
           </div>
-          {/* Show individual items if multiple */}
-          {uploadMutation.data.extractedData.itens && uploadMutation.data.extractedData.itens.length > 1 && (
-            <div className="mt-2 space-y-1">
-              <p className="text-xs font-medium text-muted-foreground uppercase">
-                {uploadMutation.data.extractedData.itens.length} itens identificados — cada um será criado como lançamento separado
-              </p>
-              {uploadMutation.data.extractedData.itens.map((item: any, idx: number) => (
-                <div key={idx} className="flex items-center justify-between bg-background/50 rounded px-2 py-1 text-xs">
-                  <span className="truncate flex-1">{item.descricao}</span>
-                  <span className="font-medium ml-2 whitespace-nowrap">{formatCurrency(item.valor)}</span>
-                </div>
-              ))}
-            </div>
-          )}
         </div>
       )}
 
