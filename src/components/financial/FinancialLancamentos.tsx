@@ -373,6 +373,41 @@ export function FinancialLancamentos({ year }: { year: number }) {
           </Button>
         </div>
 
+        {/* Job selector + Document Upload */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div>
+            <label className="text-xs font-medium text-muted-foreground flex items-center gap-1 mb-1.5">
+              <Briefcase className="h-3 w-3" /> Vincular a Vaga
+            </label>
+            <Select value={jobId} onValueChange={setJobId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Nenhuma vaga vinculada" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Nenhuma</SelectItem>
+                {jobs
+                  .filter((j: any) => j.status !== 'cancelled')
+                  .map((j: any) => (
+                    <SelectItem key={j.id} value={j.id}>
+                      {j.job_code ? `#${j.job_code} — ` : ''}{j.title}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <label className="text-xs font-medium text-muted-foreground flex items-center gap-1 mb-1.5">
+              <FileText className="h-3 w-3" /> Anexar NF / Boleto
+            </label>
+            <DocumentUpload
+              transactionId={editingId || undefined}
+              onExtracted={handleDocExtracted}
+              compact
+            />
+          </div>
+        </div>
+
         {/* Recorrente */}
         {!editingId && (
           <div className="flex items-center gap-3">
