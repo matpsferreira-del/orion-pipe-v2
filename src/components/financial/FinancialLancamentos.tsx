@@ -18,8 +18,8 @@ import {
   type FinancialTransactionInsert,
 } from '@/hooks/useFinancial';
 import { useJobs } from '@/hooks/useJobs';
-import { useFinancialDocuments, useLinkDocumentToTransaction } from '@/hooks/useFinancialDocuments';
-import { DocumentUpload } from './DocumentUpload';
+import { useLinkDocumentToTransaction } from '@/hooks/useFinancialDocuments';
+import { DocumentUpload, type UploadedDoc } from './DocumentUpload';
 import { Plus, Pencil, Trash2, Link2, CalendarIcon, Loader2, FileText, Briefcase } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, addMonths } from 'date-fns';
@@ -44,7 +44,6 @@ export function FinancialLancamentos({ year }: { year: number }) {
   const softDelete = useSoftDeleteFinancialTransaction();
   const updateTx = useUpdateFinancialTransaction();
   const { data: jobs = [] } = useJobs();
-  const { data: allDocs = [] } = useFinancialDocuments();
   const linkDoc = useLinkDocumentToTransaction();
 
   // Form state
@@ -224,16 +223,53 @@ export function FinancialLancamentos({ year }: { year: number }) {
     }
   };
 
-  // Build a map of transaction_id -> docs count
-  const docsCountMap = useMemo(() => {
-    const map: Record<string, number> = {};
-    allDocs.forEach((d: any) => {
-      if (d.financial_transaction_id) {
-        map[d.financial_transaction_id] = (map[d.financial_transaction_id] || 0) + 1;
-      }
-    });
-    return map;
-  }, [allDocs]);
+  // Handle bulk upload: create one transaction per extracted document
+  const handleBulkExtracted = async (docs: UploadedDoc[]) => {
+    const txs: FinancialTransactionInsert[] = [];
+    const docIds: string[] = [];
+
+    for (const doc of docs) {
+      const ed = doc.extractedData;
+      const isReceita = ed.classificacao === 'receita';
+      const numVal = Math.abs(ed.valor || 0);
+      const finalVal = isReceita ? numVal : -numVal;
+
+      // Find matching account
+      const tipoFilter = isReceita ? ['receita'] : [ed.classificacao || 'despesa', 'despesa'];
+      const matchingAccounts = chartAccounts.filter(a => tipoFilter.includes(a.tipo));
+      const firstAccount = matchingAccounts[0];
+
+      const parts = [ed.descricao_servico || doc.file_name];
+      if (ed.razao_social_emitente) parts.push(`- ${ed.razao_social_emitente}`);
+
+      txs.push({
+        pacote: firstAccount?.pacote || 'Despesa',
+        conta_contabil: firstAccount?.conta_contabil || 'Outros',
+        descricao: parts.join(' '),
+        valor: finalVal || 0,
+        data_referencia: ed.data_emissao || format(new Date(), 'yyyy-MM-dd'),
+        data_vencimento: ed.data_vencimento || format(new Date(), 'yyyy-MM-dd'),
+        status: 'pendente',
+        recorrente: false,
+      });
+      docIds.push(doc.id);
+    }
+
+    if (txs.length > 0) {
+      createBulk.mutate(txs, {
+        onSuccess: (results: any) => {
+          // Link documents to created transactions
+          if (Array.isArray(results)) {
+            results.forEach((tx: any, idx: number) => {
+              if (tx?.id && docIds[idx]) {
+                linkDoc.mutate({ documentId: docIds[idx], transactionId: tx.id });
+              }
+            });
+          }
+        },
+      });
+    }
+  };
 
   // Build job lookup
   const jobsMap = useMemo(() => {
@@ -428,6 +464,7 @@ export function FinancialLancamentos({ year }: { year: number }) {
             <DocumentUpload
               transactionId={editingId || undefined}
               onExtracted={handleDocExtracted}
+              onBulkExtracted={handleBulkExtracted}
               compact
             />
           </div>
@@ -526,7 +563,7 @@ export function FinancialLancamentos({ year }: { year: number }) {
                   <TableCell className="max-w-[200px] truncate text-muted-foreground">
                     <div className="flex items-center gap-1">
                       {tx.invoice_id && <Link2 className="h-3 w-3 text-primary flex-shrink-0" />}
-                      {docsCountMap[tx.id] > 0 && (
+                      {(tx as any).financial_documents?.length > 0 && (
                         <FileText className="h-3 w-3 text-primary flex-shrink-0" />
                       )}
                       {tx.descricao || '—'}
