@@ -247,10 +247,19 @@ export function FinancialLancamentos({ year }: { year: number }) {
       const numVal = Math.abs(ed.valor || 0);
       const finalVal = isReceita ? numVal : -numVal;
 
-      // Find matching account
-      const tipoFilter = isReceita ? ['receita'] : [ed.classificacao || 'despesa', 'despesa'];
-      const matchingAccounts = chartAccounts.filter(a => tipoFilter.includes(a.tipo));
-      const firstAccount = matchingAccounts[0];
+      // Find matching account - prefer AI-provided pacote/conta_contabil
+      let matchedPacote = ed.pacote || '';
+      let matchedConta = ed.conta_contabil || '';
+      if (matchedPacote && matchedConta) {
+        const exact = chartAccounts.find(a => a.pacote === matchedPacote && a.conta_contabil === matchedConta);
+        if (!exact) { matchedPacote = ''; matchedConta = ''; }
+      }
+      if (!matchedPacote) {
+        const tipoFilter = isReceita ? ['receita'] : [ed.classificacao || 'despesa', 'despesa'];
+        const fallback = chartAccounts.filter(a => tipoFilter.includes(a.tipo))[0];
+        matchedPacote = fallback?.pacote || 'Despesa';
+        matchedConta = fallback?.conta_contabil || 'Outros';
+      }
 
       const parts = [ed.descricao_servico || doc.file_name];
       if (ed.razao_social_emitente) parts.push(`- ${ed.razao_social_emitente}`);
