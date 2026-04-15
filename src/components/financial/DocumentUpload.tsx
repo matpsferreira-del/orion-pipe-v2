@@ -60,10 +60,11 @@ export function DocumentUpload({ transactionId, onExtracted, onBulkExtracted, co
           transactionId,
         });
 
+        const docRecord = result.document as any;
         const doc: UploadedDoc = {
-          id: result.document?.id || crypto.randomUUID(),
+          id: docRecord?.id || crypto.randomUUID(),
           file_name: file.name,
-          file_path: result.document?.file_path || '',
+          file_path: docRecord?.file_path || '',
           document_type: result.extractedData?.document_type || 'nf',
           extractedData: result.extractedData || {},
         };
