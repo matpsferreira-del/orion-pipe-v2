@@ -17,7 +17,10 @@ import {
   useUpdateFinancialTransaction,
   type FinancialTransactionInsert,
 } from '@/hooks/useFinancial';
-import { Plus, Pencil, Trash2, Link2, CalendarIcon, Loader2 } from 'lucide-react';
+import { useJobs } from '@/hooks/useJobs';
+import { useFinancialDocuments, useLinkDocumentToTransaction } from '@/hooks/useFinancialDocuments';
+import { DocumentUpload } from './DocumentUpload';
+import { Plus, Pencil, Trash2, Link2, CalendarIcon, Loader2, FileText, Briefcase } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, addMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
