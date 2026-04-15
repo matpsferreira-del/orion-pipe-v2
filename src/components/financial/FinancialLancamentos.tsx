@@ -211,13 +211,26 @@ export function FinancialLancamentos({ year }: { year: number }) {
       setDescricao(parts.join(' '));
     }
 
-    // Auto-select pacote based on classificacao
-    if (data.classificacao && chartAccounts.length > 0) {
+    // Auto-select pacote and conta_contabil from AI response
+    if (data.pacote && data.conta_contabil && chartAccounts.length > 0) {
+      // Try exact match from AI
+      const exactMatch = chartAccounts.find(a => a.pacote === data.pacote && a.conta_contabil === data.conta_contabil);
+      if (exactMatch) {
+        setPacote(exactMatch.pacote);
+        setContaContabil(exactMatch.conta_contabil);
+      } else {
+        // Fallback: match by pacote only
+        const pacoteMatch = chartAccounts.find(a => a.pacote === data.pacote);
+        if (pacoteMatch) {
+          setPacote(pacoteMatch.pacote);
+          setContaContabil(pacoteMatch.conta_contabil);
+        }
+      }
+    } else if (data.classificacao && chartAccounts.length > 0) {
       const tipoFilter = data.classificacao === 'receita' ? ['receita'] : [data.classificacao, 'despesa'];
       const matchingAccounts = chartAccounts.filter(a => tipoFilter.includes(a.tipo));
       if (matchingAccounts.length > 0) {
-        const firstPacote = matchingAccounts[0].pacote;
-        setPacote(firstPacote);
+        setPacote(matchingAccounts[0].pacote);
         setContaContabil(matchingAccounts[0].conta_contabil);
       }
     }
@@ -234,17 +247,26 @@ export function FinancialLancamentos({ year }: { year: number }) {
       const numVal = Math.abs(ed.valor || 0);
       const finalVal = isReceita ? numVal : -numVal;
 
-      // Find matching account
-      const tipoFilter = isReceita ? ['receita'] : [ed.classificacao || 'despesa', 'despesa'];
-      const matchingAccounts = chartAccounts.filter(a => tipoFilter.includes(a.tipo));
-      const firstAccount = matchingAccounts[0];
+      // Find matching account - prefer AI-provided pacote/conta_contabil
+      let matchedPacote = ed.pacote || '';
+      let matchedConta = ed.conta_contabil || '';
+      if (matchedPacote && matchedConta) {
+        const exact = chartAccounts.find(a => a.pacote === matchedPacote && a.conta_contabil === matchedConta);
+        if (!exact) { matchedPacote = ''; matchedConta = ''; }
+      }
+      if (!matchedPacote) {
+        const tipoFilter = isReceita ? ['receita'] : [ed.classificacao || 'despesa', 'despesa'];
+        const fallback = chartAccounts.filter(a => tipoFilter.includes(a.tipo))[0];
+        matchedPacote = fallback?.pacote || 'Despesa';
+        matchedConta = fallback?.conta_contabil || 'Outros';
+      }
 
       const parts = [ed.descricao_servico || doc.file_name];
       if (ed.razao_social_emitente) parts.push(`- ${ed.razao_social_emitente}`);
 
       txs.push({
-        pacote: firstAccount?.pacote || 'Despesa',
-        conta_contabil: firstAccount?.conta_contabil || 'Outros',
+        pacote: matchedPacote,
+        conta_contabil: matchedConta,
         descricao: parts.join(' '),
         valor: finalVal || 0,
         data_referencia: ed.data_emissao || format(new Date(), 'yyyy-MM-dd'),
