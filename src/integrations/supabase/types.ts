@@ -695,6 +695,62 @@ export type Database = {
         }
         Relationships: []
       }
+      financial_documents: {
+        Row: {
+          cnpj_emitente: string | null
+          created_at: string
+          data_vencimento: string | null
+          document_type: string
+          extracted_data: Json | null
+          file_name: string
+          file_path: string
+          file_size: number | null
+          financial_transaction_id: string | null
+          id: string
+          numero_documento: string | null
+          updated_at: string
+          valor_documento: number | null
+        }
+        Insert: {
+          cnpj_emitente?: string | null
+          created_at?: string
+          data_vencimento?: string | null
+          document_type?: string
+          extracted_data?: Json | null
+          file_name: string
+          file_path: string
+          file_size?: number | null
+          financial_transaction_id?: string | null
+          id?: string
+          numero_documento?: string | null
+          updated_at?: string
+          valor_documento?: number | null
+        }
+        Update: {
+          cnpj_emitente?: string | null
+          created_at?: string
+          data_vencimento?: string | null
+          document_type?: string
+          extracted_data?: Json | null
+          file_name?: string
+          file_path?: string
+          file_size?: number | null
+          financial_transaction_id?: string | null
+          id?: string
+          numero_documento?: string | null
+          updated_at?: string
+          valor_documento?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_documents_financial_transaction_id_fkey"
+            columns: ["financial_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "financial_transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       financial_transactions: {
         Row: {
           conta_contabil: string
