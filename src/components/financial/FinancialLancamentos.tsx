@@ -179,8 +179,43 @@ export function FinancialLancamentos({ year }: { year: number }) {
     setDataRef(new Date(tx.data_referencia + 'T00:00:00'));
     setDataVenc(new Date(tx.data_vencimento + 'T00:00:00'));
     setStatusForm(tx.status as 'pendente' | 'pago');
+    setJobId((tx as any).job_id || 'none');
     setRecorrente(false);
   };
+
+  const handleDocExtracted = (data: Record<string, any>) => {
+    // Auto-fill form fields from extracted data
+    if (data.valor && !valor) setValor(String(data.valor));
+    if (data.data_vencimento && !editingId) {
+      try {
+        setDataVenc(new Date(data.data_vencimento + 'T00:00:00'));
+      } catch {}
+    }
+    if (data.descricao_servico && !descricao) {
+      const desc = data.numero_po
+        ? `${data.descricao_servico} (PO: ${data.numero_po})`
+        : data.descricao_servico;
+      setDescricao(desc);
+    }
+  };
+
+  // Build a map of transaction_id -> docs count
+  const docsCountMap = useMemo(() => {
+    const map: Record<string, number> = {};
+    allDocs.forEach((d: any) => {
+      if (d.financial_transaction_id) {
+        map[d.financial_transaction_id] = (map[d.financial_transaction_id] || 0) + 1;
+      }
+    });
+    return map;
+  }, [allDocs]);
+
+  // Build job lookup
+  const jobsMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    jobs.forEach((j: any) => { map[j.id] = `#${j.job_code || ''} ${j.title}`; });
+    return map;
+  }, [jobs]);
 
   const handleDelete = () => {
     if (deleteId) {
