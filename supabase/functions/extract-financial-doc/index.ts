@@ -205,12 +205,12 @@ REGRAS FINAIS:
               },
               {
                 type: "text",
-                text: "Extraia os dados deste documento financeiro e classifique-o. Retorne APENAS o JSON.",
+                text: "Leia o documento INTEIRO com atenção, especialmente o campo 'Discriminação dos Serviços' (NFS-e) ou 'Histórico/Instruções' (boleto). Extraia os dados e classifique-o conforme o plano de contas. Retorne APENAS o JSON.",
               },
             ],
           },
         ],
-        max_tokens: 2000,
+        max_tokens: 3000,
       }),
     });
 
