@@ -161,8 +161,9 @@ Retorne APENAS um JSON válido (sem markdown, sem texto extra) com os campos:
 {
   "document_type": "nf" ou "boleto",
   "classificacao": "receita" | "custo" | "despesa" | "deducao",
-  "pacote": "nome do pacote correspondente do plano de contas",
-  "conta_contabil": "nome exato da conta contábil correspondente",
+  "pacote": "nome EXATO do pacote do plano de contas",
+  "conta_contabil": "nome EXATO da conta contábil do plano de contas",
+  "observacao_classificacao": "explique em 1 frase POR QUE escolheu essa conta, citando o trecho da descrição do serviço que embasou a decisão",
   "numero_documento": "número da NF ou boleto",
   "valor": 0.00,
   "cnpj_emitente": "CNPJ do emitente",
@@ -171,15 +172,17 @@ Retorne APENAS um JSON válido (sem markdown, sem texto extra) com os campos:
   "razao_social_tomador": "nome do tomador",
   "data_emissao": "YYYY-MM-DD",
   "data_vencimento": "YYYY-MM-DD",
-  "descricao_servico": "descrição resumida do serviço/produto",
+  "descricao_servico": "TRANSCREVA literalmente o campo 'Discriminação dos Serviços' / 'Descrição' / 'Histórico' do documento (até 500 caracteres). NÃO resuma — copie o texto original.",
+  "codigo_servico": "código LC 116/03 ou CNAE se houver, senão null",
   "numero_po": "número da PO se houver, senão null"
 }
 
-IMPORTANTE: 
-- valor deve ser numérico (ex: 4000.00), sem formatação
-- datas no formato YYYY-MM-DD
-- campos não encontrados devem ser null
-- pacote e conta_contabil devem corresponder EXATAMENTE aos nomes do plano de contas fornecido`;
+REGRAS FINAIS:
+- valor: numérico (ex: 4000.00), sem formatação
+- datas: formato YYYY-MM-DD
+- campos não encontrados: null
+- pacote e conta_contabil: nomes EXATOS do plano de contas (não traduza, não abrevie)
+- descricao_servico: TRANSCREVA o campo original do documento — é a evidência da classificação`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
