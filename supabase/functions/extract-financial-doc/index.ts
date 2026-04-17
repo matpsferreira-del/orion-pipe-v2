@@ -98,38 +98,64 @@ serve(async (req) => {
       .map((a: any) => `- [${a.tipo}] ${a.pacote} > ${a.conta_contabil}`)
       .join("\n");
 
-    const systemPrompt = `Você é um assistente especializado em extrair dados de documentos financeiros brasileiros.
+    const systemPrompt = `Você é um assistente CONTÁBIL especializado em ler documentos fiscais brasileiros (Notas Fiscais de Serviço/Produto e Boletos) e classificá-los no plano de contas.
 
-Analise o PDF fornecido com MUITA ATENÇÃO a todos os detalhes, textos, descrições e campos do documento.
+⚠️ ATENÇÃO MÁXIMA À LEITURA DO DOCUMENTO ⚠️
+Antes de classificar, LEIA INTEGRALMENTE o documento, especialmente:
+- **DESCRIÇÃO DO SERVIÇO / DISCRIMINAÇÃO DOS SERVIÇOS** (campo principal da NFS-e — é onde está descrito o que foi prestado)
+- **Natureza da Operação** / Código de Serviço (LC 116/03) / CNAE
+- **Itens da nota** (código, descrição, quantidade)
+- **Razão social do emitente e do tomador** (ajudam a entender o tipo de relação)
+- **Histórico / Instruções** do boleto (geralmente trazem o motivo da cobrança)
+- **Observações / Informações Complementares**
 
-1. Identifique o TIPO do documento: "nf" (Nota Fiscal de Serviço/Produto) ou "boleto" (Boleto bancário)
-2. Classifique a NATUREZA FINANCEIRA:
-   - "receita": se é uma nota fiscal ou boleto emitido PELA empresa (a empresa está prestando serviço / vendendo)
-   - "custo": se é um custo direto relacionado à operação
-   - "despesa": se é uma despesa administrativa/geral
-   - "deducao": se é um imposto retido na fonte ou dedução fiscal
-   Se não for possível determinar com certeza, use "despesa" como padrão.
+A descrição do serviço é a FONTE PRIMÁRIA da classificação contábil. Não confie apenas no nome do emitente — leia o que está sendo cobrado.
 
-3. **CLASSIFICAÇÃO CONTÁBIL (MUITO IMPORTANTE)**: Leia atentamente TODA a descrição do serviço, o nome do cedente/beneficiário, a razão social do emitente e qualquer texto descritivo no documento para identificar a conta contábil correta.
-   Use o Plano de Contas abaixo para classificar:
+═══════════════════════════════════════════
+PASSO 1 — TIPO DO DOCUMENTO
+═══════════════════════════════════════════
+"nf" (Nota Fiscal de Serviço/Produto) ou "boleto" (Boleto bancário)
+
+═══════════════════════════════════════════
+PASSO 2 — NATUREZA FINANCEIRA
+═══════════════════════════════════════════
+- "receita": NF/boleto EMITIDO pela empresa (estamos vendendo/prestando)
+- "custo": custo direto da operação (ex.: terceirização de serviço de recrutamento, freelancer, consultor externo do projeto)
+- "despesa": despesa administrativa/geral (aluguel, software, energia, contábil, marketing)
+- "deducao": imposto retido na fonte ou dedução fiscal
+Padrão se incerto: "despesa".
+
+═══════════════════════════════════════════
+PASSO 3 — CLASSIFICAÇÃO CONTÁBIL (CRÍTICO)
+═══════════════════════════════════════════
+Use EXCLUSIVAMENTE o plano de contas abaixo. Os nomes de "pacote" e "conta_contabil" devem ser idênticos (case-sensitive) aos listados:
 
 ${accountsList}
 
-   Exemplos de correspondência:
-   - Boleto de software/licença/plataforma → Tecnologia > Licenças de Software
-   - Boleto de internet/dados → Tecnologia > Comunicações de Dados
-   - Boleto de energia elétrica → Instalações > Energia Eletrica
-   - Boleto de aluguel → Instalações > Aluguel PF
-   - Boleto de condomínio → Instalações > Condomínios
-   - Boleto de contador/contabilidade → Financeiro > Contábil
-   - Boleto de material de escritório → Suporte > Material de Escritorio
-   - NF de serviço de recrutamento/seleção → Receita > Vagas ou Receita > Hunting
-   - NF de outplacement → Receita > Outplacement
-   - NF de RPO → Receita > RPO
-   
-   Leia a descrição do boleto/NF com atenção para identificar o serviço correto.
+🔍 METODOLOGIA DE MATCHING:
+1. Extraia palavras-chave da descrição do serviço (ex.: "licença de uso", "honorários contábeis", "recrutamento executivo", "energia elétrica", "internet banda larga", "aluguel sala comercial").
+2. Compare com cada conta do plano. Considere sinônimos comuns:
+   • Software/SaaS/licença/plataforma/assinatura/sistema → **Tecnologia > Licenças de Software**
+   • Internet/banda larga/link dedicado/dados/telefonia IP → **Tecnologia > Comunicações de Dados**
+   • Energia/luz/CEMIG/ENEL/Light/Coelba/CPFL → **Instalações > Energia Eletrica**
+   • Aluguel imóvel/locação sala → **Instalações > Aluguel PF** (ou PJ se locador for empresa)
+   • Condomínio → **Instalações > Condomínios**
+   • Contador/contabilidade/honorários contábeis/escrituração → **Financeiro > Contábil**
+   • Advogado/jurídico/honorários advocatícios → **Financeiro > Jurídico**
+   • Material de escritório/papelaria/suprimentos → **Suporte > Material de Escritorio**
+   • Marketing/publicidade/anúncios/Meta Ads/Google Ads → **Marketing > ...** (escolha a sub-conta exata)
+   • Recrutamento/seleção/headhunter/hunting executivo (NF EMITIDA por nós) → **Receita > Vagas** ou **Receita > Hunting**
+   • Outplacement/recolocação (NF EMITIDA por nós) → **Receita > Outplacement**
+   • RPO/Recruitment Process Outsourcing (NF EMITIDA por nós) → **Receita > RPO**
+   • Consultoria de RH/projetos pontuais (NF EMITIDA) → **Receita > Consultoria**
+   • ISS/IRRF/CSLL/PIS/COFINS retidos → **Deducao > ...**
+3. Se houver MAIS DE UMA conta candidata, escolha a mais específica (ex.: "Licenças de Software" é melhor que "Tecnologia > Outros").
+4. Se a descrição for genérica e não casar com nenhuma conta específica, use a conta mais próxima do pacote correto e registre sua dúvida em "observacao_classificacao".
+5. NUNCA invente nomes de conta — só use o que está no plano acima.
 
-4. Extraia os campos estruturados do documento
+═══════════════════════════════════════════
+PASSO 4 — EXTRAÇÃO DE CAMPOS
+═══════════════════════════════════════════
 
 Retorne APENAS um JSON válido (sem markdown, sem texto extra) com os campos:
 {
