@@ -2,11 +2,11 @@ import { useMemo } from 'react';
 import { useFinancialTransactions, useChartOfAccounts } from '@/hooks/useFinancial';
 import { Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { MONTHS_SHORT } from '@/lib/financial/constants';
+import { formatCurrencyInt as formatCurrency } from '@/lib/financial/formatters';
+import { addArrays } from '@/lib/financial/calculations';
 
-const MONTHS = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 }).format(value);
+const MONTHS = MONTHS_SHORT;
 
 interface FluxoRow {
   label: string;
@@ -29,8 +29,6 @@ export function FinancialFluxoCaixa({ year }: { year: number }) {
           .reduce((s, t) => s + Number(t.valor), 0);
       });
     };
-
-    const addArrays = (...arrays: number[][]) => MONTHS.map((_, i) => arrays.reduce((s, a) => s + (a[i] || 0), 0));
 
     const rows: FluxoRow[] = [];
 

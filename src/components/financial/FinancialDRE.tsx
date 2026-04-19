@@ -4,11 +4,11 @@ import { Button } from '@/components/ui/button';
 import { useFinancialTransactions, useChartOfAccounts } from '@/hooks/useFinancial';
 import { Loader2, ChevronDown, ChevronRight, Download } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { MONTHS_SHORT, SIMPLES_NACIONAL_RATE } from '@/lib/financial/constants';
+import { formatCurrencyInt as formatCurrency } from '@/lib/financial/formatters';
+import { sumArray, addArrays } from '@/lib/financial/calculations';
 
-const MONTHS = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 }).format(value);
+const MONTHS = MONTHS_SHORT;
 
 interface DRERow {
   label: string;
@@ -35,9 +35,6 @@ export function FinancialDRE({ year }: { year: number }) {
           .reduce((s, t) => s + Number(t.valor), 0);
       });
     };
-
-    const sumArray = (arr: number[]) => arr.reduce((s, v) => s + v, 0);
-    const addArrays = (...arrays: number[][]) => arrays.length === 0 ? MONTHS.map(() => 0) : MONTHS.map((_, i) => arrays.reduce((s, a) => s + (a[i] || 0), 0));
 
     // Helper: build hierarchical rows for a tipo (pacote > sub_pacote > conta)
     const buildHierarchicalRows = (
@@ -125,10 +122,11 @@ export function FinancialDRE({ year }: { year: number }) {
     });
 
     // DEDUÇÕES
-    const simplesValues = robValues.map(v => -(v * 0.07));
+    const simplesValues = robValues.map(v => -(v * SIMPLES_NACIONAL_RATE));
     const totalDeducoes = simplesValues;
+    const simplesPctLabel = `Simples Nacional (${(SIMPLES_NACIONAL_RATE * 100).toFixed(0)}%)`;
     rows.push({ label: '(-) DEDUÇÕES', values: totalDeducoes, total: sumArray(totalDeducoes), isGroup: true, groupKey: 'deducoes' });
-    rows.push({ label: 'Simples Nacional (7%)', values: simplesValues, total: sumArray(simplesValues), indent: 1, groupKey: 'deducoes' });
+    rows.push({ label: simplesPctLabel, values: simplesValues, total: sumArray(simplesValues), indent: 1, groupKey: 'deducoes' });
 
     // ROL
     const rolValues = addArrays(robValues, totalDeducoes);
