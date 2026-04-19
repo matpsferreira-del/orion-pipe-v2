@@ -6,6 +6,7 @@ import { FinancialDashboard } from '@/components/financial/FinancialDashboard';
 import { FinancialLancamentos } from '@/components/financial/FinancialLancamentos';
 import { FinancialDRE } from '@/components/financial/FinancialDRE';
 import { FinancialFluxoCaixa } from '@/components/financial/FinancialFluxoCaixa';
+import { FinancialReembolsos } from '@/components/financial/FinancialReembolsos';
 import { ChartOfAccountsDialog } from '@/components/financial/ChartOfAccountsDialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
@@ -53,11 +54,12 @@ export default function Financeiro() {
       />
 
       <Tabs value={currentTab} onValueChange={handleTabChange}>
-        <TabsList className="grid w-full grid-cols-4 max-w-xl">
+        <TabsList className="grid w-full grid-cols-5 max-w-2xl">
           <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
           <TabsTrigger value="lancamentos">Lançamentos</TabsTrigger>
           <TabsTrigger value="dre">DRE</TabsTrigger>
           <TabsTrigger value="fluxo-caixa">Fluxo de Caixa</TabsTrigger>
+          <TabsTrigger value="reembolsos">Reembolsos</TabsTrigger>
         </TabsList>
 
         <TabsContent value="dashboard">
@@ -71,6 +73,9 @@ export default function Financeiro() {
         </TabsContent>
         <TabsContent value="fluxo-caixa">
           <FinancialFluxoCaixa year={selectedYear} />
+        </TabsContent>
+        <TabsContent value="reembolsos">
+          <FinancialReembolsos />
         </TabsContent>
       </Tabs>
 
