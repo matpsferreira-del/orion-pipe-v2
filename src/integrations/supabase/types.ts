@@ -755,16 +755,22 @@ export type Database = {
         Row: {
           conta_contabil: string
           created_at: string | null
+          data_pagamento: string | null
           data_referencia: string
           data_vencimento: string
+          debito_automatico: boolean
           deleted_at: string | null
           descricao: string | null
+          forma_pagamento: string | null
           id: string
           invoice_id: string | null
           job_id: string | null
           pacote: string
           recorrencia_meses: number | null
           recorrente: boolean | null
+          reembolso: boolean
+          reembolso_status: string | null
+          responsavel_id: string | null
           status: string | null
           updated_at: string | null
           valor: number
@@ -772,16 +778,22 @@ export type Database = {
         Insert: {
           conta_contabil: string
           created_at?: string | null
+          data_pagamento?: string | null
           data_referencia: string
           data_vencimento: string
+          debito_automatico?: boolean
           deleted_at?: string | null
           descricao?: string | null
+          forma_pagamento?: string | null
           id?: string
           invoice_id?: string | null
           job_id?: string | null
           pacote: string
           recorrencia_meses?: number | null
           recorrente?: boolean | null
+          reembolso?: boolean
+          reembolso_status?: string | null
+          responsavel_id?: string | null
           status?: string | null
           updated_at?: string | null
           valor: number
@@ -789,16 +801,22 @@ export type Database = {
         Update: {
           conta_contabil?: string
           created_at?: string | null
+          data_pagamento?: string | null
           data_referencia?: string
           data_vencimento?: string
+          debito_automatico?: boolean
           deleted_at?: string | null
           descricao?: string | null
+          forma_pagamento?: string | null
           id?: string
           invoice_id?: string | null
           job_id?: string | null
           pacote?: string
           recorrencia_meses?: number | null
           recorrente?: boolean | null
+          reembolso?: boolean
+          reembolso_status?: string | null
+          responsavel_id?: string | null
           status?: string | null
           updated_at?: string | null
           valor?: number
@@ -816,6 +834,20 @@ export type Database = {
             columns: ["job_id"]
             isOneToOne: false
             referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_transactions_responsavel_id_fkey"
+            columns: ["responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_transactions_responsavel_id_fkey"
+            columns: ["responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
             referencedColumns: ["id"]
           },
         ]
