@@ -21,13 +21,21 @@ export interface FinancialTransaction {
   valor: number;
   data_referencia: string;
   data_vencimento: string;
+  data_pagamento: string | null;
   status: string;
   recorrente: boolean;
   recorrencia_meses: number | null;
   invoice_id: string | null;
+  job_id: string | null;
   deleted_at: string | null;
   created_at: string;
   updated_at: string;
+  // Novos campos
+  debito_automatico: boolean;
+  responsavel_id: string | null;
+  reembolso: boolean;
+  reembolso_status: 'pendente' | 'reembolsado' | null;
+  forma_pagamento: string | null;
 }
 
 export interface FinancialTransactionInsert {
@@ -37,10 +45,17 @@ export interface FinancialTransactionInsert {
   valor: number;
   data_referencia: string;
   data_vencimento: string;
+  data_pagamento?: string | null;
   status?: string;
   recorrente?: boolean;
   recorrencia_meses?: number;
   invoice_id?: string;
+  job_id?: string;
+  debito_automatico?: boolean;
+  responsavel_id?: string | null;
+  reembolso?: boolean;
+  reembolso_status?: 'pendente' | 'reembolsado' | null;
+  forma_pagamento?: string | null;
 }
 
 export function useChartOfAccounts(includeInactive = false) {
@@ -51,9 +66,7 @@ export function useChartOfAccounts(includeInactive = false) {
         .from('chart_of_accounts' as any)
         .select('*')
         .order('ordem');
-      if (!includeInactive) {
-        query = query.eq('ativo', true);
-      }
+      if (!includeInactive) query = query.eq('ativo', true);
       const { data, error } = await query;
       if (error) throw error;
       return (data as any[]) as ChartAccount[];
@@ -84,9 +97,34 @@ export function useFinancialTransactions(year?: number) {
   });
 }
 
-export function useCreateFinancialTransaction() {
-  const queryClient = useQueryClient();
+/**
+ * Hook dedicado para buscar reembolsos pendentes.
+ */
+export function usePendingReimbursements() {
+  return useQuery({
+    queryKey: ['financial_transactions', 'reembolsos_pendentes'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('financial_transactions' as any)
+        .select('*')
+        .is('deleted_at', null)
+        .eq('reembolso', true)
+        .eq('reembolso_status', 'pendente')
+        .order('data_vencimento', { ascending: true });
+      if (error) throw error;
+      return (data as any[]) as FinancialTransaction[];
+    },
+  });
+}
 
+// ============= Mutations (consolidadas) =============
+
+const invalidateAll = (qc: ReturnType<typeof useQueryClient>) => {
+  qc.invalidateQueries({ queryKey: ['financial_transactions'] });
+};
+
+export function useCreateFinancialTransaction() {
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: async (transaction: FinancialTransactionInsert) => {
       const { data, error } = await supabase
@@ -97,19 +135,13 @@ export function useCreateFinancialTransaction() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['financial_transactions'] });
-      toast.success('Lançamento criado com sucesso!');
-    },
-    onError: (error: any) => {
-      toast.error('Erro ao criar lançamento: ' + error.message);
-    },
+    onSuccess: () => { invalidateAll(qc); toast.success('Lançamento criado!'); },
+    onError: (error: any) => toast.error('Erro ao criar lançamento: ' + error.message),
   });
 }
 
 export function useCreateBulkFinancialTransactions() {
-  const queryClient = useQueryClient();
-
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: async (transactions: FinancialTransactionInsert[]) => {
       const { data, error } = await supabase
@@ -119,19 +151,13 @@ export function useCreateBulkFinancialTransactions() {
       if (error) throw error;
       return data;
     },
-    onSuccess: (_, vars) => {
-      queryClient.invalidateQueries({ queryKey: ['financial_transactions'] });
-      toast.success(`${vars.length} lançamentos criados com sucesso!`);
-    },
-    onError: (error: any) => {
-      toast.error('Erro ao criar lançamentos: ' + error.message);
-    },
+    onSuccess: (_, vars) => { invalidateAll(qc); toast.success(`${vars.length} lançamentos criados!`); },
+    onError: (error: any) => toast.error('Erro ao criar lançamentos: ' + error.message),
   });
 }
 
 export function useUpdateFinancialTransaction() {
-  const queryClient = useQueryClient();
-
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...data }: { id: string } & Partial<FinancialTransactionInsert>) => {
       const { error } = await supabase
@@ -140,19 +166,13 @@ export function useUpdateFinancialTransaction() {
         .eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['financial_transactions'] });
-      toast.success('Lançamento atualizado!');
-    },
-    onError: (error: any) => {
-      toast.error('Erro ao atualizar: ' + error.message);
-    },
+    onSuccess: () => { invalidateAll(qc); toast.success('Lançamento atualizado!'); },
+    onError: (error: any) => toast.error('Erro ao atualizar: ' + error.message),
   });
 }
 
 export function useSoftDeleteFinancialTransaction() {
-  const queryClient = useQueryClient();
-
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
@@ -161,12 +181,29 @@ export function useSoftDeleteFinancialTransaction() {
         .eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['financial_transactions'] });
-      toast.success('Lançamento excluído!');
+    onSuccess: () => { invalidateAll(qc); toast.success('Lançamento excluído!'); },
+    onError: (error: any) => toast.error('Erro ao excluir: ' + error.message),
+  });
+}
+
+/**
+ * Marca um reembolso como pago/reembolsado.
+ */
+export function useMarkReimbursementPaid() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('financial_transactions' as any)
+        .update({
+          reembolso_status: 'reembolsado',
+          status: 'pago',
+          data_pagamento: new Date().toISOString().split('T')[0],
+        } as any)
+        .eq('id', id);
+      if (error) throw error;
     },
-    onError: (error: any) => {
-      toast.error('Erro ao excluir: ' + error.message);
-    },
+    onSuccess: () => { invalidateAll(qc); toast.success('Reembolso marcado como pago!'); },
+    onError: (error: any) => toast.error('Erro: ' + error.message),
   });
 }
