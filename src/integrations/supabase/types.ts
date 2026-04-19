@@ -1317,6 +1317,7 @@ export type Database = {
           motivo_rejeicao: string | null
           observacoes: string | null
           origem_lead: string
+          outplacement_party_id: string | null
           probabilidade: number
           proposal_exclusivity: string | null
           proposal_fee: string | null
@@ -1350,6 +1351,7 @@ export type Database = {
           motivo_rejeicao?: string | null
           observacoes?: string | null
           origem_lead?: string
+          outplacement_party_id?: string | null
           probabilidade?: number
           proposal_exclusivity?: string | null
           proposal_fee?: string | null
@@ -1383,6 +1385,7 @@ export type Database = {
           motivo_rejeicao?: string | null
           observacoes?: string | null
           origem_lead?: string
+          outplacement_party_id?: string | null
           probabilidade?: number
           proposal_exclusivity?: string | null
           proposal_fee?: string | null
@@ -1420,6 +1423,13 @@ export type Database = {
             columns: ["contact_id"]
             isOneToOne: false
             referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunities_outplacement_party_id_fkey"
+            columns: ["outplacement_party_id"]
+            isOneToOne: false
+            referencedRelation: "party"
             referencedColumns: ["id"]
           },
           {

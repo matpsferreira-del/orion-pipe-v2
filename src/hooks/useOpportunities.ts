@@ -24,6 +24,7 @@ export interface OpportunityRow {
   spin_necessidade_cenario: string | null;
   spin_necessidade_urgencia: string | null;
   motivo_rejeicao: string | null;
+  outplacement_party_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -39,6 +40,7 @@ export interface OpportunityInsert {
   origem_lead: string;
   tipo_servico: string;
   observacoes?: string;
+  outplacement_party_id?: string | null;
 }
 
 export function useOpportunities() {
@@ -109,6 +111,7 @@ export interface OpportunityUpdate {
   origem_lead?: string;
   tipo_servico?: string;
   observacoes?: string | null;
+  outplacement_party_id?: string | null;
 }
 
 export function useUpdateOpportunity() {

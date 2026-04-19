@@ -23,6 +23,7 @@ interface JobDialogProps {
   preSelectedContactId?: string;
   preSelectedResponsavelId?: string;
   preSelectedOpportunityId?: string;
+  preSelectedClosingCandidateId?: string;
   isOutplacementProject?: boolean;
   outplacementClientName?: string;
 }
@@ -70,7 +71,7 @@ const WORK_MODELS = [
   { value: 'Remoto', label: 'Remoto' },
 ];
 
-export function JobDialog({ open, onOpenChange, job, preSelectedCompanyId, preSelectedContactId, preSelectedResponsavelId, preSelectedOpportunityId, isOutplacementProject, outplacementClientName }: JobDialogProps) {
+export function JobDialog({ open, onOpenChange, job, preSelectedCompanyId, preSelectedContactId, preSelectedResponsavelId, preSelectedOpportunityId, preSelectedClosingCandidateId, isOutplacementProject, outplacementClientName }: JobDialogProps) {
   const [formData, setFormData] = useState({
     company_id: '',
     contact_id: '',
@@ -204,6 +205,7 @@ export function JobDialog({ open, onOpenChange, job, preSelectedCompanyId, preSe
         area: (formData.area as JobArea) || null,
         deadline: formData.deadline || null,
         ...(preSelectedOpportunityId && !isEditing ? { opportunity_id: preSelectedOpportunityId } : {}),
+        ...(preSelectedClosingCandidateId && !isEditing ? { closing_candidate_id: preSelectedClosingCandidateId } : {}),
       } as any;
 
       if (isEditing && job) {
