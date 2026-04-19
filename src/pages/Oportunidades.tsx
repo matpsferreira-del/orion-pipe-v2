@@ -375,6 +375,7 @@ export default function Oportunidades() {
             preSelectedContactId={selectedOpportunity.contact_id || undefined}
             preSelectedResponsavelId={selectedOpportunity.responsavel_id}
             preSelectedOpportunityId={selectedOpportunity.id}
+            preSelectedClosingCandidateId={selectedOpportunity.outplacement_party_id || undefined}
             isOutplacementProject={selectedOpportunity.tipo_servico === 'outplacement'}
             outplacementClientName={selectedOpportunity.tipo_servico === 'outplacement' && !selectedOpportunity.company_id
               ? (selectedOpportunity.observacoes?.match(/\[PF: (.+?)\]/)?.[1] || '')
