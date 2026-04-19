@@ -50,8 +50,8 @@ export function LancamentoTable({ transactions, jobsMap, profilesMap, onEdit, on
               <TableCell className="max-w-[220px] truncate text-muted-foreground">
                 <div className="flex items-center gap-1">
                   {tx.invoice_id && <Link2 className="h-3 w-3 text-primary flex-shrink-0" />}
-                  {tx.debito_automatico && <Zap className="h-3 w-3 text-primary flex-shrink-0" title="Débito automático" />}
-                  {tx.reembolso && <RotateCcw className="h-3 w-3 text-warning flex-shrink-0" title="Reembolso" />}
+                  {tx.debito_automatico && <span title="Débito automático"><Zap className="h-3 w-3 text-primary flex-shrink-0" /></span>}
+                  {tx.reembolso && <span title="Reembolso"><RotateCcw className="h-3 w-3 text-warning flex-shrink-0" /></span>}
                   <span className="truncate">{tx.descricao || '—'}</span>
                 </div>
               </TableCell>
