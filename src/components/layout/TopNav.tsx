@@ -48,7 +48,6 @@ export const routeToTab: Record<string, TabType> = {
   '/recrutamento': 'recrutamento',
   '/pessoas': 'recrutamento',
   '/vagas': 'recrutamento',
-  '/projetos': 'recrutamento',
   '/equipe': 'configuracoes',
   '/configuracoes': 'configuracoes',
 };
