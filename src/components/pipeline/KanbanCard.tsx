@@ -1,6 +1,7 @@
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Calendar, DollarSign } from 'lucide-react';
+import { Calendar, DollarSign, AtSign } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAllOpportunityMentions } from '@/hooks/useOpportunityMentions';
 
 interface ExtendedOpportunity {
   id: string;
@@ -29,6 +30,10 @@ export function KanbanCard({ opportunity, onClick }: KanbanCardProps) {
   const company = opportunity._company;
   const contact = opportunity._contact;
   const responsavel = opportunity._responsavel;
+  const { data: allMentions = [] } = useAllOpportunityMentions();
+  const pendingMentions = allMentions.filter(
+    (m) => m.opportunity_id === opportunity.id && m.status === 'pendente'
+  );
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -83,9 +88,20 @@ export function KanbanCard({ opportunity, onClick }: KanbanCardProps) {
             ? (opportunity.observacoes?.match(/\[PF: (.+?)\]/)?.[1] || 'Outplacement')
             : (company?.nome_fantasia || 'Empresa não encontrada')}
         </h4>
-        <span className="text-[10px] sm:text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0">
-          {opportunity.probabilidade}%
-        </span>
+        <div className="flex items-center gap-1 shrink-0">
+          {pendingMentions.length > 0 && (
+            <span
+              className="inline-flex items-center gap-0.5 text-[10px] font-medium bg-warning/15 text-warning px-1.5 py-0.5 rounded"
+              title={`${pendingMentions.length} menção(ões) pendente(s)`}
+            >
+              <AtSign className="h-2.5 w-2.5" />
+              {pendingMentions.length}
+            </span>
+          )}
+          <span className="text-[10px] sm:text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+            {opportunity.probabilidade}%
+          </span>
+        </div>
       </div>
 
       {contact && (

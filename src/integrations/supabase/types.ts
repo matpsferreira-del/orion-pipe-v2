@@ -1535,6 +1535,53 @@ export type Database = {
           },
         ]
       }
+      opportunity_mentions: {
+        Row: {
+          created_at: string
+          id: string
+          mentioned_by_user_id: string
+          mentioned_user_id: string
+          observacao: string | null
+          opportunity_id: string
+          resolution_note: string | null
+          resolved_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          mentioned_by_user_id: string
+          mentioned_user_id: string
+          observacao?: string | null
+          opportunity_id: string
+          resolution_note?: string | null
+          resolved_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          mentioned_by_user_id?: string
+          mentioned_user_id?: string
+          observacao?: string | null
+          opportunity_id?: string
+          resolution_note?: string | null
+          resolved_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "opportunity_mentions_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       party: {
         Row: {
           city: string | null

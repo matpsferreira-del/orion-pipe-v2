@@ -14,6 +14,7 @@ import { useContacts } from '@/hooks/useContacts';
 import { useProfiles } from '@/hooks/useProfiles';
 import { useActivitiesByOpportunity } from '@/hooks/useActivities';
 import { useOpportunityAttachments, useUploadOpportunityAttachment, useDeleteOpportunityAttachment, getAttachmentUrl } from '@/hooks/useOpportunityAttachments';
+import { MentionsSection } from '@/components/opportunities/MentionsSection';
 import { pipelineStages } from '@/data/mockData';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -278,6 +279,9 @@ export function OpportunityDetail({ opportunity, onOpenActivityDialog, onOpenJob
               </CardContent>
             </Card>
           )}
+
+          {/* Mentions / @ tags */}
+          <MentionsSection opportunityId={opportunity.id} />
         </TabsContent>
 
         <TabsContent value="spin" className="space-y-4 mt-4">
