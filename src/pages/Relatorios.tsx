@@ -7,7 +7,7 @@ import { PipelineChart } from '@/components/dashboard/PipelineChart';
 import { RevenueChart } from '@/components/dashboard/RevenueChart';
 import { LeadSourceChart } from '@/components/dashboard/LeadSourceChart';
 import { useOpportunities } from '@/hooks/useOpportunities';
-import { useInvoices } from '@/hooks/useInvoices';
+import { useFinancialTransactions } from '@/hooks/useFinancial';
 import { useCompanies } from '@/hooks/useCompanies';
 import { useProfiles } from '@/hooks/useProfiles';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
