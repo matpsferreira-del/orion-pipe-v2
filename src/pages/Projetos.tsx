@@ -110,7 +110,8 @@ function OutplacementTab() {
 }
 
 function MentoriaTab() {
-  const { data: plans, isLoading, error } = usePathlyActivePlans();
+  const { data, isLoading, error } = usePathlyActivePlans();
+  const plans = Array.isArray(data) ? data : [];
 
   if (isLoading) {
     return (
@@ -143,7 +144,7 @@ function MentoriaTab() {
     );
   }
 
-  if (!plans || plans.length === 0) {
+  if (plans.length === 0) {
     return (
       <EmptyState
         icon={GraduationCap}
