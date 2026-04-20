@@ -51,6 +51,7 @@ const activityTypeLabels: Record<string, string> = {
   email: 'Email',
   proposta: 'Proposta',
   followup: 'Follow-up',
+  mencao: 'Menção',
   outro: 'Outro',
 };
 
