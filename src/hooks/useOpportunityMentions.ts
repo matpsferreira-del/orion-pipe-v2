@@ -73,6 +73,24 @@ export function useCreateMention() {
         .single();
       if (error) throw error;
 
+      // Buscar company_id e nome do mencionado para registrar atividade
+      const [{ data: opp }, { data: mentionedProfile }] = await Promise.all([
+        supabase.from('opportunities').select('company_id').eq('id', input.opportunity_id).maybeSingle(),
+        supabase.from('public_profiles').select('name').eq('id', input.mentioned_user_id).maybeSingle(),
+      ]);
+
+      if (opp?.company_id) {
+        await supabase.from('activities').insert({
+          opportunity_id: input.opportunity_id,
+          company_id: opp.company_id,
+          user_id: profile.id,
+          type: 'mencao',
+          titulo: `@ Menção a ${mentionedProfile?.name || 'integrante'}`,
+          descricao: input.observacao || null,
+          data: new Date().toISOString(),
+        });
+      }
+
       // Fire-and-forget notification (do not block UI on email errors)
       supabase.functions.invoke('notify-mention', {
         body: { mention_id: data.id },
@@ -82,6 +100,7 @@ export function useCreateMention() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['opportunity-mentions'] });
+      qc.invalidateQueries({ queryKey: ['activities'] });
       toast.success('Integrante notificado!');
     },
     onError: (err: any) => toast.error('Erro ao marcar: ' + err.message),
@@ -90,8 +109,16 @@ export function useCreateMention() {
 
 export function useResolveMention() {
   const qc = useQueryClient();
+  const { profile } = useAuth();
   return useMutation({
     mutationFn: async ({ id, resolution_note }: { id: string; resolution_note?: string }) => {
+      const { data: mention, error: fetchErr } = await supabase
+        .from('opportunity_mentions')
+        .select('opportunity_id, mentioned_user_id')
+        .eq('id', id)
+        .maybeSingle();
+      if (fetchErr) throw fetchErr;
+
       const { error } = await supabase
         .from('opportunity_mentions')
         .update({
@@ -101,9 +128,30 @@ export function useResolveMention() {
         })
         .eq('id', id);
       if (error) throw error;
+
+      // Registrar atividade de resolução
+      if (mention?.opportunity_id && profile?.id) {
+        const { data: opp } = await supabase
+          .from('opportunities')
+          .select('company_id')
+          .eq('id', mention.opportunity_id)
+          .maybeSingle();
+        if (opp?.company_id) {
+          await supabase.from('activities').insert({
+            opportunity_id: mention.opportunity_id,
+            company_id: opp.company_id,
+            user_id: profile.id,
+            type: 'mencao',
+            titulo: '✓ Menção sinalizada como feita',
+            descricao: resolution_note || null,
+            data: new Date().toISOString(),
+          });
+        }
+      }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['opportunity-mentions'] });
+      qc.invalidateQueries({ queryKey: ['activities'] });
       toast.success('Menção sinalizada como resolvida');
     },
     onError: (err: any) => toast.error('Erro: ' + err.message),

@@ -2,6 +2,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Calendar, DollarSign, AtSign } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAllOpportunityMentions } from '@/hooks/useOpportunityMentions';
+import { useProfiles } from '@/hooks/useProfiles';
 
 interface ExtendedOpportunity {
   id: string;
@@ -31,6 +32,7 @@ export function KanbanCard({ opportunity, onClick }: KanbanCardProps) {
   const contact = opportunity._contact;
   const responsavel = opportunity._responsavel;
   const { data: allMentions = [] } = useAllOpportunityMentions();
+  const { data: profiles = [] } = useProfiles();
   const pendingMentions = allMentions.filter(
     (m) => m.opportunity_id === opportunity.id && m.status === 'pendente'
   );
@@ -88,21 +90,37 @@ export function KanbanCard({ opportunity, onClick }: KanbanCardProps) {
             ? (opportunity.observacoes?.match(/\[PF: (.+?)\]/)?.[1] || 'Outplacement')
             : (company?.nome_fantasia || 'Empresa não encontrada')}
         </h4>
-        <div className="flex items-center gap-1 shrink-0">
-          {pendingMentions.length > 0 && (
-            <span
-              className="inline-flex items-center gap-0.5 text-[10px] font-medium bg-warning/15 text-warning px-1.5 py-0.5 rounded"
-              title={`${pendingMentions.length} menção(ões) pendente(s)`}
-            >
-              <AtSign className="h-2.5 w-2.5" />
-              {pendingMentions.length}
-            </span>
-          )}
-          <span className="text-[10px] sm:text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-            {opportunity.probabilidade}%
-          </span>
-        </div>
+        <span className="text-[10px] sm:text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0">
+          {opportunity.probabilidade}%
+        </span>
       </div>
+
+      {pendingMentions.length > 0 && (
+        <div className="flex items-center gap-1 mb-2 flex-wrap">
+          <AtSign className="h-3 w-3 text-warning shrink-0" />
+          {pendingMentions.slice(0, 3).map((m) => {
+            const p = profiles.find((pr) => pr.id === m.mentioned_user_id);
+            const name = p?.name || '?';
+            return (
+              <span
+                key={m.id}
+                className="inline-flex items-center gap-1 text-[10px] font-medium bg-warning/15 text-warning px-1.5 py-0.5 rounded-full"
+                title={`${name}${m.observacao ? ': ' + m.observacao : ''}`}
+              >
+                <Avatar className="h-3.5 w-3.5">
+                  <AvatarFallback className="text-[8px] bg-warning/20 text-warning">
+                    {getInitials(name)}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="truncate max-w-[80px]">{name.split(' ')[0]}</span>
+              </span>
+            );
+          })}
+          {pendingMentions.length > 3 && (
+            <span className="text-[10px] text-warning font-medium">+{pendingMentions.length - 3}</span>
+          )}
+        </div>
+      )}
 
       {contact && (
         <p className="text-[11px] sm:text-xs text-muted-foreground truncate mb-2">
