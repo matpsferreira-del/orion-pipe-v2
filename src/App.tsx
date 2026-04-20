@@ -14,7 +14,11 @@ const Pipeline = lazy(() => import("./pages/Pipeline"));
 const Empresas = lazy(() => import("./pages/Empresas"));
 const Contatos = lazy(() => import("./pages/Contatos"));
 const Oportunidades = lazy(() => import("./pages/Oportunidades"));
-const Faturamento = lazy(() => import("./pages/Faturamento"));
+const FinanceiroDashboard = lazy(() => import("./pages/FinanceiroDashboard"));
+const FinanceiroLancamentos = lazy(() => import("./pages/FinanceiroLancamentos"));
+const FinanceiroDRE = lazy(() => import("./pages/FinanceiroDRE"));
+const FinanceiroFluxoCaixa = lazy(() => import("./pages/FinanceiroFluxoCaixa"));
+const FinanceiroReembolsos = lazy(() => import("./pages/FinanceiroReembolsos"));
 const Relatorios = lazy(() => import("./pages/Relatorios"));
 const Equipe = lazy(() => import("./pages/Equipe"));
 const Configuracoes = lazy(() => import("./pages/Configuracoes"));
@@ -31,7 +35,7 @@ const PostGenerator = lazy(() => import("./pages/PostGenerator"));
 const FormatacaoCV = lazy(() => import("./pages/FormatacaoCV"));
 const ChromeExtension = lazy(() => import("./pages/ChromeExtension"));
 const CartaOferta = lazy(() => import("./pages/CartaOferta"));
-const Financeiro = lazy(() => import("./pages/Financeiro"));
+
 const PropostaOutplacement = lazy(() => import("./pages/PropostaOutplacement"));
 const PptInstitucional = lazy(() => import("./pages/PptInstitucional"));
 const NotFound = lazy(() => import("./pages/NotFound"));
@@ -132,8 +136,13 @@ const App = () => (
                 <Route path="/oportunidades/:id/proposta-outplacement" element={<PropostaOutplacement />} />
                 <Route path="/ppt-institucional" element={<PptInstitucional />} />
                 <Route path="/tarefas" element={<Tarefas />} />
-                <Route path="/faturamento" element={<Faturamento />} />
-                <Route path="/financeiro" element={<Financeiro />} />
+                <Route path="/financeiro" element={<Navigate to="/financeiro/dashboard" replace />} />
+                <Route path="/faturamento" element={<Navigate to="/financeiro/lancamentos" replace />} />
+                <Route path="/financeiro/dashboard" element={<FinanceiroDashboard />} />
+                <Route path="/financeiro/lancamentos" element={<FinanceiroLancamentos />} />
+                <Route path="/financeiro/dre" element={<FinanceiroDRE />} />
+                <Route path="/financeiro/fluxo-caixa" element={<FinanceiroFluxoCaixa />} />
+                <Route path="/financeiro/reembolsos" element={<FinanceiroReembolsos />} />
                 <Route path="/relatorios" element={<Relatorios />} />
                 <Route path="/mapeamento-vagas" element={<MapeamentoVagas />} />
                 <Route path="/map-comercial" element={<MapComercial />} />

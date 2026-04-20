@@ -23,6 +23,9 @@ import {
   FileText,
   Share2,
   TrendingUp,
+  BookOpen,
+  Wallet,
+  HandCoins,
 } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -90,8 +93,11 @@ const tabNavItems = {
     { to: '/chrome-extension', icon: Radar, label: 'Extensão Chrome' },
   ],
   financeiro: [
-    { to: '/financeiro', icon: TrendingUp, label: 'Painel Financeiro' },
-    { to: '/faturamento', icon: Receipt, label: 'Faturamento' },
+    { to: '/financeiro/dashboard', icon: TrendingUp, label: 'Dashboard' },
+    { to: '/financeiro/lancamentos', icon: Receipt, label: 'Lançamentos' },
+    { to: '/financeiro/dre', icon: BookOpen, label: 'DRE' },
+    { to: '/financeiro/fluxo-caixa', icon: Wallet, label: 'Fluxo de Caixa' },
+    { to: '/financeiro/reembolsos', icon: HandCoins, label: 'Reembolsos' },
   ],
   configuracoes: [
     { to: '/equipe', icon: Users, label: 'Equipe' },
