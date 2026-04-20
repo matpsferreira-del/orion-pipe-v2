@@ -1582,6 +1582,286 @@ export type Database = {
           },
         ]
       }
+      outplacement_activities: {
+        Row: {
+          activity_date: string
+          activity_type: string
+          contact_id: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          project_id: string
+          title: string
+        }
+        Insert: {
+          activity_date?: string
+          activity_type?: string
+          contact_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          project_id: string
+          title: string
+        }
+        Update: {
+          activity_date?: string
+          activity_type?: string
+          contact_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          project_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "outplacement_activities_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "outplacement_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "outplacement_activities_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "outplacement_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      outplacement_contacts: {
+        Row: {
+          city: string | null
+          company_name: string | null
+          contact_type: string
+          created_at: string
+          created_by: string | null
+          current_position: string | null
+          email: string | null
+          id: string
+          kanban_stage: string
+          linkedin_url: string | null
+          name: string
+          notes: string | null
+          party_id: string | null
+          phone: string | null
+          project_id: string
+          state: string | null
+          tier: string
+          updated_at: string
+        }
+        Insert: {
+          city?: string | null
+          company_name?: string | null
+          contact_type?: string
+          created_at?: string
+          created_by?: string | null
+          current_position?: string | null
+          email?: string | null
+          id?: string
+          kanban_stage?: string
+          linkedin_url?: string | null
+          name: string
+          notes?: string | null
+          party_id?: string | null
+          phone?: string | null
+          project_id: string
+          state?: string | null
+          tier?: string
+          updated_at?: string
+        }
+        Update: {
+          city?: string | null
+          company_name?: string | null
+          contact_type?: string
+          created_at?: string
+          created_by?: string | null
+          current_position?: string | null
+          email?: string | null
+          id?: string
+          kanban_stage?: string
+          linkedin_url?: string | null
+          name?: string
+          notes?: string | null
+          party_id?: string | null
+          phone?: string | null
+          project_id?: string
+          state?: string | null
+          tier?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "outplacement_contacts_party_id_fkey"
+            columns: ["party_id"]
+            isOneToOne: false
+            referencedRelation: "party"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "outplacement_contacts_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "outplacement_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      outplacement_market_jobs: {
+        Row: {
+          applied_at: string | null
+          company_name: string
+          created_at: string
+          created_by: string | null
+          id: string
+          job_title: string
+          job_url: string | null
+          location: string | null
+          notes: string | null
+          project_id: string
+          source: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          applied_at?: string | null
+          company_name: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          job_title: string
+          job_url?: string | null
+          location?: string | null
+          notes?: string | null
+          project_id: string
+          source?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          applied_at?: string | null
+          company_name?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          job_title?: string
+          job_url?: string | null
+          location?: string | null
+          notes?: string | null
+          project_id?: string
+          source?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "outplacement_market_jobs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "outplacement_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      outplacement_projects: {
+        Row: {
+          company_id: string | null
+          contact_id: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          end_date: string | null
+          id: string
+          notes: string | null
+          opportunity_id: string | null
+          party_id: string | null
+          project_type: string
+          responsavel_id: string | null
+          start_date: string | null
+          status: string
+          target_industry: string | null
+          target_location: string | null
+          target_role: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          company_id?: string | null
+          contact_id?: string | null
+          created_at?: string
+          created_by: string
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          notes?: string | null
+          opportunity_id?: string | null
+          party_id?: string | null
+          project_type?: string
+          responsavel_id?: string | null
+          start_date?: string | null
+          status?: string
+          target_industry?: string | null
+          target_location?: string | null
+          target_role?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string | null
+          contact_id?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          notes?: string | null
+          opportunity_id?: string | null
+          party_id?: string | null
+          project_type?: string
+          responsavel_id?: string | null
+          start_date?: string | null
+          status?: string
+          target_industry?: string | null
+          target_location?: string | null
+          target_role?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "outplacement_projects_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "outplacement_projects_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "outplacement_projects_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "outplacement_projects_party_id_fkey"
+            columns: ["party_id"]
+            isOneToOne: false
+            referencedRelation: "party"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       party: {
         Row: {
           city: string | null
