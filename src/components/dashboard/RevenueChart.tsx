@@ -1,30 +1,29 @@
 import { useMemo } from 'react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { InvoiceRow } from '@/hooks/useInvoices';
+import type { FinancialTransaction } from '@/hooks/useFinancial';
 
 interface RevenueChartProps {
-  invoices: InvoiceRow[];
+  transactions: FinancialTransaction[];
 }
 
-export function RevenueChart({ invoices }: RevenueChartProps) {
+export function RevenueChart({ transactions }: RevenueChartProps) {
   const data = useMemo(() => {
-    if (invoices.length === 0) {
-      // Return empty months for current year if no data
+    // Only positive values (receita)
+    const revenueTransactions = transactions.filter(t => Number(t.valor) > 0);
+
+    if (revenueTransactions.length === 0) {
       const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
       return months.map(name => ({ name, recebido: 0, pendente: 0 }));
     }
 
-    // Find the date range from invoices
-    const dates = invoices.map(inv => new Date(inv.data_emissao));
+    const dates = revenueTransactions.map(t => new Date(t.data_referencia));
     const minDate = new Date(Math.min(...dates.map(d => d.getTime())));
     const maxDate = new Date(Math.max(...dates.map(d => d.getTime())));
     
-    // Generate months from min to max date (or last 12 months if range is too small)
     const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
     const result: { name: string; recebido: number; pendente: number }[] = [];
     
-    // Start from minDate's month/year and go to maxDate's month/year
     const startMonth = minDate.getMonth();
     const startYear = minDate.getFullYear();
     const endMonth = maxDate.getMonth();
@@ -34,28 +33,24 @@ export function RevenueChart({ invoices }: RevenueChartProps) {
     let currentMonth = startMonth;
     
     while (currentYear < endYear || (currentYear === endYear && currentMonth <= endMonth)) {
-      const monthInvoices = invoices.filter(inv => {
-        const invoiceDate = new Date(inv.data_emissao);
-        return invoiceDate.getMonth() === currentMonth && invoiceDate.getFullYear() === currentYear;
+      const monthTxns = revenueTransactions.filter(t => {
+        const d = new Date(t.data_referencia);
+        return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
       });
       
-      const recebido = monthInvoices
-        .filter(inv => inv.status === 'recebido')
-        .reduce((sum, inv) => sum + Number(inv.valor), 0);
+      const recebido = monthTxns
+        .filter(t => t.status === 'pago')
+        .reduce((sum, t) => sum + Number(t.valor), 0);
       
-      const pendente = monthInvoices
-        .filter(inv => inv.status === 'a_receber' || inv.status === 'em_atraso')
-        .reduce((sum, inv) => sum + Number(inv.valor), 0);
+      const pendente = monthTxns
+        .filter(t => t.status === 'pendente')
+        .reduce((sum, t) => sum + Number(t.valor), 0);
       
       const label = startYear === endYear 
         ? monthNames[currentMonth]
         : `${monthNames[currentMonth]}/${String(currentYear).slice(2)}`;
       
-      result.push({
-        name: label,
-        recebido,
-        pendente,
-      });
+      result.push({ name: label, recebido, pendente });
       
       currentMonth++;
       if (currentMonth > 11) {
@@ -65,7 +60,7 @@ export function RevenueChart({ invoices }: RevenueChartProps) {
     }
     
     return result;
-  }, [invoices]);
+  }, [transactions]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -76,7 +71,7 @@ export function RevenueChart({ invoices }: RevenueChartProps) {
     }).format(value);
   };
 
-  const hasData = invoices.length > 0;
+  const hasData = transactions.some(t => Number(t.valor) > 0);
 
   return (
     <Card>
@@ -86,7 +81,7 @@ export function RevenueChart({ invoices }: RevenueChartProps) {
       <CardContent>
         {!hasData ? (
           <div className="h-[300px] flex items-center justify-center text-muted-foreground">
-            Nenhuma fatura cadastrada
+            Nenhum lançamento de receita cadastrado
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={300}>

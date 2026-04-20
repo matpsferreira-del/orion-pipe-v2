@@ -7,7 +7,7 @@ import { PipelineChart } from '@/components/dashboard/PipelineChart';
 import { RevenueChart } from '@/components/dashboard/RevenueChart';
 import { LeadSourceChart } from '@/components/dashboard/LeadSourceChart';
 import { useOpportunities } from '@/hooks/useOpportunities';
-import { useInvoices } from '@/hooks/useInvoices';
+import { useFinancialTransactions } from '@/hooks/useFinancial';
 import { useCompanies } from '@/hooks/useCompanies';
 import { useProfiles } from '@/hooks/useProfiles';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
@@ -25,7 +25,7 @@ const pipelineStages = [
 
 export default function Relatorios() {
   const { data: opportunities = [], isLoading: loadingOpps } = useOpportunities();
-  const { data: invoices = [], isLoading: loadingInvoices } = useInvoices();
+  const { data: transactions = [], isLoading: loadingInvoices } = useFinancialTransactions();
   const { data: companies = [], isLoading: loadingCompanies } = useCompanies();
   const { data: profiles = [], isLoading: loadingProfiles } = useProfiles();
 
@@ -71,12 +71,15 @@ export default function Relatorios() {
   }, [opportunities, profiles]);
 
   const topClients = useMemo(() => {
-    const clientRevenue = invoices.reduce((acc, inv) => {
-      if (inv.status === 'recebido') {
-        acc[inv.company_id] = (acc[inv.company_id] || 0) + Number(inv.valor);
+    // Use invoices linked to transactions, or group revenue transactions by invoice company
+    // Since we now use financial_transactions, we'll use opportunity-based revenue from won deals
+    const wonOpps = opportunities.filter(o => o.stage === 'fechado_ganhou' && o.company_id);
+    const clientRevenue: Record<string, number> = {};
+    for (const opp of wonOpps) {
+      if (opp.company_id) {
+        clientRevenue[opp.company_id] = (clientRevenue[opp.company_id] || 0) + Number(opp.valor_potencial);
       }
-      return acc;
-    }, {} as Record<string, number>);
+    }
 
     return Object.entries(clientRevenue)
       .map(([companyId, valor]) => ({
@@ -86,7 +89,7 @@ export default function Relatorios() {
       .filter(c => c.company)
       .sort((a, b) => b.valor - a.valor)
       .slice(0, 5);
-  }, [invoices, companies]);
+  }, [opportunities, companies]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -240,7 +243,7 @@ export default function Relatorios() {
 
         <TabsContent value="financeiro" className="space-y-6 mt-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <RevenueChart invoices={invoices} />
+            <RevenueChart transactions={transactions} />
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg font-semibold">Top 5 Clientes por Faturamento</CardTitle>
