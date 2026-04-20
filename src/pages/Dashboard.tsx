@@ -8,7 +8,7 @@ import { RecentActivities } from '@/components/dashboard/RecentActivities';
 import { TasksList } from '@/components/dashboard/TasksList';
 import { TaskCalendar } from '@/components/tasks/TaskCalendar';
 import { useOpportunities } from '@/hooks/useOpportunities';
-import { useInvoices } from '@/hooks/useInvoices';
+import { useFinancialTransactions } from '@/hooks/useFinancial';
 import { useCompanies } from '@/hooks/useCompanies';
 import { useProfiles } from '@/hooks/useProfiles';
 import { useActivities } from '@/hooks/useActivities';
@@ -21,20 +21,20 @@ export default function Dashboard() {
   const [calendarDate, setCalendarDate] = useState<Date | undefined>(undefined);
   
   const { data: opportunities = [], isLoading: loadingOpps } = useOpportunities();
-  const { data: invoices = [], isLoading: loadingInvoices } = useInvoices();
+  const { data: transactions = [], isLoading: loadingTransactions } = useFinancialTransactions();
   const { data: companies = [], isLoading: loadingCompanies } = useCompanies();
   const { data: profiles = [], isLoading: loadingProfiles } = useProfiles();
   const { data: activities = [], isLoading: loadingActivities } = useActivities();
   const { data: tasks = [], isLoading: loadingTasks } = usePendingTasks();
 
-  const isLoading = loadingOpps || loadingInvoices || loadingCompanies || loadingProfiles || loadingActivities || loadingTasks;
+  const isLoading = loadingOpps || loadingTransactions || loadingCompanies || loadingProfiles || loadingActivities || loadingTasks;
 
   // Filter data by selected team member
   const filteredData = useMemo(() => {
     if (selectedMemberId === 'all') {
       return {
         opportunities,
-        invoices,
+        transactions,
         companies,
         activities,
         tasks,
@@ -42,12 +42,9 @@ export default function Dashboard() {
     }
 
     const filteredOpps = opportunities.filter(o => o.responsavel_id === selectedMemberId);
-    const filteredOppIds = new Set(filteredOpps.map(o => o.id));
     
-    // Filter invoices by opportunities that belong to the selected member
-    const filteredInvoices = invoices.filter(inv => 
-      inv.opportunity_id && filteredOppIds.has(inv.opportunity_id)
-    );
+    // Filter transactions by responsavel_id
+    const filteredTransactions = transactions.filter(t => t.responsavel_id === selectedMemberId);
     
     // Filter companies by responsavel_id
     const filteredCompanies = companies.filter(c => c.responsavel_id === selectedMemberId);
@@ -60,15 +57,15 @@ export default function Dashboard() {
 
     return {
       opportunities: filteredOpps,
-      invoices: filteredInvoices,
+      transactions: filteredTransactions,
       companies: filteredCompanies,
       activities: filteredActivities,
       tasks: filteredTasks,
     };
-  }, [selectedMemberId, opportunities, invoices, companies, activities, tasks]);
+  }, [selectedMemberId, opportunities, transactions, companies, activities, tasks]);
 
   const stats = useMemo(() => {
-    const { opportunities: opps, invoices: invs, companies: comps } = filteredData;
+    const { opportunities: opps, transactions: txns, companies: comps } = filteredData;
     
     const activeOpps = opps.filter(o => 
       !['fechado_perdeu'].includes(o.stage)
@@ -77,11 +74,14 @@ export default function Dashboard() {
     const totalPipeline = activeOpps.reduce((sum, o) => sum + Number(o.valor_potencial), 0);
     const wonValue = wonOpps.reduce((sum, o) => sum + Number(o.valor_potencial), 0);
     
-    const receivedInvoices = invs.filter(i => i.status === 'recebido');
-    const totalRevenue = receivedInvoices.reduce((sum, i) => sum + Number(i.valor), 0);
+    // Revenue from financial_transactions (positive values = receita)
+    const paidRevenue = txns
+      .filter(t => Number(t.valor) > 0 && t.status === 'pago')
+      .reduce((sum, t) => sum + Number(t.valor), 0);
     
-    const pendingInvoices = invs.filter(i => i.status === 'a_receber');
-    const pendingValue = pendingInvoices.reduce((sum, i) => sum + Number(i.valor), 0);
+    const pendingRevenue = txns
+      .filter(t => Number(t.valor) > 0 && t.status === 'pendente')
+      .reduce((sum, t) => sum + Number(t.valor), 0);
 
     const activeClients = comps.filter(c => c.status === 'cliente_ativo').length;
 
@@ -90,8 +90,8 @@ export default function Dashboard() {
       totalPipeline,
       wonDeals: wonOpps.length,
       wonValue,
-      totalRevenue,
-      pendingValue,
+      totalRevenue: paidRevenue,
+      pendingValue: pendingRevenue,
       activeClients,
       conversionRate: opps.length > 0 ? Math.round((wonOpps.length / opps.length) * 100) : 0,
       totalCompanies: comps.length,
@@ -202,7 +202,7 @@ export default function Dashboard() {
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <PipelineChart opportunities={filteredData.opportunities} />
-        <RevenueChart invoices={filteredData.invoices} />
+        <RevenueChart transactions={filteredData.transactions} />
       </div>
 
       {/* Bottom Section */}
