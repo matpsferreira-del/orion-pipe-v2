@@ -9,7 +9,6 @@ import { useProfiles } from '@/hooks/useProfiles';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useState } from 'react';
 import { OpportunityDetail } from '@/components/opportunities/OpportunityDetail';
-// kept import below
 
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
