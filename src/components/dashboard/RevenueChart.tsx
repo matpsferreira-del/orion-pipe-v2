@@ -71,7 +71,7 @@ export function RevenueChart({ transactions = [] }: RevenueChartProps) {
     }).format(value);
   };
 
-  const hasData = transactions.some(t => Number(t.valor) > 0);
+  const hasData = (transactions ?? []).some(t => Number(t.valor) > 0);
 
   return (
     <Card>
