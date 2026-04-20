@@ -35,6 +35,7 @@ const PostGenerator = lazy(() => import("./pages/PostGenerator"));
 const FormatacaoCV = lazy(() => import("./pages/FormatacaoCV"));
 const ChromeExtension = lazy(() => import("./pages/ChromeExtension"));
 const CartaOferta = lazy(() => import("./pages/CartaOferta"));
+const Projetos = lazy(() => import("./pages/Projetos"));
 
 const PropostaOutplacement = lazy(() => import("./pages/PropostaOutplacement"));
 const PptInstitucional = lazy(() => import("./pages/PptInstitucional"));
@@ -149,6 +150,7 @@ const App = () => (
                 <Route path="/equipe" element={<Equipe />} />
                 <Route path="/post-generator" element={<PostGenerator />} />
                 <Route path="/carta-oferta" element={<CartaOferta />} />
+                <Route path="/projetos" element={<Projetos />} />
                 <Route path="/configuracoes" element={<Configuracoes />} />
               </Route>
               <Route path="*" element={<NotFound />} />
