@@ -168,7 +168,7 @@
 
 @layer components {
   .kanban-card {
-    @apply bg-card rounded-lg border border-border p-4 cursor-grab active:cursor-grabbing;
+    @apply bg-card rounded-lg border border-border p-3 sm:p-4 cursor-grab active:cursor-grabbing;
     box-shadow: var(--shadow-card);
     transition: all 0.2s ease;
   }
@@ -184,11 +184,11 @@
   }
 
   .kanban-column {
-    @apply bg-muted/50 rounded-xl p-3 min-h-[500px];
+    @apply bg-muted/50 rounded-xl p-2 sm:p-3 min-h-[400px] sm:min-h-[500px];
   }
 
   .metric-card {
-    @apply bg-card rounded-xl border border-border p-6;
+    @apply bg-card rounded-xl border border-border p-4 sm:p-6;
     box-shadow: var(--shadow-card);
   }
 
@@ -201,7 +201,7 @@
   }
 
   .nav-item {
-    @apply flex items-center gap-3 px-3 py-2.5 rounded-lg text-sidebar-foreground/80 transition-all duration-200;
+    @apply flex items-center gap-3 px-3 py-3 sm:py-2.5 rounded-lg text-sidebar-foreground/80 transition-all duration-200;
   }
 
   .nav-item:hover {
@@ -234,6 +234,17 @@
 
   .pipeline-badge {
     @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium;
+  }
+
+  /* Mobile list card — shared pattern for replacing tables on small screens */
+  .mobile-list-card {
+    @apply bg-card rounded-lg border border-border p-3 active:bg-muted/50 transition-colors;
+    box-shadow: var(--shadow-card);
+  }
+
+  /* Touch target helper — ensures min 44x44 hit area on mobile */
+  .touch-target {
+    @apply min-h-[44px] min-w-[44px];
   }
 }
 
