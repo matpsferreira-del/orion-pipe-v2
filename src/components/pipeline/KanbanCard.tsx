@@ -1,6 +1,7 @@
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Calendar, DollarSign } from 'lucide-react';
+import { Calendar, DollarSign, AtSign } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAllOpportunityMentions } from '@/hooks/useOpportunityMentions';
 
 interface ExtendedOpportunity {
   id: string;
