@@ -13,6 +13,7 @@ import { ContactDialog } from '@/components/contacts/ContactDialog';
 import { ImportContactsDialog } from '@/components/contacts/ImportContactsDialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
+import { MobileListCard } from '@/components/ui/mobile-list-card';
 
 const PAGE_SIZE = 100;
 
@@ -295,8 +296,85 @@ export default function Contatos() {
         )}
       </div>
 
-      {/* Table */}
-      <div className="border rounded-lg bg-card overflow-x-auto">
+      {/* Mobile: Card list */}
+      <div className="md:hidden space-y-2">
+        {paginatedContacts.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground text-sm border rounded-lg bg-card">
+            Nenhum contato encontrado
+          </div>
+        ) : (
+          paginatedContacts.map((contact) => (
+            <MobileListCard
+              key={contact.id}
+              leading={
+                <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center">
+                  <User className="h-4 w-4 text-primary" />
+                </div>
+              }
+              title={
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="truncate">{contact.nome}</span>
+                  {contact.is_primary && (
+                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Principal</Badge>
+                  )}
+                </div>
+              }
+              subtitle={
+                <span className="flex items-center gap-1">
+                  <Building2 className="h-3 w-3 shrink-0" />
+                  {getCompanyName(contact.company_id)}
+                  {contact.cargo && <span className="opacity-70"> • {contact.cargo}</span>}
+                </span>
+              }
+              trailing={
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-9 w-9 -mr-2">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => { setContactToEdit(contact); setDialogOpen(true); }}>
+                      <Pencil className="h-4 w-4 mr-2" />Editar
+                    </DropdownMenuItem>
+                    <DropdownMenuItem className="text-destructive" onClick={(e) => handleDeleteClick(contact, e)}>
+                      <Trash2 className="h-4 w-4 mr-2" />Excluir
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              }
+              meta={
+                <div className="flex items-center gap-3 flex-wrap text-xs">
+                  {contact.email && (
+                    <a href={`mailto:${contact.email}`} className="flex items-center gap-1 text-primary truncate max-w-full" onClick={(e) => e.stopPropagation()}>
+                      <Mail className="h-3 w-3 shrink-0" />
+                      <span className="truncate">{contact.email}</span>
+                    </a>
+                  )}
+                  {contact.telefone && (
+                    <a href={`tel:${contact.telefone}`} className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                      <Phone className="h-3 w-3" />{contact.telefone}
+                    </a>
+                  )}
+                  {contact.whatsapp && (
+                    <a href={`https://wa.me/${contact.whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-success" onClick={(e) => e.stopPropagation()}>
+                      <Phone className="h-3 w-3" />WhatsApp
+                    </a>
+                  )}
+                  {contact.linkedin && (
+                    <a href={contact.linkedin.startsWith('http') ? contact.linkedin : `https://${contact.linkedin}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-primary" onClick={(e) => e.stopPropagation()}>
+                      <Linkedin className="h-3 w-3" />LinkedIn
+                    </a>
+                  )}
+                </div>
+              }
+            />
+          ))
+        )}
+      </div>
+
+      {/* Desktop: Table */}
+      <div className="hidden md:block border rounded-lg bg-card overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -372,8 +450,6 @@ export default function Contatos() {
                             <Badge variant="secondary" className="text-xs shrink-0">Principal</Badge>
                           )}
                         </div>
-                        {/* Show email on mobile inline */}
-                        <p className="text-xs text-muted-foreground truncate sm:hidden">{contact.email}</p>
                       </div>
                     </div>
                   </TableCell>

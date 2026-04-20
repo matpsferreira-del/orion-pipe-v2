@@ -485,8 +485,74 @@ export default function Empresas() {
         )}
       </div>
 
-      {/* Table */}
-      <div className="border rounded-lg bg-card overflow-x-auto">
+      {/* Mobile: Card list */}
+      <div className="md:hidden space-y-2">
+        {paginatedCompanies.length === 0 ? (
+          <div className="text-center py-8 text-sm text-muted-foreground border rounded-lg bg-card">
+            Nenhuma empresa encontrada
+          </div>
+        ) : (
+          paginatedCompanies.map((company) => {
+            const status = statusConfig[company.status] || statusConfig.prospect;
+            return (
+              <div
+                key={company.id}
+                onClick={() => setSelectedCompany(company)}
+                className="mobile-list-card cursor-pointer"
+              >
+                <div className="flex items-start gap-3">
+                  <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                    <Building2 className="h-4 w-4 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-sm text-foreground truncate">{company.nome_fantasia}</p>
+                        <p className="text-xs text-muted-foreground truncate">{company.cnpj}</p>
+                      </div>
+                      <div onClick={(e) => e.stopPropagation()}>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-9 w-9 -mr-2">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => setSelectedCompany(company)}>
+                              <Eye className="h-4 w-4 mr-2" />Ver
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => { setCompanyToEdit(company); setDialogOpen(true); }}>
+                              <Pencil className="h-4 w-4 mr-2" />Editar
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={(e) => handleNewOpportunity(company, e)}>
+                              <Target className="h-4 w-4 mr-2" />Nova Oportunidade
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="text-destructive" onClick={(e) => handleDeleteClick(company, e)}>
+                              <Trash2 className="h-4 w-4 mr-2" />Excluir
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </div>
+                    <div className="mt-2 flex items-center gap-2 flex-wrap text-xs">
+                      <span className={cn(status.className)}>{status.label}</span>
+                      {company.segmento && <span className="text-muted-foreground">{company.segmento}</span>}
+                      <span className="text-muted-foreground">{company.cidade}/{company.estado}</span>
+                    </div>
+                    <div className="mt-1.5 flex items-center gap-3 text-xs text-muted-foreground">
+                      <span>{getContactsCount(company.id)} contatos</span>
+                      <span>{getOpportunitiesCount(company.id)} oport.</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {/* Desktop: Table */}
+      <div className="hidden md:block border rounded-lg bg-card overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>

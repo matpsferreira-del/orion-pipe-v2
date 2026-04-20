@@ -22,6 +22,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { OpportunityDetail } from '@/components/opportunities/OpportunityDetail';
+import { MobileListCard } from '@/components/ui/mobile-list-card';
 
 const sourceLabels: Record<string, string> = {
   indicacao: 'Indicação',
@@ -176,8 +177,79 @@ export default function Oportunidades() {
         </Select>
       </div>
 
-      {/* Table */}
-      <div className="border rounded-lg bg-card overflow-x-auto">
+      {/* Mobile: Card list */}
+      <div className="md:hidden space-y-2">
+        {filteredOpportunities.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground text-sm border rounded-lg bg-card">
+            Nenhuma oportunidade encontrada
+          </div>
+        ) : (
+          filteredOpportunities.map((opp) => {
+            const company = companies.find(c => c.id === opp.company_id);
+            const contact = contacts.find(c => c.id === opp.contact_id);
+            const responsavel = profiles.find(p => p.id === opp.responsavel_id);
+            const stage = pipelineStages.find(s => s.key === opp.stage);
+            return (
+              <MobileListCard
+                key={opp.id}
+                onClick={() => setSelectedOpportunity(opp)}
+                leading={
+                  <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <Target className="h-4 w-4 text-primary" />
+                  </div>
+                }
+                title={
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="truncate">{getDisplayName(opp, company?.nome_fantasia)}</span>
+                  </div>
+                }
+                subtitle={
+                  <span>{stage?.label} • {formatCurrency(Number(opp.valor_potencial))}</span>
+                }
+                trailing={
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-9 w-9 -mr-2">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => setSelectedOpportunity(opp)}>
+                        <Eye className="h-4 w-4 mr-2" />Ver
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setEditingOpportunity(opp)}>
+                        <Pencil className="h-4 w-4 mr-2" />Editar
+                      </DropdownMenuItem>
+                      <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(opp.id)}>
+                        <Trash2 className="h-4 w-4 mr-2" />Excluir
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                }
+                meta={
+                  <div className="flex items-center gap-3 flex-wrap text-xs">
+                    <Badge variant="secondary" className="text-[10px]">{serviceLabels[opp.tipo_servico] || opp.tipo_servico}</Badge>
+                    <span>{opp.probabilidade}% • {formatDate(opp.data_previsao_fechamento)}</span>
+                    {responsavel && (
+                      <span className="flex items-center gap-1">
+                        <Avatar className="h-4 w-4">
+                          <AvatarFallback className="text-[8px] bg-primary/10 text-primary">
+                            {responsavel.name?.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                          </AvatarFallback>
+                        </Avatar>
+                        {responsavel.name}
+                      </span>
+                    )}
+                  </div>
+                }
+              />
+            );
+          })
+        )}
+      </div>
+
+      {/* Desktop: Table */}
+      <div className="hidden md:block border rounded-lg bg-card overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>

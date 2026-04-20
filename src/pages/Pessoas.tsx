@@ -9,12 +9,13 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
-import { Plus, Search, Mail, Phone, Linkedin, Users, AlertTriangle, Globe } from 'lucide-react';
+import { Plus, Search, Mail, Phone, Linkedin, Users, AlertTriangle, Globe, MapPin } from 'lucide-react';
 import { useParties, useDuplicateSuggestions } from '@/hooks/useParties';
 import { PartyRoleType, partyRoleLabels, PartyCreatedFrom } from '@/types/party';
 import { PartyDialog } from '@/components/parties/PartyDialog';
 import { PartyDetailDialog } from '@/components/parties/PartyDetailDialog';
 import { DuplicatesDialog } from '@/components/parties/DuplicatesDialog';
+import { MobileListCard } from '@/components/ui/mobile-list-card';
 
 export default function Pessoas() {
   const [search, setSearch] = useState('');
@@ -103,8 +104,68 @@ export default function Pessoas() {
         </Select>
       </div>
 
-      {/* Table */}
-      <div className="border rounded-lg overflow-x-auto">
+      {/* Mobile: Cards */}
+      <div className="md:hidden space-y-2">
+        {isLoading ? (
+          <div className="text-center py-8 text-sm text-muted-foreground">Carregando...</div>
+        ) : parties?.length === 0 ? (
+          <div className="text-center py-8 border rounded-lg bg-card">
+            <Users className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+            <p className="text-sm text-muted-foreground">Nenhuma pessoa encontrada</p>
+          </div>
+        ) : (
+          parties?.map((party) => (
+            <MobileListCard
+              key={party.id}
+              onClick={() => setSelectedPartyId(party.id)}
+              leading={
+                <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Users className="h-4 w-4 text-primary" />
+                </div>
+              }
+              title={
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="truncate">{party.full_name}</span>
+                  {party.created_from === 'site' && (
+                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0 flex items-center gap-0.5">
+                      <Globe className="h-2.5 w-2.5" />Portal
+                    </Badge>
+                  )}
+                </div>
+              }
+              subtitle={party.headline || (party.city || party.state ? [party.city, party.state].filter(Boolean).join(', ') : undefined)}
+              meta={
+                <div className="space-y-1">
+                  <div className="flex items-center gap-3 flex-wrap">
+                    {party.email_norm && (
+                      <a href={`mailto:${party.email_norm}`} className="flex items-center gap-1 text-primary truncate" onClick={(e) => e.stopPropagation()}>
+                        <Mail className="h-3 w-3 shrink-0" />
+                        <span className="truncate max-w-[150px]">{party.email_norm}</span>
+                      </a>
+                    )}
+                    {party.phone_e164 && (
+                      <a href={`tel:${party.phone_e164}`} className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                        <Phone className="h-3 w-3" />{party.phone_raw}
+                      </a>
+                    )}
+                    {party.linkedin_url && (
+                      <a href={party.linkedin_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-primary" onClick={(e) => e.stopPropagation()}>
+                        <Linkedin className="h-3 w-3" />LinkedIn
+                      </a>
+                    )}
+                  </div>
+                  {party.party_role && party.party_role.length > 0 && (
+                    <div className="flex flex-wrap gap-1">{getRoleBadges(party.party_role)}</div>
+                  )}
+                </div>
+              }
+            />
+          ))
+        )}
+      </div>
+
+      {/* Desktop: Table */}
+      <div className="hidden md:block border rounded-lg overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -150,12 +211,6 @@ export default function Pessoas() {
                       {party.headline && (
                         <p className="text-sm text-muted-foreground truncate max-w-[200px] sm:max-w-none">{party.headline}</p>
                       )}
-                      {/* Mobile: show contact inline */}
-                      <div className="flex items-center gap-2 mt-1 sm:hidden">
-                        {party.email_norm && <Mail className="h-3 w-3 text-muted-foreground" />}
-                        {party.phone_e164 && <Phone className="h-3 w-3 text-muted-foreground" />}
-                        {party.linkedin_url && <Linkedin className="h-3 w-3 text-muted-foreground" />}
-                      </div>
                     </div>
                   </TableCell>
                   <TableCell className="hidden sm:table-cell">
