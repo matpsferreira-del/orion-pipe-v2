@@ -75,6 +75,11 @@ export default function Dashboard() {
     const wonValue = wonOpps.reduce((sum, o) => sum + Number(o.valor_potencial), 0);
     
     // Revenue from financial_transactions (positive values = receita)
+    // "Faturado" = total emitido (pago + pendente, exclui cancelado)
+    const billedRevenue = txns
+      .filter(t => Number(t.valor) > 0 && t.status !== 'cancelado')
+      .reduce((sum, t) => sum + Number(t.valor), 0);
+
     const paidRevenue = txns
       .filter(t => Number(t.valor) > 0 && t.status === 'pago')
       .reduce((sum, t) => sum + Number(t.valor), 0);
@@ -90,7 +95,8 @@ export default function Dashboard() {
       totalPipeline,
       wonDeals: wonOpps.length,
       wonValue,
-      totalRevenue: paidRevenue,
+      totalRevenue: billedRevenue,
+      paidRevenue,
       pendingValue: pendingRevenue,
       activeClients,
       conversionRate: opps.length > 0 ? Math.round((wonOpps.length / opps.length) * 100) : 0,
