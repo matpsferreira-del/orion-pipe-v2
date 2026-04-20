@@ -7,6 +7,7 @@ import { LeadSourceChart } from '@/components/dashboard/LeadSourceChart';
 import { RecentActivities } from '@/components/dashboard/RecentActivities';
 import { TasksList } from '@/components/dashboard/TasksList';
 import { TaskCalendar } from '@/components/tasks/TaskCalendar';
+import { MyMentionsCard } from '@/components/dashboard/MyMentionsCard';
 import { useOpportunities } from '@/hooks/useOpportunities';
 import { useFinancialTransactions } from '@/hooks/useFinancial';
 import { useCompanies } from '@/hooks/useCompanies';
@@ -213,10 +214,15 @@ export default function Dashboard() {
 
       {/* Bottom Section */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        <LeadSourceChart opportunities={filteredData.opportunities} />
+        <MyMentionsCard />
         <RecentActivities activities={filteredData.activities} profiles={profiles} companies={companies} />
         <TasksList tasks={filteredData.tasks} profiles={profiles} companies={companies} />
         <TaskCalendar tasks={filteredData.tasks} selectedDate={calendarDate} onSelectDate={setCalendarDate} compact />
+      </div>
+
+      {/* Lead source chart */}
+      <div className="grid grid-cols-1 gap-6">
+        <LeadSourceChart opportunities={filteredData.opportunities} />
       </div>
     </div>
   );
