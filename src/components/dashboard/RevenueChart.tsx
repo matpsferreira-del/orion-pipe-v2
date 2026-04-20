@@ -7,10 +7,10 @@ interface RevenueChartProps {
   transactions: FinancialTransaction[];
 }
 
-export function RevenueChart({ transactions }: RevenueChartProps) {
+export function RevenueChart({ transactions = [] }: RevenueChartProps) {
   const data = useMemo(() => {
     // Only positive values (receita)
-    const revenueTransactions = transactions.filter(t => Number(t.valor) > 0);
+    const revenueTransactions = (transactions ?? []).filter(t => Number(t.valor) > 0);
 
     if (revenueTransactions.length === 0) {
       const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
@@ -71,7 +71,7 @@ export function RevenueChart({ transactions }: RevenueChartProps) {
     }).format(value);
   };
 
-  const hasData = transactions.some(t => Number(t.valor) > 0);
+  const hasData = (transactions ?? []).some(t => Number(t.valor) > 0);
 
   return (
     <Card>
