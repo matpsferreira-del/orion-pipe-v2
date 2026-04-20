@@ -190,6 +190,9 @@ export function OpportunityDetail({ opportunity, onOpenActivityDialog, onOpenJob
         </div>
       </div>
 
+      {/* Mentions / @ tags - topo, junto com info principal */}
+      <MentionsSection opportunityId={opportunity.id} />
+
       <Separator />
 
       <Tabs defaultValue="info" className="w-full">
@@ -279,9 +282,6 @@ export function OpportunityDetail({ opportunity, onOpenActivityDialog, onOpenJob
               </CardContent>
             </Card>
           )}
-
-          {/* Mentions / @ tags */}
-          <MentionsSection opportunityId={opportunity.id} />
         </TabsContent>
 
         <TabsContent value="spin" className="space-y-4 mt-4">
