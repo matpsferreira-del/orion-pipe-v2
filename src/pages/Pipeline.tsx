@@ -95,34 +95,34 @@ export default function Pipeline() {
   }
 
   return (
-    <div className="p-4 md:p-6 h-full flex flex-col">
+    <div className="p-3 sm:p-4 md:p-6 h-full flex flex-col">
       <PageHeader
         title="Funil Comercial"
         description="Gerencie suas oportunidades de vendas"
         actions={
-          <Button onClick={() => setShowNewDialog(true)}>
-            <Plus className="h-4 w-4 mr-2" />
+          <Button onClick={() => setShowNewDialog(true)} size="sm" className="sm:h-10">
+            <Plus className="h-4 w-4 sm:mr-2" />
             <span className="hidden sm:inline">Nova Oportunidade</span>
-            <span className="sm:hidden">Nova</span>
+            <span className="sm:hidden ml-1">Nova</span>
           </Button>
         }
       />
 
       {/* Filters */}
-      <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-4 sm:mt-6 mb-4">
-        <div className="relative flex-1 min-w-0 max-w-sm">
+      <div className="flex items-center gap-2 mt-3 sm:mt-6 mb-3 sm:mb-4">
+        <div className="relative flex-1 min-w-0">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar oportunidades..."
+            placeholder="Buscar..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9"
+            className="pl-9 h-9 sm:h-10"
           />
         </div>
         <Select value={filterResponsavel} onValueChange={setFilterResponsavel}>
-          <SelectTrigger className="w-full sm:w-[200px]">
-            <Filter className="h-4 w-4 mr-2" />
-            <SelectValue placeholder="Responsável" />
+          <SelectTrigger className="w-[44px] sm:w-[200px] h-9 sm:h-10 px-2 sm:px-3">
+            <Filter className="h-4 w-4 sm:mr-2 shrink-0" />
+            <SelectValue placeholder="Responsável" className="hidden sm:inline" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos</SelectItem>
@@ -134,10 +134,10 @@ export default function Pipeline() {
       </div>
 
       {/* Kanban Board */}
-      <div className="flex-1 overflow-x-auto">
-        <div className="flex gap-3 sm:gap-4 h-full min-w-max pb-4">
+      <div className="flex-1 overflow-x-auto -mx-3 sm:mx-0 px-3 sm:px-0">
+        <div className="flex gap-2 sm:gap-4 h-full min-w-max pb-4 snap-x snap-mandatory sm:snap-none">
           {activeStages.map((stage) => (
-            <div key={stage.key} className="w-[80vw] sm:w-72 flex-shrink-0">
+            <div key={stage.key} className="w-[78vw] sm:w-72 flex-shrink-0 snap-start">
               <KanbanColumn
                 stage={stage}
                 opportunities={adaptedOpportunities.filter(o => o.stage === stage.key)}

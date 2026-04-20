@@ -77,30 +77,30 @@ export function KanbanCard({ opportunity, onClick }: KanbanCardProps) {
       onDragEnd={handleDragEnd}
       onClick={onClick}
     >
-      <div className="flex items-start justify-between mb-2">
-        <h4 className="font-medium text-sm text-foreground truncate flex-1">
+      <div className="flex items-start justify-between gap-2 mb-1.5">
+        <h4 className="font-medium text-[13px] sm:text-sm text-foreground line-clamp-2 flex-1 leading-tight">
           {opportunity.tipoServico === 'outplacement' && !opportunity.companyId
             ? (opportunity.observacoes?.match(/\[PF: (.+?)\]/)?.[1] || 'Outplacement')
             : (company?.nome_fantasia || 'Empresa não encontrada')}
         </h4>
-        <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+        <span className="text-[10px] sm:text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0">
           {opportunity.probabilidade}%
         </span>
       </div>
 
       {contact && (
-        <p className="text-xs text-muted-foreground truncate mb-3">
+        <p className="text-[11px] sm:text-xs text-muted-foreground truncate mb-2">
           {contact.nome} • {contact.cargo}
         </p>
       )}
 
-      <div className="flex items-center justify-between text-xs">
-        <div className="flex items-center gap-1 text-primary font-medium">
-          <DollarSign className="h-3 w-3" />
-          {formatCurrency(opportunity.valorPotencial)}
+      <div className="flex items-center justify-between text-[11px] sm:text-xs gap-2">
+        <div className="flex items-center gap-0.5 text-primary font-medium min-w-0">
+          <DollarSign className="h-3 w-3 shrink-0" />
+          <span className="truncate">{formatCurrency(opportunity.valorPotencial)}</span>
         </div>
         <div className={cn(
-          'flex items-center gap-1',
+          'flex items-center gap-1 shrink-0',
           isOverdue() ? 'text-destructive' : isNearDeadline() ? 'text-warning' : 'text-muted-foreground'
         )}>
           <Calendar className="h-3 w-3" />
@@ -109,13 +109,13 @@ export function KanbanCard({ opportunity, onClick }: KanbanCardProps) {
       </div>
 
       {responsavel && (
-        <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border">
-          <Avatar className="h-5 w-5">
-            <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
+        <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-border">
+          <Avatar className="h-4 w-4 sm:h-5 sm:w-5">
+            <AvatarFallback className="text-[9px] sm:text-[10px] bg-primary/10 text-primary">
               {responsavel.avatar || getInitials(responsavel.name)}
             </AvatarFallback>
           </Avatar>
-          <span className="text-xs text-muted-foreground truncate">
+          <span className="text-[11px] sm:text-xs text-muted-foreground truncate">
             {responsavel.name}
           </span>
         </div>
