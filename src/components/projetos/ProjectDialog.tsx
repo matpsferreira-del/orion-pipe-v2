@@ -92,6 +92,9 @@ export function ProjectDialog({ open, onOpenChange, project, preset }: Props) {
         estado: project.estado || '',
         cidade: project.cidade || '',
         preferencia_regiao: project.preferencia_regiao || '',
+        client_linkedin_url: project.client_linkedin_url || '',
+        client_email: project.client_email || '',
+        client_phone: project.client_phone || '',
       });
       setCidadesInteresse(Array.isArray(project.cidades_interesse) ? project.cidades_interesse : []);
     } else {
@@ -106,6 +109,7 @@ export function ProjectDialog({ open, onOpenChange, project, preset }: Props) {
         description: '', start_date: '', end_date: '',
         situacao_atual: '', modelo_trabalho: '',
         estado: '', cidade: '', preferencia_regiao: '',
+        client_linkedin_url: '', client_email: '', client_phone: '',
       });
       setCidadesInteresse([]);
     }
