@@ -287,20 +287,59 @@ async function syncContactIfLinked(contact: OutplacementContact) {
   }
 }
 
+function normalizeLinkedinUrl(url?: string | null): string | null {
+  if (!url) return null;
+  const trimmed = url.trim().toLowerCase().replace(/\/+$/, '').replace(/^https?:\/\/(www\.)?/, '');
+  return trimmed || null;
+}
+
 export function useCreateOutplacementContact() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: Partial<OutplacementContact> & { project_id: string; name: string }) => {
+      // Dedup by LinkedIn URL within the same project
+      const normalizedNew = normalizeLinkedinUrl(input.linkedin_url);
+      if (normalizedNew) {
+        const { data: existing } = await supabase
+          .from('outplacement_contacts')
+          .select('*')
+          .eq('project_id', input.project_id)
+          .not('linkedin_url', 'is', null);
+
+        const match = (existing || []).find(
+          (c: any) => normalizeLinkedinUrl(c.linkedin_url) === normalizedNew
+        );
+
+        if (match) {
+          // Merge: update only fields that have new values, preserving existing data
+          const updates: Record<string, any> = {};
+          (['name', 'current_position', 'company_name', 'email', 'phone', 'city', 'state', 'notes', 'contact_type', 'tier', 'kanban_stage'] as const).forEach((k) => {
+            const v = (input as any)[k];
+            if (v !== undefined && v !== null && v !== '') updates[k] = v;
+          });
+          const { data: updated, error: updErr } = await supabase
+            .from('outplacement_contacts')
+            .update(updates)
+            .eq('id', match.id)
+            .select()
+            .single();
+          if (updErr) throw updErr;
+          const contact = updated as OutplacementContact;
+          syncContactIfLinked(contact);
+          return { contact, wasUpdated: true };
+        }
+      }
+
       const { data, error } = await supabase.from('outplacement_contacts').insert(input).select().single();
       if (error) throw error;
       const contact = data as OutplacementContact;
       syncContactIfLinked(contact); // fire-and-forget
-      return contact;
+      return { contact, wasUpdated: false };
     },
-    onSuccess: (data) => {
+    onSuccess: ({ contact, wasUpdated }) => {
       qc.invalidateQueries({ queryKey: ['outplacement-contacts'] });
-      qc.invalidateQueries({ queryKey: ['outplacement-contacts', data.project_id] });
-      toast.success('Contato adicionado!');
+      qc.invalidateQueries({ queryKey: ['outplacement-contacts', contact.project_id] });
+      toast.success(wasUpdated ? 'Perfil já existia — dados atualizados!' : 'Contato adicionado!');
     },
     onError: (e: Error) => toast.error('Erro: ' + e.message),
   });
