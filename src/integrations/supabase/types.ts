@@ -1780,6 +1780,9 @@ export type Database = {
         Row: {
           cidade: string | null
           cidades_interesse: Json | null
+          client_email: string | null
+          client_linkedin_url: string | null
+          client_phone: string | null
           company_id: string | null
           contact_id: string | null
           created_at: string
@@ -1809,6 +1812,9 @@ export type Database = {
         Insert: {
           cidade?: string | null
           cidades_interesse?: Json | null
+          client_email?: string | null
+          client_linkedin_url?: string | null
+          client_phone?: string | null
           company_id?: string | null
           contact_id?: string | null
           created_at?: string
@@ -1838,6 +1844,9 @@ export type Database = {
         Update: {
           cidade?: string | null
           cidades_interesse?: Json | null
+          client_email?: string | null
+          client_linkedin_url?: string | null
+          client_phone?: string | null
           company_id?: string | null
           contact_id?: string | null
           created_at?: string
