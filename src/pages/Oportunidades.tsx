@@ -62,6 +62,7 @@ export default function Oportunidades() {
   const [showNewDialog, setShowNewDialog] = useState(false);
   const [showActivityDialog, setShowActivityDialog] = useState(false);
   const [showJobDialog, setShowJobDialog] = useState(false);
+  const [showProjectDialog, setShowProjectDialog] = useState(false);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
 
