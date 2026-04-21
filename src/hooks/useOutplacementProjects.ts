@@ -377,13 +377,44 @@ export function useOutplacementMarketJobs(projectId: string | undefined) {
   });
 }
 
+async function syncMarketJobIfLinked(job: OutplacementMarketJob) {
+  try {
+    const { data: project } = await supabase
+      .from('outplacement_projects')
+      .select('pathly_plan_id')
+      .eq('id', job.project_id)
+      .maybeSingle();
+    const planId = (project as { pathly_plan_id?: string | null } | null)?.pathly_plan_id;
+    if (!planId) return;
+    const r = await syncMarketJobToPathly(planId, {
+      job_title: job.job_title,
+      company_name: job.company_name,
+      location: job.location,
+      job_url: job.job_url,
+      source: job.source,
+      status: job.status,
+      notes: job.notes,
+    });
+    if (r.ok) {
+      await supabase
+        .from('outplacement_market_jobs')
+        .update({ pathly_synced_at: new Date().toISOString() })
+        .eq('id', job.id);
+    }
+  } catch (e) {
+    console.warn('Pathly market job sync failed (non-blocking):', e);
+  }
+}
+
 export function useCreateOutplacementMarketJob() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: Partial<OutplacementMarketJob> & { project_id: string; job_title: string; company_name: string }) => {
       const { data, error } = await supabase.from('outplacement_market_jobs').insert(input).select().single();
       if (error) throw error;
-      return data as OutplacementMarketJob;
+      const job = data as OutplacementMarketJob;
+      syncMarketJobIfLinked(job);
+      return job;
     },
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ['outplacement-market-jobs', data.project_id] });
@@ -397,8 +428,14 @@ export function useUpdateOutplacementMarketJob() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...updates }: Partial<OutplacementMarketJob> & { id: string }) => {
-      const { error } = await supabase.from('outplacement_market_jobs').update(updates).eq('id', id);
+      const { data, error } = await supabase
+        .from('outplacement_market_jobs')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
       if (error) throw error;
+      if (data) syncMarketJobIfLinked(data as OutplacementMarketJob);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['outplacement-market-jobs'] }),
   });
