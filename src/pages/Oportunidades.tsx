@@ -386,7 +386,13 @@ export default function Oportunidades() {
             <OpportunityDetail
               opportunity={selectedOpportunity}
               onOpenActivityDialog={() => setShowActivityDialog(true)}
-              onOpenJobDialog={() => setShowJobDialog(true)}
+              onOpenJobDialog={() => {
+                if (selectedOpportunity?.tipo_servico === 'outplacement') {
+                  setShowProjectDialog(true);
+                } else {
+                  setShowJobDialog(true);
+                }
+              }}
               onOpenRejectDialog={() => setShowRejectDialog(true)}
             />
           )}
