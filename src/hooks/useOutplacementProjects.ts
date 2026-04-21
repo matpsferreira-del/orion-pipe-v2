@@ -1,6 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import {
+  createPathlyPlan,
+  syncContactToPathly,
+  syncMarketJobToPathly,
+} from '@/lib/pathlySync';
 
 export interface OutplacementProject {
   id: string;
@@ -22,6 +27,8 @@ export interface OutplacementProject {
   notes: string | null;
   created_at: string;
   updated_at: string;
+  pathly_plan_id: string | null;
+  pathly_synced_at: string | null;
 }
 
 export interface OutplacementContact {
@@ -44,6 +51,7 @@ export interface OutplacementContact {
   created_at: string;
   updated_at: string;
   ai_validated_at: string | null;
+  pathly_synced_at: string | null;
 }
 
 export interface OutplacementActivity {
@@ -72,6 +80,7 @@ export interface OutplacementMarketJob {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  pathly_synced_at: string | null;
 }
 
 export const KANBAN_STAGES = [
