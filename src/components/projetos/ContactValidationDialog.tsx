@@ -1,7 +1,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { ArrowRight, Check, X, Sparkles } from 'lucide-react';
+import { ArrowRight, Check, X, Sparkles, Linkedin } from 'lucide-react';
 import { useState } from 'react';
 import { ContactSuggestion } from '@/hooks/useContactValidation';
 import { useUpdateOutplacementContact } from '@/hooks/useOutplacementProjects';
@@ -39,27 +39,27 @@ export function ContactValidationDialog({ open, onOpenChange, suggestions, isLoa
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-3xl max-h-[85vh] flex flex-col">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-3xl max-h-[85vh] flex flex-col gap-0 p-0">
+        <DialogHeader className="px-6 pt-6 pb-2 shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-primary" />
             Sugestões de Correção (IA)
           </DialogTitle>
         </DialogHeader>
 
-        {isLoading ? (
-          <div className="py-12 text-center text-muted-foreground">
-            <Sparkles className="h-8 w-8 mx-auto mb-3 animate-pulse text-primary" />
-            <p>Analisando contatos com IA...</p>
-          </div>
-        ) : suggestions.length === 0 ? (
-          <div className="py-12 text-center text-muted-foreground">
-            <Check className="h-10 w-10 mx-auto mb-3 text-emerald-500" />
-            <p className="font-medium">Tudo certo!</p>
-            <p className="text-sm mt-1">Nenhuma inconsistência encontrada nos contatos.</p>
-          </div>
-        ) : (
-          <ScrollArea className="flex-1 -mx-6 px-6">
+        <div className="flex-1 min-h-0 overflow-y-auto px-6 py-3">
+          {isLoading ? (
+            <div className="py-12 text-center text-muted-foreground">
+              <Sparkles className="h-8 w-8 mx-auto mb-3 animate-pulse text-primary" />
+              <p>Analisando contatos com IA...</p>
+            </div>
+          ) : suggestions.length === 0 ? (
+            <div className="py-12 text-center text-muted-foreground">
+              <Check className="h-10 w-10 mx-auto mb-3 text-emerald-500" />
+              <p className="font-medium">Tudo certo!</p>
+              <p className="text-sm mt-1">Nenhuma inconsistência encontrada nos contatos.</p>
+            </div>
+          ) : (
             <div className="space-y-3">
               <p className="text-sm text-muted-foreground">
                 A IA encontrou <strong>{suggestions.length}</strong> contato(s) com possíveis inconsistências.
@@ -75,15 +75,28 @@ export function ContactValidationDialog({ open, onOpenChange, suggestions, isLoa
                     }`}
                   >
                     <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <h4 className="font-semibold text-sm">{s.name}</h4>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h4 className="font-semibold text-sm">{s.name}</h4>
+                          {s.linkedin_url && (
+                            <a
+                              href={s.linkedin_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-xs text-[#0A66C2] hover:underline"
+                            >
+                              <Linkedin className="h-3.5 w-3.5" />
+                              LinkedIn
+                            </a>
+                          )}
+                        </div>
                         <p className="text-xs text-muted-foreground mt-0.5">{s.reason}</p>
                       </div>
                       {status === 'accepted' && (
-                        <span className="text-xs text-emerald-600 font-medium">✓ Aplicada</span>
+                        <span className="text-xs text-emerald-600 font-medium whitespace-nowrap">✓ Aplicada</span>
                       )}
                       {status === 'rejected' && (
-                        <span className="text-xs text-muted-foreground font-medium">Ignorada</span>
+                        <span className="text-xs text-muted-foreground font-medium whitespace-nowrap">Ignorada</span>
                       )}
                     </div>
 
@@ -125,10 +138,10 @@ export function ContactValidationDialog({ open, onOpenChange, suggestions, isLoa
                 );
               })}
             </div>
-          </ScrollArea>
-        )}
+          )}
+        </div>
 
-        <DialogFooter>
+        <DialogFooter className="px-6 py-4 border-t shrink-0">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             {pending.length === 0 ? 'Fechar' : 'Concluir'}
           </Button>

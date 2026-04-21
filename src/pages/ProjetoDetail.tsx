@@ -48,6 +48,7 @@ export default function ProjetoDetail() {
         id: c.id, name: c.name,
         current_position: c.current_position,
         company_name: c.company_name,
+        linkedin_url: c.linkedin_url,
       }))
     );
     setSuggestions(result);
@@ -61,6 +62,7 @@ export default function ProjetoDetail() {
       id: target.id, name: target.name,
       current_position: target.current_position,
       company_name: target.company_name,
+      linkedin_url: target.linkedin_url,
     }]);
     if (result.length > 0) {
       setSuggestions(result);
