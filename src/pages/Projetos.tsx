@@ -123,7 +123,7 @@ export default function Projetos() {
   const escapeCSV = (v: unknown) => {
     if (v === null || v === undefined) return '';
     const s = String(v);
-    return /[",\n\r]/.test(s) ? '"' + s.replaceAll('"', '""') + '"' : s;
+    return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
   };
 
   const handleExportCSV = () => {
