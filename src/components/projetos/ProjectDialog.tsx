@@ -91,9 +91,13 @@ export function ProjectDialog({ open, onOpenChange, project, preset }: Props) {
       setCidadesInteresse(Array.isArray(project.cidades_interesse) ? project.cidades_interesse : []);
     } else {
       setForm({
-        title: '', project_type: 'outplacement', status: 'ativo',
-        party_id: NONE, company_id: NONE,
-        target_role: '', target_industry: '',
+        title: preset?.title || '',
+        project_type: 'outplacement',
+        status: 'ativo',
+        party_id: preset?.party_id || NONE,
+        company_id: preset?.company_id || NONE,
+        target_role: preset?.target_role || '',
+        target_industry: '',
         description: '', start_date: '', end_date: '',
         situacao_atual: '', modelo_trabalho: '',
         estado: '', cidade: '', preferencia_regiao: '',
@@ -102,7 +106,7 @@ export function ProjectDialog({ open, onOpenChange, project, preset }: Props) {
     }
     setNovoEstado('');
     setNovaCidade('');
-  }, [project, open]);
+  }, [project, open, preset]);
 
   const cidadesPrincipais = useMemo(
     () => (form.estado ? BRAZIL_CITIES[form.estado] || [] : []),
