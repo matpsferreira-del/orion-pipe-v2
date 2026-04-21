@@ -24,6 +24,13 @@ export interface OutplacementProject {
   target_role: string | null;
   target_industry: string | null;
   target_location: string | null;
+  // Campos alinhados com Pathly
+  situacao_atual: string | null;
+  modelo_trabalho: string | null;
+  estado: string | null;
+  cidade: string | null;
+  preferencia_regiao: string | null;
+  cidades_interesse: Array<{ estado: string; cidade: string }> | null;
   notes: string | null;
   created_at: string;
   updated_at: string;
@@ -164,6 +171,12 @@ export function useCreateOutplacementProject() {
           target_role: project.target_role,
           target_industry: project.target_industry,
           target_location: project.target_location,
+          situacao_atual: project.situacao_atual,
+          modelo_trabalho: project.modelo_trabalho,
+          estado: project.estado,
+          cidade: project.cidade,
+          preferencia_regiao: project.preferencia_regiao,
+          cidades_interesse: project.cidades_interesse,
         });
         const planId = (result.data as { plan?: { id?: string } } | null)?.plan?.id;
         if (planId) {
