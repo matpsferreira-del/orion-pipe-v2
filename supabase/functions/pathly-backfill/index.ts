@@ -167,36 +167,43 @@ Deno.serve(async (req) => {
 
     let contactOk = 0, contactFail = 0;
     for (const c of contacts ?? []) {
-      if (c.company_name) {
-        await callBridge('upsert_company', {
+      try {
+        if (c.company_name) {
+          await safeCall('upsert_company', {
+            plan_id: planId,
+            name: c.company_name,
+            tier: c.tier ?? 'B',
+            has_openings: false,
+            source: 'orion',
+          });
+          await sleep(400);
+        }
+        const r = await safeCall('upsert_contact', {
           plan_id: planId,
-          name: c.company_name,
+          name: c.name,
+          current_position: c.current_position,
+          company: c.company_name,
+          linkedin_url: c.linkedin_url,
+          type: TYPE_MAP[c.contact_type ?? 'outro'] ?? 'other',
           tier: c.tier ?? 'B',
-          has_openings: false,
+          status: STAGE_MAP[c.kanban_stage ?? 'identificado'] ?? 'identified',
+          notes: c.notes,
           source: 'orion',
         });
-      }
-      const r = await callBridge('upsert_contact', {
-        plan_id: planId,
-        name: c.name,
-        current_position: c.current_position,
-        company: c.company_name,
-        linkedin_url: c.linkedin_url,
-        type: TYPE_MAP[c.contact_type ?? 'outro'] ?? 'other',
-        tier: c.tier ?? 'B',
-        status: STAGE_MAP[c.kanban_stage ?? 'identificado'] ?? 'identified',
-        notes: c.notes,
-        source: 'orion',
-      });
-      if (r.ok) {
-        contactOk++;
-        await sb.from('outplacement_contacts')
-          .update({ pathly_synced_at: new Date().toISOString() })
-          .eq('id', c.id);
-      } else {
+        if (r.ok) {
+          contactOk++;
+          await sb.from('outplacement_contacts')
+            .update({ pathly_synced_at: new Date().toISOString() })
+            .eq('id', c.id);
+        } else {
+          contactFail++;
+          console.log(`[backfill] contact ${c.id} failed:`, JSON.stringify(r.data).slice(0, 200));
+        }
+      } catch (e) {
         contactFail++;
+        console.log(`[backfill] contact ${c.id} threw:`, (e as Error)?.message);
       }
-      await sleep(250);
+      await sleep(600);
     }
     entry.contacts = { ok: contactOk, failed: contactFail, total: contacts?.length ?? 0 };
 
@@ -207,25 +214,30 @@ Deno.serve(async (req) => {
 
     let jobOk = 0, jobFail = 0;
     for (const j of jobs ?? []) {
-      const r = await callBridge('upsert_market_job', {
-        plan_id: planId,
-        job_title: j.job_title,
-        company_name: j.company_name,
-        location: j.location,
-        job_url: j.job_url,
-        source: j.source,
-        status: j.status,
-        notes: j.notes,
-      });
-      if (r.ok) {
-        jobOk++;
-        await sb.from('outplacement_market_jobs')
-          .update({ pathly_synced_at: new Date().toISOString() })
-          .eq('id', j.id);
-      } else {
+      try {
+        const r = await safeCall('upsert_market_job', {
+          plan_id: planId,
+          job_title: j.job_title,
+          company_name: j.company_name,
+          location: j.location,
+          job_url: j.job_url,
+          source: j.source,
+          status: j.status,
+          notes: j.notes,
+        });
+        if (r.ok) {
+          jobOk++;
+          await sb.from('outplacement_market_jobs')
+            .update({ pathly_synced_at: new Date().toISOString() })
+            .eq('id', j.id);
+        } else {
+          jobFail++;
+        }
+      } catch (e) {
         jobFail++;
+        console.log(`[backfill] market_job ${j.id} threw:`, (e as Error)?.message);
       }
-      await sleep(250);
+      await sleep(500);
     }
     entry.market_jobs = { ok: jobOk, failed: jobFail, total: jobs?.length ?? 0 };
 
