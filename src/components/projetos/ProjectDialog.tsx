@@ -190,6 +190,9 @@ export function ProjectDialog({ open, onOpenChange, project, preset }: Props) {
       cidade: form.cidade || null,
       preferencia_regiao: form.preferencia_regiao || null,
       cidades_interesse: cidadesInteresse,
+      client_linkedin_url: form.client_linkedin_url.trim() || null,
+      client_email: form.client_email.trim() || null,
+      client_phone: form.client_phone.trim() || null,
     };
     if (project) {
       await update.mutateAsync({ id: project.id, ...payload });
