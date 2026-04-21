@@ -8,12 +8,9 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useContacts, useDeleteContact, ContactRow } from '@/hooks/useContacts';
 import { useCompanies } from '@/hooks/useCompanies';
-import { Plus, Search, Filter, MoreHorizontal, User, Pencil, Trash2, Download, Loader2, Mail, Phone, Building2, Upload, Linkedin, ArrowUpDown, ArrowUp, ArrowDown, X, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
+import { Plus, Search, Filter, MoreHorizontal, User, Pencil, Trash2, Download, Loader2, Mail, Phone, Building2, Upload, Linkedin, ArrowUpDown, ArrowUp, ArrowDown, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { ContactDialog } from '@/components/contacts/ContactDialog';
 import { ImportContactsDialog } from '@/components/contacts/ImportContactsDialog';
-import { ContactsValidationDialog } from '@/components/contacts/ContactValidationDialog';
-import { useValidateContacts, ContactSuggestion } from '@/hooks/useContactValidation';
-import { toast } from 'sonner';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { MobileListCard } from '@/components/ui/mobile-list-card';
@@ -36,13 +33,10 @@ export default function Contatos() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [contactToDelete, setContactToDelete] = useState<ContactRow | null>(null);
   const [page, setPage] = useState(0);
-  const [showValidation, setShowValidation] = useState(false);
-  const [suggestions, setSuggestions] = useState<(ContactSuggestion & { company_name_ref?: string | null })[]>([]);
 
   const { data: contacts = [], isLoading } = useContacts();
   const { data: companies = [] } = useCompanies();
   const deleteContact = useDeleteContact();
-  const validate = useValidateContacts();
 
   const companyMap = useMemo(() => {
     const map = new Map<string, string>();
@@ -71,30 +65,6 @@ export default function Contatos() {
     setFilterCargo('all');
     setFilterPrimary('all');
     setPage(0);
-  };
-
-  const handleValidateAll = async () => {
-    if (contacts.length === 0) {
-      toast.info('Nenhum contato para validar');
-      return;
-    }
-    setShowValidation(true);
-    setSuggestions([]);
-    const result = await validate.mutateAsync(
-      contacts.map(c => ({
-        id: c.id,
-        name: c.nome,
-        current_position: c.cargo,
-        company_name: getCompanyName(c.company_id),
-        linkedin_url: c.linkedin,
-      }))
-    );
-    const enriched = result.map(s => {
-      const orig = contacts.find(c => c.id === s.contact_id);
-      return { ...s, company_name_ref: orig ? getCompanyName(orig.company_id) : null };
-    });
-    setSuggestions(enriched);
-    if (result.length === 0) toast.success('Todos os contatos estão consistentes!');
   };
 
   const filteredAndSortedContacts = useMemo(() => {
@@ -195,15 +165,6 @@ export default function Contatos() {
         description="Gerencie os contatos das empresas"
         actions={
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              onClick={handleValidateAll}
-              disabled={validate.isPending}
-              className="hidden sm:flex gap-1.5"
-            >
-              <Sparkles className="h-4 w-4" />
-              {validate.isPending ? 'Validando...' : 'Validar com IA'}
-            </Button>
             <Button variant="outline" className="hidden sm:flex">
               <Download className="h-4 w-4 mr-2" />
               Exportar
@@ -220,9 +181,6 @@ export default function Contatos() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={handleValidateAll} disabled={validate.isPending}>
-                  <Sparkles className="h-4 w-4 mr-2" />Validar com IA
-                </DropdownMenuItem>
                 <DropdownMenuItem>
                   <Download className="h-4 w-4 mr-2" />Exportar
                 </DropdownMenuItem>
@@ -616,12 +574,6 @@ export default function Contatos() {
         contact={contactToEdit}
       />
       <ImportContactsDialog open={importDialogOpen} onOpenChange={setImportDialogOpen} />
-      <ContactsValidationDialog
-        open={showValidation}
-        onOpenChange={setShowValidation}
-        suggestions={suggestions}
-        isLoading={validate.isPending}
-      />
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>

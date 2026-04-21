@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Search, Loader2, Users, MapPin, Briefcase, Target, MoreVertical, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Search, Loader2, Users, MapPin, Briefcase, Target, MoreVertical, Pencil, Trash2, Sparkles } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import {
   useOutplacementProjects, useDeleteOutplacementProject,
@@ -16,6 +16,9 @@ import { useParties } from '@/hooks/useParties';
 import { useCompanies } from '@/hooks/useCompanies';
 import { ProjectDialog } from '@/components/projetos/ProjectDialog';
 import { ContactList } from '@/components/projetos/ContactList';
+import { ContactValidationDialog } from '@/components/projetos/ContactValidationDialog';
+import { useValidateContacts, ContactSuggestion } from '@/hooks/useContactValidation';
+import { toast } from 'sonner';
 
 const ALL = 'all';
 
@@ -33,6 +36,9 @@ export default function Projetos() {
   const [filterType, setFilterType] = useState(ALL);
   const [filterStatus, setFilterStatus] = useState(ALL);
   const [view, setView] = useState<'projetos' | 'contatos'>('projetos');
+  const [showValidation, setShowValidation] = useState(false);
+  const [suggestions, setSuggestions] = useState<ContactSuggestion[]>([]);
+  const validate = useValidateContacts();
 
   const partyMap = useMemo(() => Object.fromEntries(parties.map(p => [p.id, p.full_name])), [parties]);
   const companyMap = useMemo(() => Object.fromEntries(companies.map(c => [c.id, c.nome_fantasia])), [companies]);
@@ -63,6 +69,25 @@ export default function Projetos() {
 
   const openEdit = (p: OutplacementProject) => { setEditing(p); setShowDialog(true); };
   const openNew = () => { setEditing(null); setShowDialog(true); };
+
+  const handleValidateAll = async () => {
+    if (allContacts.length === 0) {
+      toast.info('Nenhum contato para validar');
+      return;
+    }
+    setShowValidation(true);
+    setSuggestions([]);
+    const result = await validate.mutateAsync(
+      allContacts.map(c => ({
+        id: c.id, name: c.name,
+        current_position: c.current_position,
+        company_name: c.company_name,
+        linkedin_url: c.linkedin_url,
+      }))
+    );
+    setSuggestions(result);
+    if (result.length === 0) toast.success('Todos os contatos estão consistentes!');
+  };
 
   return (
     <div className="flex-1 overflow-auto">
@@ -193,9 +218,21 @@ export default function Projetos() {
           )
         ) : (
           <div>
-            <p className="text-sm text-muted-foreground mb-3">
-              {filteredContacts.length} contato(s) em todos os projetos
-            </p>
+            <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
+              <p className="text-sm text-muted-foreground">
+                {filteredContacts.length} contato(s) em todos os projetos
+              </p>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleValidateAll}
+                disabled={validate.isPending}
+                className="gap-1.5"
+              >
+                <Sparkles className="h-4 w-4" />
+                {validate.isPending ? 'Validando...' : 'Validar com IA'}
+              </Button>
+            </div>
             {filteredContacts.length === 0 ? (
               <div className="text-center py-20 text-muted-foreground border-2 border-dashed rounded-lg">
                 <Users className="h-12 w-12 mx-auto mb-4 opacity-30" />
@@ -208,6 +245,12 @@ export default function Projetos() {
         )}
 
         <ProjectDialog open={showDialog} onOpenChange={setShowDialog} project={editing} />
+        <ContactValidationDialog
+          open={showValidation}
+          onOpenChange={setShowValidation}
+          suggestions={suggestions}
+          isLoading={validate.isPending}
+        />
       </div>
     </div>
   );
