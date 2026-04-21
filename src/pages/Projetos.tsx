@@ -70,15 +70,26 @@ export default function Projetos() {
   const openEdit = (p: OutplacementProject) => { setEditing(p); setShowDialog(true); };
   const openNew = () => { setEditing(null); setShowDialog(true); };
 
-  const handleValidateAll = async () => {
+  const handleValidateAll = async (revalidateAll = false) => {
     if (allContacts.length === 0) {
       toast.info('Nenhum contato para validar');
       return;
     }
+    const toValidate = revalidateAll
+      ? allContacts
+      : allContacts.filter(c => !c.ai_validated_at);
+
+    if (toValidate.length === 0) {
+      toast.info('Todos os contatos já foram validados pela IA. Use "Revalidar todos" para forçar nova análise.');
+      return;
+    }
+
     setShowValidation(true);
     setSuggestions([]);
+    toast.info(`Analisando ${toValidate.length} contato(s)${revalidateAll ? ' (revalidação completa)' : ' novo(s)'}...`);
+
     const result = await validate.mutateAsync(
-      allContacts.map(c => ({
+      toValidate.map(c => ({
         id: c.id, name: c.name,
         current_position: c.current_position,
         company_name: c.company_name,
@@ -86,7 +97,17 @@ export default function Projetos() {
       }))
     );
     setSuggestions(result);
-    if (result.length === 0) toast.success('Todos os contatos estão consistentes!');
+
+    // Mark all sent contacts as validated (regardless of suggestion outcome)
+    const ids = toValidate.map(c => c.id);
+    const { error } = await supabase
+      .from('outplacement_contacts')
+      .update({ ai_validated_at: new Date().toISOString() })
+      .in('id', ids);
+    if (error) console.error('Failed to mark contacts as validated:', error);
+    else queryClient.invalidateQueries({ queryKey: ['outplacement_contacts'] });
+
+    if (result.length === 0) toast.success('Todos os contatos analisados estão consistentes!');
   };
 
   return (
