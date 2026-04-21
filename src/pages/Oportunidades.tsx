@@ -462,6 +462,19 @@ export default function Oportunidades() {
               : undefined
             }
           />
+          <ProjectDialog
+            open={showProjectDialog}
+            onOpenChange={setShowProjectDialog}
+            preset={{
+              opportunity_id: selectedOpportunity.id,
+              party_id: selectedOpportunity.outplacement_party_id || null,
+              company_id: selectedOpportunity.company_id || null,
+              responsavel_id: selectedOpportunity.responsavel_id || null,
+              title: selectedOpportunity.tipo_servico === 'outplacement' && !selectedOpportunity.company_id
+                ? `Outplacement - ${selectedOpportunity.observacoes?.match(/\[PF: (.+?)\]/)?.[1] || ''}`.trim()
+                : undefined,
+            }}
+          />
         </>
       )}
 
