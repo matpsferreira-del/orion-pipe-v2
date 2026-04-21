@@ -87,7 +87,14 @@ export function ProjectDialog({ open, onOpenChange, project }: Props) {
       await update.mutateAsync({ id: project.id, ...payload });
     } else {
       if (!profile?.id) return;
-      await create.mutateAsync({ ...payload, created_by: profile.id });
+      // Pega nome/email do party selecionado para criar o plano espelho no Pathly
+      const selectedParty = form.party_id !== NONE ? parties.find(p => p.id === form.party_id) : null;
+      await create.mutateAsync({
+        ...payload,
+        created_by: profile.id,
+        _party_name: selectedParty?.full_name,
+        _party_email: selectedParty?.email_raw ?? undefined,
+      });
     }
     onOpenChange(false);
   };
