@@ -145,7 +145,7 @@ export function useOutplacementProject(id: string | undefined) {
         .eq('id', id)
         .single();
       if (error) throw error;
-      return data as OutplacementProject;
+      return data as unknown as OutplacementProject;
     },
     enabled: !!id,
   });
