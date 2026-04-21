@@ -220,6 +220,9 @@ export default function Contatos() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleValidateAll} disabled={validate.isPending}>
+                  <Sparkles className="h-4 w-4 mr-2" />Validar com IA
+                </DropdownMenuItem>
                 <DropdownMenuItem>
                   <Download className="h-4 w-4 mr-2" />Exportar
                 </DropdownMenuItem>
