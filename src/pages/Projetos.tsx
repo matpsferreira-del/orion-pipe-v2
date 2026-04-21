@@ -218,9 +218,21 @@ export default function Projetos() {
           )
         ) : (
           <div>
-            <p className="text-sm text-muted-foreground mb-3">
-              {filteredContacts.length} contato(s) em todos os projetos
-            </p>
+            <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
+              <p className="text-sm text-muted-foreground">
+                {filteredContacts.length} contato(s) em todos os projetos
+              </p>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleValidateAll}
+                disabled={validate.isPending}
+                className="gap-1.5"
+              >
+                <Sparkles className="h-4 w-4" />
+                {validate.isPending ? 'Validando...' : 'Validar com IA'}
+              </Button>
+            </div>
             {filteredContacts.length === 0 ? (
               <div className="text-center py-20 text-muted-foreground border-2 border-dashed rounded-lg">
                 <Users className="h-12 w-12 mx-auto mb-4 opacity-30" />
@@ -233,6 +245,12 @@ export default function Projetos() {
         )}
 
         <ProjectDialog open={showDialog} onOpenChange={setShowDialog} project={editing} />
+        <ContactValidationDialog
+          open={showValidation}
+          onOpenChange={setShowValidation}
+          suggestions={suggestions}
+          isLoading={validate.isPending}
+        />
       </div>
     </div>
   );
