@@ -247,23 +247,23 @@ export function ProjectDialog({ open, onOpenChange, project, preset }: Props) {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <Label>Cliente PF (Pessoa)</Label>
-                <Select value={form.party_id} onValueChange={v => setForm({ ...form, party_id: v })}>
-                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                  <SelectContent className="max-h-[300px]">
-                    <SelectItem value={NONE}>Nenhum</SelectItem>
-                    {parties.map(p => <SelectItem key={p.id} value={p.id}>{p.full_name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+                <SearchableSelect
+                  options={partyOptions}
+                  value={form.party_id}
+                  onChange={v => setForm({ ...form, party_id: v })}
+                  placeholder="Selecione..."
+                  searchPlaceholder="Buscar pessoa..."
+                />
               </div>
               <div>
                 <Label>Cliente PJ (Empresa)</Label>
-                <Select value={form.company_id} onValueChange={v => setForm({ ...form, company_id: v })}>
-                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                  <SelectContent className="max-h-[300px]">
-                    <SelectItem value={NONE}>Nenhuma</SelectItem>
-                    {companies.map(c => <SelectItem key={c.id} value={c.id}>{c.nome_fantasia}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+                <SearchableSelect
+                  options={companyOptions}
+                  value={form.company_id}
+                  onChange={v => setForm({ ...form, company_id: v })}
+                  placeholder="Selecione..."
+                  searchPlaceholder="Buscar empresa..."
+                />
               </div>
             </div>
           </section>
