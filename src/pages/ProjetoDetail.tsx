@@ -140,7 +140,13 @@ export default function ProjetoDetail() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input className="pl-9" placeholder="Buscar contatos..." value={search} onChange={e => setSearch(e.target.value)} />
               </div>
-              <Button size="sm" onClick={openNewContact} className="gap-1.5"><Plus className="h-4 w-4" />Novo Contato</Button>
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline" onClick={handleValidateAll} disabled={validate.isPending} className="gap-1.5">
+                  <Sparkles className="h-4 w-4" />
+                  {validate.isPending ? 'Validando...' : 'Validar com IA'}
+                </Button>
+                <Button size="sm" onClick={openNewContact} className="gap-1.5"><Plus className="h-4 w-4" />Novo Contato</Button>
+              </div>
             </div>
             <p className="text-sm text-muted-foreground">
               {filteredContacts.length} contato(s){contacts.length !== filteredContacts.length && ` de ${contacts.length}`}
@@ -173,7 +179,13 @@ export default function ProjetoDetail() {
 
         <ProjectDialog open={showProjectDialog} onOpenChange={setShowProjectDialog} project={project} />
         <ProjectContactDialog open={showContactDialog} onOpenChange={setShowContactDialog}
-          projectId={project.id} contact={editingContact} />
+          projectId={project.id} contact={editingContact} onCreated={handleValidateNew} />
+        <ContactValidationDialog
+          open={showValidation}
+          onOpenChange={setShowValidation}
+          suggestions={suggestions}
+          isLoading={validate.isPending}
+        />
       </div>
     </div>
   );

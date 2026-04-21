@@ -16,9 +16,10 @@ interface Props {
   onOpenChange: (o: boolean) => void;
   projectId: string;
   contact?: OutplacementContact | null;
+  onCreated?: (newId: string) => void;
 }
 
-export function ProjectContactDialog({ open, onOpenChange, projectId, contact }: Props) {
+export function ProjectContactDialog({ open, onOpenChange, projectId, contact, onCreated }: Props) {
   const { profile } = useAuth();
   const create = useCreateOutplacementContact();
   const update = useUpdateOutplacementContact();
@@ -67,7 +68,8 @@ export function ProjectContactDialog({ open, onOpenChange, projectId, contact }:
     if (contact) {
       await update.mutateAsync({ id: contact.id, ...payload });
     } else {
-      await create.mutateAsync({ ...payload, project_id: projectId, created_by: profile?.id || null } as any);
+      const created: any = await create.mutateAsync({ ...payload, project_id: projectId, created_by: profile?.id || null } as any);
+      if (onCreated && created?.id) onCreated(created.id);
     }
     onOpenChange(false);
   };
