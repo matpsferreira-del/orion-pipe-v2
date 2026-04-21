@@ -231,13 +231,45 @@ export function useOutplacementContacts(projectId?: string) {
   });
 }
 
+async function syncContactIfLinked(contact: OutplacementContact) {
+  try {
+    const { data: project } = await supabase
+      .from('outplacement_projects')
+      .select('pathly_plan_id')
+      .eq('id', contact.project_id)
+      .maybeSingle();
+    const planId = (project as { pathly_plan_id?: string | null } | null)?.pathly_plan_id;
+    if (!planId) return;
+    const r = await syncContactToPathly(planId, {
+      name: contact.name,
+      current_position: contact.current_position,
+      company_name: contact.company_name,
+      linkedin_url: contact.linkedin_url,
+      contact_type: contact.contact_type,
+      tier: contact.tier,
+      kanban_stage: contact.kanban_stage,
+      notes: contact.notes,
+    });
+    if (r.ok) {
+      await supabase
+        .from('outplacement_contacts')
+        .update({ pathly_synced_at: new Date().toISOString() })
+        .eq('id', contact.id);
+    }
+  } catch (e) {
+    console.warn('Pathly contact sync failed (non-blocking):', e);
+  }
+}
+
 export function useCreateOutplacementContact() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: Partial<OutplacementContact> & { project_id: string; name: string }) => {
       const { data, error } = await supabase.from('outplacement_contacts').insert(input).select().single();
       if (error) throw error;
-      return data as OutplacementContact;
+      const contact = data as OutplacementContact;
+      syncContactIfLinked(contact); // fire-and-forget
+      return contact;
     },
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ['outplacement-contacts'] });
@@ -252,8 +284,14 @@ export function useUpdateOutplacementContact() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...updates }: Partial<OutplacementContact> & { id: string }) => {
-      const { error } = await supabase.from('outplacement_contacts').update(updates).eq('id', id);
+      const { data, error } = await supabase
+        .from('outplacement_contacts')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
       if (error) throw error;
+      if (data) syncContactIfLinked(data as OutplacementContact);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['outplacement-contacts'] });
