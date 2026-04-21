@@ -44,7 +44,57 @@ export default function Projetos() {
   const [suggestions, setSuggestions] = useState<ContactSuggestion[]>([]);
   const [importing, setImporting] = useState(false);
   const [syncingProjectId, setSyncingProjectId] = useState<string | null>(null);
+  const [mirroringAll, setMirroringAll] = useState(false);
   const validate = useValidateContacts();
+
+  const handleMirrorAll = async () => {
+    if (projects.length === 0) {
+      toast.info('Nenhum projeto para espelhar');
+      return;
+    }
+    if (!confirm(`Espelhar TODOS os ${projects.length} projetos no Pathly? Isso pode levar vários minutos.`)) return;
+
+    setMirroringAll(true);
+    const toastId = toast.loading(`Espelhando 0/${projects.length} projetos...`);
+    let done = 0;
+    let totalOk = 0;
+    let totalFailed = 0;
+    const failedProjects: string[] = [];
+
+    for (const p of projects) {
+      try {
+        const result = await mirrorProjectToPathly(p.id, {
+          onProgress: ({ phase, processed, total }) => {
+            const label = phase === 'link' ? 'vinculando'
+              : phase === 'companies' ? 'empresas'
+              : phase === 'contacts' ? 'contatos' : 'vagas';
+            toast.loading(
+              `Projeto ${done + 1}/${projects.length}: ${p.title} · ${label} ${processed}/${total}`,
+              { id: toastId },
+            );
+          },
+        });
+        totalOk += result.companies.ok + result.contacts.ok + result.jobs.ok;
+        totalFailed += result.companies.failed + result.contacts.failed + result.jobs.failed;
+      } catch (e) {
+        failedProjects.push(p.title);
+        console.error(`Falha ao espelhar ${p.title}:`, e);
+      }
+      done += 1;
+    }
+
+    queryClient.invalidateQueries({ queryKey: ['outplacement-projects'] });
+    queryClient.invalidateQueries({ queryKey: ['outplacement-contacts'] });
+    queryClient.invalidateQueries({ queryKey: ['outplacement-market-jobs'] });
+
+    const msg = `${done} projeto(s) processado(s) · ${totalOk} item(ns) sincronizado(s)`
+      + (totalFailed ? ` · ${totalFailed} falha(s)` : '')
+      + (failedProjects.length ? ` · ${failedProjects.length} projeto(s) com erro` : '');
+    if (failedProjects.length) toast.error(msg, { id: toastId, duration: 8000 });
+    else toast.success(msg, { id: toastId, duration: 6000 });
+
+    setMirroringAll(false);
+  };
 
   const handleMirrorProject = async (projectId: string, title: string) => {
     setSyncingProjectId(projectId);
@@ -285,6 +335,15 @@ export default function Projetos() {
           description="Outplacement e Consultoria"
           actions={
             <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                onClick={handleMirrorAll}
+                disabled={mirroringAll || projects.length === 0}
+                className="gap-1.5"
+              >
+                <RefreshCw className={`h-4 w-4 ${mirroringAll ? 'animate-spin' : ''}`} />
+                {mirroringAll ? 'Espelhando...' : 'Espelhar TODOS no Pathly'}
+              </Button>
               <Button onClick={openNew} className="gap-1.5">
                 <Plus className="h-4 w-4" /> Novo Projeto
               </Button>
