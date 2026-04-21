@@ -142,6 +142,8 @@ export function ProjectDialog({ open, onOpenChange, project, preset }: Props) {
       status: form.status,
       party_id: form.party_id === NONE ? null : form.party_id,
       company_id: form.company_id === NONE ? null : form.company_id,
+      opportunity_id: preset?.opportunity_id ?? null,
+      responsavel_id: preset?.responsavel_id ?? null,
       target_role: form.target_role.trim() || null,
       target_industry: form.target_industry.trim() || null,
       target_location: targetLocation,
