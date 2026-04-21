@@ -39,40 +39,68 @@ Deno.serve(async (req) => {
 
   const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-  async function callBridge(action: string, payload: unknown, retries = 3): Promise<{ ok: boolean; status: number; data: any }> {
+  async function callBridge(action: string, payload: unknown, retries = 5): Promise<{ ok: boolean; status: number; data: any }> {
     for (let attempt = 0; attempt < retries; attempt++) {
-      const r = await fetch(bridge, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-orion-secret': ORION_BRIDGE_SECRET! },
-        body: JSON.stringify({ action, payload }),
-      });
-      const text = await r.text();
-      let data: any;
-      try { data = JSON.parse(text); } catch { data = { raw: text }; }
-      // Rate limit -> wait and retry
-      if (r.status === 429 || /rate limit/i.test(text)) {
-        const waitMs = data?.retryAfterMs || 5000 * (attempt + 1);
-        console.log(`[backfill] rate limit on ${action}, waiting ${waitMs}ms`);
-        await sleep(Math.min(waitMs, 35000));
+      try {
+        const r = await fetch(bridge, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-orion-secret': ORION_BRIDGE_SECRET! },
+          body: JSON.stringify({ action, payload }),
+        });
+        const text = await r.text();
+        let data: any;
+        try { data = JSON.parse(text); } catch { data = { raw: text }; }
+        // Rate limit -> wait and retry
+        if (r.status === 429 || /rate limit/i.test(text)) {
+          const waitMs = data?.retryAfterMs || 8000 * (attempt + 1);
+          console.log(`[backfill] rate limit on ${action}, waiting ${waitMs}ms (attempt ${attempt + 1}/${retries})`);
+          await sleep(Math.min(waitMs, 60000));
+          continue;
+        }
+        return { ok: r.ok && !data?.error, status: r.status, data };
+      } catch (e) {
+        // Network/runtime error (incluindo Deno RateLimitError do fetch) — esperar e tentar de novo
+        const msg = (e as Error)?.message ?? String(e);
+        const match = msg.match(/Retry after (\d+)ms/i);
+        const waitMs = match ? parseInt(match[1], 10) : 8000 * (attempt + 1);
+        console.log(`[backfill] fetch error on ${action}: ${msg} — waiting ${waitMs}ms (attempt ${attempt + 1}/${retries})`);
+        await sleep(Math.min(waitMs + 500, 60000));
         continue;
       }
-      return { ok: r.ok && !data?.error, status: r.status, data };
     }
     return { ok: false, status: 429, data: { error: 'rate limit retries exhausted' } };
   }
 
+  async function safeCall(action: string, payload: unknown) {
+    try {
+      return await callBridge(action, payload);
+    } catch (e) {
+      console.log(`[backfill] safeCall caught ${action}:`, (e as Error)?.message);
+      return { ok: false, status: 500, data: { error: (e as Error)?.message } };
+    }
+  }
+
   // Modo: 'all' (default) processa projetos sem plano E re-sincroniza contatos pendentes
   // de projetos já vinculados; 'plans_only' apenas cria planos faltantes.
+  // Suporta project_id (limita a um projeto) e batch_size (limita contatos/vagas por invocação,
+  // evitando rate limit do runtime Deno).
   let mode: 'all' | 'plans_only' | 'force' = 'all';
+  let onlyProjectId: string | null = null;
+  let batchSize = 40;
   try {
     const body = await req.json().catch(() => ({}));
     if (body?.mode === 'plans_only' || body?.mode === 'force') mode = body.mode;
+    if (typeof body?.project_id === 'string') onlyProjectId = body.project_id;
+    if (typeof body?.batch_size === 'number' && body.batch_size > 0 && body.batch_size <= 200) {
+      batchSize = body.batch_size;
+    }
   } catch { /* ignore */ }
 
-  // Buscar TODOS os projetos (vamos decidir por projeto se cria plano ou só re-sync)
-  const { data: projects, error } = await sb
+  let projectsQuery = sb
     .from('outplacement_projects')
     .select('id, title, target_role, target_industry, target_location, party_id, client_email, pathly_plan_id, situacao_atual, modelo_trabalho, estado, cidade, preferencia_regiao, cidades_interesse');
+  if (onlyProjectId) projectsQuery = projectsQuery.eq('id', onlyProjectId);
+  const { data: projects, error } = await projectsQuery;
 
   if (error) return json({ error: error.message }, 500);
 
@@ -142,71 +170,86 @@ Deno.serve(async (req) => {
     }
 
     // 2. Sincroniza contatos (em modo padrão, apenas pendentes; em 'force', todos)
-    let contactsQuery = sb.from('outplacement_contacts').select('*').eq('project_id', proj.id);
+    // Limitado a batchSize por invocação para evitar rate limit do runtime Deno.
+    let contactsQuery = sb.from('outplacement_contacts').select('*').eq('project_id', proj.id).order('created_at', { ascending: true });
     if (mode !== 'force') contactsQuery = contactsQuery.is('pathly_synced_at', null);
+    contactsQuery = contactsQuery.limit(batchSize);
     const { data: contacts } = await contactsQuery;
 
     let contactOk = 0, contactFail = 0;
     for (const c of contacts ?? []) {
-      if (c.company_name) {
-        await callBridge('upsert_company', {
+      try {
+        if (c.company_name) {
+          await safeCall('upsert_company', {
+            plan_id: planId,
+            name: c.company_name,
+            tier: c.tier ?? 'B',
+            has_openings: false,
+            source: 'orion',
+          });
+          await sleep(400);
+        }
+        const r = await safeCall('upsert_contact', {
           plan_id: planId,
-          name: c.company_name,
+          name: c.name,
+          current_position: c.current_position,
+          company: c.company_name,
+          linkedin_url: c.linkedin_url,
+          type: TYPE_MAP[c.contact_type ?? 'outro'] ?? 'other',
           tier: c.tier ?? 'B',
-          has_openings: false,
+          status: STAGE_MAP[c.kanban_stage ?? 'identificado'] ?? 'identified',
+          notes: c.notes,
           source: 'orion',
         });
-      }
-      const r = await callBridge('upsert_contact', {
-        plan_id: planId,
-        name: c.name,
-        current_position: c.current_position,
-        company: c.company_name,
-        linkedin_url: c.linkedin_url,
-        type: TYPE_MAP[c.contact_type ?? 'outro'] ?? 'other',
-        tier: c.tier ?? 'B',
-        status: STAGE_MAP[c.kanban_stage ?? 'identificado'] ?? 'identified',
-        notes: c.notes,
-        source: 'orion',
-      });
-      if (r.ok) {
-        contactOk++;
-        await sb.from('outplacement_contacts')
-          .update({ pathly_synced_at: new Date().toISOString() })
-          .eq('id', c.id);
-      } else {
+        if (r.ok) {
+          contactOk++;
+          await sb.from('outplacement_contacts')
+            .update({ pathly_synced_at: new Date().toISOString() })
+            .eq('id', c.id);
+        } else {
+          contactFail++;
+          console.log(`[backfill] contact ${c.id} failed:`, JSON.stringify(r.data).slice(0, 200));
+        }
+      } catch (e) {
         contactFail++;
+        console.log(`[backfill] contact ${c.id} threw:`, (e as Error)?.message);
       }
-      await sleep(250);
+      await sleep(600);
     }
     entry.contacts = { ok: contactOk, failed: contactFail, total: contacts?.length ?? 0 };
 
-    // 3. Sincroniza vagas de mercado (apenas pendentes em modo padrão)
-    let jobsQuery = sb.from('outplacement_market_jobs').select('*').eq('project_id', proj.id);
+    // 3. Sincroniza vagas de mercado (apenas pendentes em modo padrão), também limitado.
+    let jobsQuery = sb.from('outplacement_market_jobs').select('*').eq('project_id', proj.id).order('created_at', { ascending: true });
     if (mode !== 'force') jobsQuery = jobsQuery.is('pathly_synced_at', null);
+    jobsQuery = jobsQuery.limit(batchSize);
     const { data: jobs } = await jobsQuery;
 
     let jobOk = 0, jobFail = 0;
     for (const j of jobs ?? []) {
-      const r = await callBridge('upsert_market_job', {
-        plan_id: planId,
-        job_title: j.job_title,
-        company_name: j.company_name,
-        location: j.location,
-        job_url: j.job_url,
-        source: j.source,
-        status: j.status,
-        notes: j.notes,
-      });
-      if (r.ok) {
-        jobOk++;
-        await sb.from('outplacement_market_jobs')
-          .update({ pathly_synced_at: new Date().toISOString() })
-          .eq('id', j.id);
-      } else {
+      try {
+        const r = await safeCall('upsert_market_job', {
+          plan_id: planId,
+          job_title: j.job_title,
+          company_name: j.company_name,
+          location: j.location,
+          job_url: j.job_url,
+          source: j.source,
+          status: j.status,
+          notes: j.notes,
+        });
+        if (r.ok) {
+          jobOk++;
+          await sb.from('outplacement_market_jobs')
+            .update({ pathly_synced_at: new Date().toISOString() })
+            .eq('id', j.id);
+        } else {
+          jobFail++;
+        }
+      } catch (e) {
         jobFail++;
+        console.log(`[backfill] market_job ${j.id} threw:`, (e as Error)?.message);
       }
-      await sleep(250);
+      await sleep(500);
     }
     entry.market_jobs = { ok: jobOk, failed: jobFail, total: jobs?.length ?? 0 };
 

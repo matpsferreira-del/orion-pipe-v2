@@ -47,17 +47,49 @@ export default function Projetos() {
 
   const handleSyncPathly = async (force = false) => {
     setSyncingPathly(true);
+    const toastId = toast.loading('Sincronizando com Pathly...');
     try {
-      const { data, error } = await supabase.functions.invoke('pathly-backfill', {
-        body: { mode: force ? 'force' : 'all' },
-      });
-      if (error) throw error;
-      const processed = (data as { projects_processed?: number })?.projects_processed ?? 0;
-      toast.success(`Sincronização concluída · ${processed} projeto(s) processado(s)`);
+      const BATCH_SIZE = 30;
+      const MAX_ITERATIONS = 30; // até 900 contatos+vagas por clique
+      let totalOk = 0;
+      let totalFailed = 0;
+      let projectsTouched = 0;
+
+      for (let i = 0; i < MAX_ITERATIONS; i++) {
+        const { data, error } = await supabase.functions.invoke('pathly-backfill', {
+          body: { mode: force ? 'force' : 'all', batch_size: BATCH_SIZE },
+        });
+        if (error) throw error;
+
+        const report = (data as { report?: any[] })?.report ?? [];
+        let processedThisRound = 0;
+        for (const r of report) {
+          const cOk = r?.contacts?.ok ?? 0;
+          const cFail = r?.contacts?.failed ?? 0;
+          const jOk = r?.market_jobs?.ok ?? 0;
+          const jFail = r?.market_jobs?.failed ?? 0;
+          totalOk += cOk + jOk;
+          totalFailed += cFail + jFail;
+          processedThisRound += cOk + jOk + cFail + jFail;
+          if (cOk + jOk + cFail + jFail > 0) projectsTouched++;
+        }
+
+        toast.loading(`Sincronizando... ${totalOk} enviado(s)`, { id: toastId });
+
+        // Se nada foi processado nesta rodada, terminamos
+        if (processedThisRound === 0) break;
+      }
+
+      toast.success(
+        `Sincronização concluída · ${totalOk} registro(s) enviado(s)` +
+          (totalFailed > 0 ? ` · ${totalFailed} falha(s)` : ''),
+        { id: toastId },
+      );
       queryClient.invalidateQueries({ queryKey: ['outplacement-projects'] });
       queryClient.invalidateQueries({ queryKey: ['outplacement-contacts'] });
+      queryClient.invalidateQueries({ queryKey: ['outplacement-market-jobs'] });
     } catch (e) {
-      toast.error('Erro ao sincronizar: ' + (e as Error).message);
+      toast.error('Erro ao sincronizar: ' + (e as Error).message, { id: toastId });
     } finally {
       setSyncingPathly(false);
     }
