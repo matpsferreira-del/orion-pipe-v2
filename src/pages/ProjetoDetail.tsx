@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, Plus, Loader2, Search, Pencil } from 'lucide-react';
+import { ArrowLeft, Plus, Loader2, Search, Pencil, Sparkles } from 'lucide-react';
 import {
   useOutplacementProject, useOutplacementContacts, OutplacementContact,
 } from '@/hooks/useOutplacementProjects';
@@ -16,6 +16,9 @@ import { ContactList } from '@/components/projetos/ContactList';
 import { ContactKanban } from '@/components/projetos/ContactKanban';
 import { MarketJobsTab } from '@/components/projetos/MarketJobsTab';
 import { ActivitiesTab } from '@/components/projetos/ActivitiesTab';
+import { ContactValidationDialog } from '@/components/projetos/ContactValidationDialog';
+import { useValidateContacts, ContactSuggestion } from '@/hooks/useContactValidation';
+import { toast } from 'sonner';
 
 export default function ProjetoDetail() {
   const { id } = useParams<{ id: string }>();
@@ -29,6 +32,41 @@ export default function ProjetoDetail() {
   const [showContactDialog, setShowContactDialog] = useState(false);
   const [editingContact, setEditingContact] = useState<OutplacementContact | null>(null);
   const [search, setSearch] = useState('');
+  const [showValidation, setShowValidation] = useState(false);
+  const [suggestions, setSuggestions] = useState<ContactSuggestion[]>([]);
+  const validate = useValidateContacts();
+
+  const handleValidateAll = async () => {
+    if (contacts.length === 0) {
+      toast.info('Nenhum contato para validar');
+      return;
+    }
+    setShowValidation(true);
+    setSuggestions([]);
+    const result = await validate.mutateAsync(
+      contacts.map(c => ({
+        id: c.id, name: c.name,
+        current_position: c.current_position,
+        company_name: c.company_name,
+      }))
+    );
+    setSuggestions(result);
+    if (result.length === 0) toast.success('Todos os contatos estão consistentes!');
+  };
+
+  const handleValidateNew = async (newId: string) => {
+    const target = contacts.find(c => c.id === newId);
+    if (!target) return;
+    const result = await validate.mutateAsync([{
+      id: target.id, name: target.name,
+      current_position: target.current_position,
+      company_name: target.company_name,
+    }]);
+    if (result.length > 0) {
+      setSuggestions(result);
+      setShowValidation(true);
+    }
+  };
 
   const filteredContacts = useMemo(() => {
     if (!search) return contacts;
@@ -102,7 +140,13 @@ export default function ProjetoDetail() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input className="pl-9" placeholder="Buscar contatos..." value={search} onChange={e => setSearch(e.target.value)} />
               </div>
-              <Button size="sm" onClick={openNewContact} className="gap-1.5"><Plus className="h-4 w-4" />Novo Contato</Button>
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline" onClick={handleValidateAll} disabled={validate.isPending} className="gap-1.5">
+                  <Sparkles className="h-4 w-4" />
+                  {validate.isPending ? 'Validando...' : 'Validar com IA'}
+                </Button>
+                <Button size="sm" onClick={openNewContact} className="gap-1.5"><Plus className="h-4 w-4" />Novo Contato</Button>
+              </div>
             </div>
             <p className="text-sm text-muted-foreground">
               {filteredContacts.length} contato(s){contacts.length !== filteredContacts.length && ` de ${contacts.length}`}
@@ -135,7 +179,13 @@ export default function ProjetoDetail() {
 
         <ProjectDialog open={showProjectDialog} onOpenChange={setShowProjectDialog} project={project} />
         <ProjectContactDialog open={showContactDialog} onOpenChange={setShowContactDialog}
-          projectId={project.id} contact={editingContact} />
+          projectId={project.id} contact={editingContact} onCreated={handleValidateNew} />
+        <ContactValidationDialog
+          open={showValidation}
+          onOpenChange={setShowValidation}
+          suggestions={suggestions}
+          isLoading={validate.isPending}
+        />
       </div>
     </div>
   );
