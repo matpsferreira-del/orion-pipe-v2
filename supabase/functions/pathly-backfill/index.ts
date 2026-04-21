@@ -117,6 +117,7 @@ Deno.serve(async (req) => {
   const REGIAO_MAP: Record<string, string> = { mesma_regiao: 'same_region', outras_regioes: 'other_regions', indiferente: 'any' };
 
   for (const proj of projects ?? []) {
+    if (timeUp()) { report.push({ time_budget_reached: true }); break; }
     const entry: any = { project_id: proj.id, title: proj.title };
 
     let planId = proj.pathly_plan_id as string | null;
