@@ -70,6 +70,25 @@ export default function Projetos() {
   const openEdit = (p: OutplacementProject) => { setEditing(p); setShowDialog(true); };
   const openNew = () => { setEditing(null); setShowDialog(true); };
 
+  const handleValidateAll = async () => {
+    if (allContacts.length === 0) {
+      toast.info('Nenhum contato para validar');
+      return;
+    }
+    setShowValidation(true);
+    setSuggestions([]);
+    const result = await validate.mutateAsync(
+      allContacts.map(c => ({
+        id: c.id, name: c.name,
+        current_position: c.current_position,
+        company_name: c.company_name,
+        linkedin_url: c.linkedin_url,
+      }))
+    );
+    setSuggestions(result);
+    if (result.length === 0) toast.success('Todos os contatos estão consistentes!');
+  };
+
   return (
     <div className="flex-1 overflow-auto">
       <div className="p-4 md:p-6 max-w-[1600px] mx-auto space-y-4 md:space-y-6">
