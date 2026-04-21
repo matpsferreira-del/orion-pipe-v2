@@ -49,15 +49,24 @@ Deno.serve(async (req) => {
     const systemPrompt = `Você é um especialista sênior em validação de dados profissionais brasileiros, com profundo conhecimento do mercado corporativo, LinkedIn e estruturas organizacionais.
 
 ## SUA MISSÃO
-Identificar e CORRIGIR inconsistências nos campos CARGO e EMPRESA de contatos profissionais. Retorne APENAS contatos que precisam de correção.
+Analisar TODOS os contatos enviados, UM POR UM, sem pular nenhum, e identificar inconsistências nos campos CARGO (current_position) e EMPRESA (company_name). Retorne APENAS contatos que precisam de correção, mas analise todos com a mesma atenção.
 
 ## DEFINIÇÕES
 - **CARGO**: função, posição ou senioridade (ex: "Diretor Comercial", "Head of People", "CEO", "Analista Sênior", "Sócio-fundador", "Gerente de RH", "VP of Engineering", "Coordenadora de Marketing")
-- **EMPRESA**: nome de organização/marca (ex: "Ambev", "Itaú Unibanco", "Magazine Luiza", "Google Brasil", "Stone", "iFood", "Banco BTG Pactual")
+- **EMPRESA**: nome de organização/marca (ex: "Ambev", "Itaú Unibanco", "Patria Investments", "Wilson Sons", "Petrobras", "Baker Hughes", "Oceaneering", "AKOFS Offshore", "Bristow Group", "Priner", "Grupo CBO")
 
-## TIPOS DE INCONSISTÊNCIAS A DETECTAR
+## TIPOS DE INCONSISTÊNCIAS A DETECTAR (em ordem de prioridade)
 
-### 1. CAMPOS TROCADOS (mais comum)
+### 0. ⚠️ CARGO IGUAL À EMPRESA (CRÍTICO - falha mais comum)
+Quando current_position == company_name (ou são quase idênticos, ignorando caixa/espaços), o cargo está ERRADO. Ninguém tem como cargo o nome da própria empresa.
+- Cargo: "Patria Investments" / Empresa: "Patria Investments" → cargo deve ficar VAZIO ("")
+- Cargo: "Wilson Sons" / Empresa: "Wilson Sons" → cargo VAZIO
+- Cargo: "GRUPO CBO - Companhia Brasileira de Offshore" / Empresa: "GRUPO CBO - Companhia Brasileira de Offshore" → cargo VAZIO
+- Cargo: "Petrobras" / Empresa: "Petrobras" → cargo VAZIO
+- Cargo: "Baker Hughes" / Empresa: "Baker Hughes" → cargo VAZIO
+SEMPRE reporte esses casos. A empresa permanece, o cargo vai para "".
+
+### 1. CAMPOS TROCADOS
 Empresa no campo cargo e/ou cargo no campo empresa.
 - Cargo: "Itaú" / Empresa: "Diretor de TI" → trocar
 - Cargo: "Ambev" / Empresa: vazio → mover para empresa, cargo fica vazio
@@ -67,32 +76,38 @@ Cargo contém empresa via conectores: " na ", " at ", " - ", " @ ", " | ", " da 
 - "Diretor na Vale" → cargo: "Diretor", empresa: "Vale"
 - "CEO @ Stone" → cargo: "CEO", empresa: "Stone"
 - "Gerente Comercial - Magazine Luiza" → separar
-- "Head of HR | iFood" → separar
-ATENÇÃO: NÃO separe se a parte após o conector for parte legítima do cargo, ex: "Diretor de Vendas" (não trocar), "Gerente de Projetos" (manter), "Head of People" (manter).
+ATENÇÃO: NÃO separe se a parte após o conector for parte legítima do cargo: "Diretor de Vendas" (manter), "Gerente de Projetos" (manter), "Head of People" (manter).
 
 ### 3. CARGO INVÁLIDO
-Cargo é claramente um nome próprio, sigla de empresa, URL ou texto não-profissional.
+Cargo é nome próprio, sigla de empresa, URL, texto truncado ("4 a 4 m"), ou texto não-profissional.
 
 ### 4. EMPRESA INVÁLIDA
-Empresa contém função (ex: "Diretor"), localização ("São Paulo"), ou descrição genérica ("Empresa de tecnologia").
+Empresa contém função (ex: "Diretor"), localização ("São Paulo"), ou descrição genérica.
 
 ### 5. RUÍDO/FORMATAÇÃO
 - Remover sufixos de localização do cargo: "Diretor - São Paulo" → "Diretor"
 - Remover datas: "CEO (2020-presente)" → "CEO"
-- Remover departamento duplicado da empresa quando óbvio
+
+## PROCESSO DE ANÁLISE OBRIGATÓRIO
+Para CADA contato da lista, faça nesta ordem:
+1. Compare current_position e company_name normalizados (lowercase, sem espaços extras). Se forem iguais ou quase iguais → REGRA 0, reporte com cargo vazio.
+2. Verifique se cargo parece ser nome de empresa conhecida → REGRA 1.
+3. Verifique se cargo contém conectores indicando empresa embutida → REGRA 2.
+4. Verifique cargo/empresa inválidos ou ruidosos → REGRAS 3, 4, 5.
+5. Se nenhum problema, ignore o contato.
+
+NÃO PULE contatos. Se a lista tem 50 contatos, analise os 50.
 
 ## REGRAS CRÍTICAS
-1. **Use o LINKEDIN_URL** como contexto: o slug pode confirmar nome (ex: /in/joao-silva-itau).
-2. **NÃO sugira** se ambos os campos parecem plausíveis e bem formatados, mesmo que você não conheça a empresa.
-3. **NÃO invente** empresas ou cargos que não estão nos dados. Se não conseguir determinar com clareza, deixe o campo como string vazia "".
-4. **NÃO sugira** apenas por questão de capitalização (ex: "diretor" vs "Diretor"), a menos que haja outro problema.
-5. **Empresas brasileiras conhecidas**: Itaú, Bradesco, Santander, BTG, XP, Nubank, Stone, PagSeguro, Mercado Livre, iFood, Magazine Luiza, Americanas, Vale, Petrobras, Ambev, JBS, Natura, Boticário, Globo, Embraer, WEG, Localiza, Renner, Lojas Americanas, B3, Itaú BBA, Suzano, Klabin, Gerdau, Usiminas, CSN, Braskem, Raia Drogasil, Cosan, Eletrobras, Banco do Brasil, Caixa, etc.
-6. **Cargos comuns**: C-level (CEO, CFO, CTO, COO, CMO, CHRO, CRO), VP, Diretor(a), Head, Gerente, Coordenador(a), Supervisor(a), Analista, Especialista, Consultor(a), Sócio(a), Fundador(a), Partner, Associate, Trainee, Estagiário(a).
-7. Seja **conservador mas decisivo**: se houver evidência clara de problema, corrija; se duvidoso, ignore.
-8. Para cada sugestão, escreva uma "reason" em PT-BR curta (máx 120 caracteres) explicando o problema detectado.
+1. **Use o LINKEDIN_URL** como contexto: o slug pode confirmar nome.
+2. **NÃO invente** empresas ou cargos que não estão nos dados. Se não souber o cargo correto, use string vazia "".
+3. **NÃO sugira** apenas por capitalização ("diretor" vs "Diretor") sem outro problema.
+4. **NÃO sugira** se ambos os campos já estão plausíveis e diferentes entre si.
+5. Para REGRA 0 (cargo == empresa), SEMPRE reporte: suggested_position="", suggested_company=<empresa atual>.
+6. Para cada sugestão, escreva "reason" em PT-BR curta (máx 120 caracteres) explicando o problema.
 
 ## FORMATO DA RESPOSTA
-Use a função report_inconsistencies. Inclua APENAS contatos com problemas reais. Se nenhum problema, retorne lista vazia.`;
+Use a função report_inconsistencies. Inclua TODOS os contatos com problemas, especialmente os de REGRA 0.`;
 
     const userPrompt = `Analise estes contatos e retorne SOMENTE os que precisam de correção:\n\n${JSON.stringify(candidates, null, 2)}`;
 
@@ -159,14 +174,7 @@ Use a função report_inconsistencies. Inclua APENAS contatos com problemas reai
 
     const data = await response.json();
     const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
-    if (!toolCall) {
-      return new Response(JSON.stringify({ suggestions: [] }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    const parsed = JSON.parse(toolCall.function.arguments);
-    const rawSuggestions = parsed.suggestions || [];
+    const rawSuggestions = toolCall ? (JSON.parse(toolCall.function.arguments).suggestions || []) : [];
 
     // Build full suggestion objects with originals
     const contactMap = new Map(candidates.map(c => [c.id, c]));
@@ -176,24 +184,36 @@ Use a função report_inconsistencies. Inclua APENAS contatos com problemas reai
         if (!original) return null;
         const suggestedPos = s.suggested_position?.trim() || null;
         const suggestedComp = s.suggested_company?.trim() || null;
-        // Skip if no actual change
         if (suggestedPos === original.current_position && suggestedComp === original.company_name) return null;
         return {
           contact_id: s.contact_id,
           name: s.name || original.name,
           linkedin_url: original.linkedin_url ?? null,
-          original: {
-            current_position: original.current_position,
-            company_name: original.company_name,
-          },
-          suggested: {
-            current_position: suggestedPos,
-            company_name: suggestedComp,
-          },
+          original: { current_position: original.current_position, company_name: original.company_name },
+          suggested: { current_position: suggestedPos, company_name: suggestedComp },
           reason: s.reason,
         };
       })
       .filter(Boolean);
+
+    // Deterministic safety net: catch cargo == empresa cases the AI may have missed
+    const norm = (s: string | null) => (s ?? '').toLowerCase().replace(/\s+/g, ' ').trim();
+    const alreadyFlagged = new Set(suggestions.map(s => s.contact_id));
+    for (const c of candidates) {
+      if (alreadyFlagged.has(c.id)) continue;
+      const pos = norm(c.current_position);
+      const comp = norm(c.company_name);
+      if (pos && comp && pos === comp) {
+        suggestions.push({
+          contact_id: c.id,
+          name: c.name,
+          linkedin_url: c.linkedin_url ?? null,
+          original: { current_position: c.current_position, company_name: c.company_name },
+          suggested: { current_position: null, company_name: c.company_name },
+          reason: 'Cargo idêntico ao nome da empresa — cargo deve ficar vazio.',
+        });
+      }
+    }
 
     return new Response(JSON.stringify({ suggestions }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
