@@ -271,9 +271,28 @@ export default function Projetos() {
           title="Projetos"
           description="Outplacement e Consultoria"
           actions={
-            <Button onClick={openNew} className="gap-1.5">
-              <Plus className="h-4 w-4" /> Novo Projeto
-            </Button>
+            <div className="flex items-center gap-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" disabled={syncingPathly} className="gap-1.5">
+                    {syncingPathly ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                    Sincronizar Pathly
+                    <ChevronDown className="h-3 w-3" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => handleSyncPathly(false)}>
+                    Sincronizar pendentes
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleSyncPathly(true)}>
+                    Forçar re-sincronização completa
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button onClick={openNew} className="gap-1.5">
+                <Plus className="h-4 w-4" /> Novo Projeto
+              </Button>
+            </div>
           }
         />
 
