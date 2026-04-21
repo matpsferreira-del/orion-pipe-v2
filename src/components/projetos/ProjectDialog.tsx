@@ -332,36 +332,24 @@ export function ProjectDialog({ open, onOpenChange, project, preset }: Props) {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <Label>Estado</Label>
-                <Select
+                <SearchableSelect
+                  options={stateOptions}
                   value={form.estado || NONE}
-                  onValueChange={v => setForm({ ...form, estado: v === NONE ? '' : v, cidade: '' })}
-                >
-                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                  <SelectContent className="max-h-[300px]">
-                    <SelectItem value={NONE}>Selecione</SelectItem>
-                    {BRAZIL_STATES.map(s => (
-                      <SelectItem key={s.uf} value={s.uf}>{s.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  onChange={v => setForm({ ...form, estado: v === NONE ? '' : v, cidade: '' })}
+                  placeholder="Selecione..."
+                  searchPlaceholder="Buscar estado..."
+                />
               </div>
               <div>
                 <Label>Cidade</Label>
-                <Select
+                <SearchableSelect
+                  options={cityPrincipalOptions}
                   value={form.cidade || NONE}
-                  onValueChange={v => setForm({ ...form, cidade: v === NONE ? '' : v })}
+                  onChange={v => setForm({ ...form, cidade: v === NONE ? '' : v })}
                   disabled={!form.estado}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={form.estado ? 'Selecione...' : 'Escolha o estado primeiro'} />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-[300px]">
-                    <SelectItem value={NONE}>Selecione</SelectItem>
-                    {cidadesPrincipais.map(c => (
-                      <SelectItem key={c} value={c}>{c}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  placeholder={form.estado ? 'Selecione...' : 'Escolha o estado primeiro'}
+                  searchPlaceholder="Buscar cidade..."
+                />
               </div>
             </div>
 
