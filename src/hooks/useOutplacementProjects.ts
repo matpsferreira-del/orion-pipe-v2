@@ -144,10 +144,40 @@ export function useOutplacementProject(id: string | undefined) {
 export function useCreateOutplacementProject() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (input: Partial<OutplacementProject> & { title: string; created_by: string }) => {
-      const { data, error } = await supabase.from('outplacement_projects').insert(input).select().single();
+    mutationFn: async (input: Partial<OutplacementProject> & {
+      title: string;
+      created_by: string;
+      _party_name?: string;
+      _party_email?: string;
+    }) => {
+      const { _party_name, _party_email, ...row } = input;
+      const { data, error } = await supabase.from('outplacement_projects').insert(row).select().single();
       if (error) throw error;
-      return data as OutplacementProject;
+      const project = data as OutplacementProject;
+
+      // Best-effort: cria plano espelho no Pathly
+      try {
+        const result = await createPathlyPlan({
+          title: project.title,
+          party_name: _party_name ?? null,
+          party_email: _party_email ?? null,
+          target_role: project.target_role,
+          target_industry: project.target_industry,
+          target_location: project.target_location,
+        });
+        const planId = (result.data as { plan?: { id?: string } } | null)?.plan?.id;
+        if (planId) {
+          await supabase
+            .from('outplacement_projects')
+            .update({ pathly_plan_id: planId, pathly_synced_at: new Date().toISOString() })
+            .eq('id', project.id);
+          (project as OutplacementProject).pathly_plan_id = planId;
+        }
+      } catch (e) {
+        console.warn('Pathly plan creation failed (non-blocking):', e);
+      }
+
+      return project;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['outplacement-projects'] });
