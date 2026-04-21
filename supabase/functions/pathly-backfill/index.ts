@@ -39,7 +39,7 @@ Deno.serve(async (req) => {
 
   const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-  async function callBridge(action: string, payload: unknown, retries = 5): Promise<{ ok: boolean; status: number; data: any }> {
+  async function callBridge(action: string, payload: unknown, retries = 2): Promise<{ ok: boolean; status: number; data: any }> {
     for (let attempt = 0; attempt < retries; attempt++) {
       try {
         const r = await fetch(bridge, {
@@ -50,21 +50,19 @@ Deno.serve(async (req) => {
         const text = await r.text();
         let data: any;
         try { data = JSON.parse(text); } catch { data = { raw: text }; }
-        // Rate limit -> wait and retry
         if (r.status === 429 || /rate limit/i.test(text)) {
-          const waitMs = data?.retryAfterMs || 8000 * (attempt + 1);
+          const waitMs = Math.min(data?.retryAfterMs || 3000 * (attempt + 1), 8000);
           console.log(`[backfill] rate limit on ${action}, waiting ${waitMs}ms (attempt ${attempt + 1}/${retries})`);
-          await sleep(Math.min(waitMs, 60000));
+          await sleep(waitMs);
           continue;
         }
         return { ok: r.ok && !data?.error, status: r.status, data };
       } catch (e) {
-        // Network/runtime error (incluindo Deno RateLimitError do fetch) — esperar e tentar de novo
         const msg = (e as Error)?.message ?? String(e);
         const match = msg.match(/Retry after (\d+)ms/i);
-        const waitMs = match ? parseInt(match[1], 10) : 8000 * (attempt + 1);
+        const waitMs = Math.min(match ? parseInt(match[1], 10) : 3000 * (attempt + 1), 8000);
         console.log(`[backfill] fetch error on ${action}: ${msg} — waiting ${waitMs}ms (attempt ${attempt + 1}/${retries})`);
-        await sleep(Math.min(waitMs + 500, 60000));
+        await sleep(waitMs);
         continue;
       }
     }
@@ -86,7 +84,7 @@ Deno.serve(async (req) => {
   // evitando rate limit do runtime Deno).
   let mode: 'all' | 'plans_only' | 'force' = 'all';
   let onlyProjectId: string | null = null;
-  let batchSize = 40;
+  let batchSize = 15;
   try {
     const body = await req.json().catch(() => ({}));
     if (body?.mode === 'plans_only' || body?.mode === 'force') mode = body.mode;
@@ -95,6 +93,12 @@ Deno.serve(async (req) => {
       batchSize = body.batch_size;
     }
   } catch { /* ignore */ }
+
+  // Hard time budget per invocation. The platform kills idle requests at 150s,
+  // so we stop early and return what was processed; the client loop continues.
+  const startedAt = Date.now();
+  const TIME_BUDGET_MS = 90_000;
+  const timeUp = () => Date.now() - startedAt > TIME_BUDGET_MS;
 
   let projectsQuery = sb
     .from('outplacement_projects')
@@ -111,6 +115,7 @@ Deno.serve(async (req) => {
   const REGIAO_MAP: Record<string, string> = { mesma_regiao: 'same_region', outras_regioes: 'other_regions', indiferente: 'any' };
 
   for (const proj of projects ?? []) {
+    if (timeUp()) { report.push({ time_budget_reached: true }); break; }
     const entry: any = { project_id: proj.id, title: proj.title };
 
     let planId = proj.pathly_plan_id as string | null;
@@ -178,6 +183,7 @@ Deno.serve(async (req) => {
 
     let contactOk = 0, contactFail = 0;
     for (const c of contacts ?? []) {
+      if (timeUp()) break;
       try {
         if (c.company_name) {
           await safeCall('upsert_company', {
@@ -187,7 +193,7 @@ Deno.serve(async (req) => {
             has_openings: false,
             source: 'orion',
           });
-          await sleep(400);
+          await sleep(150);
         }
         const r = await safeCall('upsert_contact', {
           plan_id: planId,
@@ -214,9 +220,15 @@ Deno.serve(async (req) => {
         contactFail++;
         console.log(`[backfill] contact ${c.id} threw:`, (e as Error)?.message);
       }
-      await sleep(600);
+      await sleep(200);
     }
     entry.contacts = { ok: contactOk, failed: contactFail, total: contacts?.length ?? 0 };
+
+    if (timeUp()) {
+      entry.time_budget_reached = true;
+      report.push(entry);
+      break;
+    }
 
     // 3. Sincroniza vagas de mercado (apenas pendentes em modo padrão), também limitado.
     let jobsQuery = sb.from('outplacement_market_jobs').select('*').eq('project_id', proj.id).order('created_at', { ascending: true });
@@ -226,6 +238,7 @@ Deno.serve(async (req) => {
 
     let jobOk = 0, jobFail = 0;
     for (const j of jobs ?? []) {
+      if (timeUp()) break;
       try {
         const r = await safeCall('upsert_market_job', {
           plan_id: planId,
@@ -249,7 +262,7 @@ Deno.serve(async (req) => {
         jobFail++;
         console.log(`[backfill] market_job ${j.id} threw:`, (e as Error)?.message);
       }
-      await sleep(500);
+      await sleep(150);
     }
     entry.market_jobs = { ok: jobOk, failed: jobFail, total: jobs?.length ?? 0 };
 

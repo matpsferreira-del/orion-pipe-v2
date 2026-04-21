@@ -49,8 +49,8 @@ export default function Projetos() {
     setSyncingPathly(true);
     const toastId = toast.loading('Sincronizando com Pathly...');
     try {
-      const BATCH_SIZE = 30;
-      const MAX_ITERATIONS = 30; // até 900 contatos+vagas por clique
+      const BATCH_SIZE = 15;
+      const MAX_ITERATIONS = 60; // ~900 registros por clique
       let totalOk = 0;
       let totalFailed = 0;
       let projectsTouched = 0;
