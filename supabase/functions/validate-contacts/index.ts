@@ -145,6 +145,7 @@ Regras:
         return {
           contact_id: s.contact_id,
           name: s.name || original.name,
+          linkedin_url: original.linkedin_url ?? null,
           original: {
             current_position: original.current_position,
             company_name: original.company_name,
