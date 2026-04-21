@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import { Plus, X } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useParties } from '@/hooks/useParties';
@@ -117,6 +118,31 @@ export function ProjectDialog({ open, onOpenChange, project, preset }: Props) {
     [novoEstado]
   );
 
+  const partyOptions = useMemo(
+    () => [{ value: NONE, label: 'Nenhum' }, ...parties.map(p => ({ value: p.id, label: p.full_name }))],
+    [parties]
+  );
+  const companyOptions = useMemo(
+    () => [{ value: NONE, label: 'Nenhuma' }, ...companies.map(c => ({ value: c.id, label: c.nome_fantasia }))],
+    [companies]
+  );
+  const stateOptions = useMemo(
+    () => [{ value: NONE, label: 'Selecione' }, ...BRAZIL_STATES.map(s => ({ value: s.uf, label: s.name }))],
+    []
+  );
+  const stateUfOptions = useMemo(
+    () => [{ value: NONE, label: 'Estado' }, ...BRAZIL_STATES.map(s => ({ value: s.uf, label: s.uf }))],
+    []
+  );
+  const cityPrincipalOptions = useMemo(
+    () => [{ value: NONE, label: 'Selecione' }, ...cidadesPrincipais.map(c => ({ value: c, label: c }))],
+    [cidadesPrincipais]
+  );
+  const cityAdicionalOptions = useMemo(
+    () => [{ value: NONE, label: 'Cidade' }, ...cidadesAdicionais.map(c => ({ value: c, label: c }))],
+    [cidadesAdicionais]
+  );
+
   const adicionarCidadeInteresse = () => {
     if (!novoEstado || !novaCidade) return;
     if (cidadesInteresse.some(c => c.estado === novoEstado && c.cidade === novaCidade)) return;
@@ -221,23 +247,23 @@ export function ProjectDialog({ open, onOpenChange, project, preset }: Props) {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <Label>Cliente PF (Pessoa)</Label>
-                <Select value={form.party_id} onValueChange={v => setForm({ ...form, party_id: v })}>
-                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                  <SelectContent className="max-h-[300px]">
-                    <SelectItem value={NONE}>Nenhum</SelectItem>
-                    {parties.map(p => <SelectItem key={p.id} value={p.id}>{p.full_name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+                <SearchableSelect
+                  options={partyOptions}
+                  value={form.party_id}
+                  onChange={v => setForm({ ...form, party_id: v })}
+                  placeholder="Selecione..."
+                  searchPlaceholder="Buscar pessoa..."
+                />
               </div>
               <div>
                 <Label>Cliente PJ (Empresa)</Label>
-                <Select value={form.company_id} onValueChange={v => setForm({ ...form, company_id: v })}>
-                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                  <SelectContent className="max-h-[300px]">
-                    <SelectItem value={NONE}>Nenhuma</SelectItem>
-                    {companies.map(c => <SelectItem key={c.id} value={c.id}>{c.nome_fantasia}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+                <SearchableSelect
+                  options={companyOptions}
+                  value={form.company_id}
+                  onChange={v => setForm({ ...form, company_id: v })}
+                  placeholder="Selecione..."
+                  searchPlaceholder="Buscar empresa..."
+                />
               </div>
             </div>
           </section>
@@ -306,36 +332,24 @@ export function ProjectDialog({ open, onOpenChange, project, preset }: Props) {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <Label>Estado</Label>
-                <Select
+                <SearchableSelect
+                  options={stateOptions}
                   value={form.estado || NONE}
-                  onValueChange={v => setForm({ ...form, estado: v === NONE ? '' : v, cidade: '' })}
-                >
-                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                  <SelectContent className="max-h-[300px]">
-                    <SelectItem value={NONE}>Selecione</SelectItem>
-                    {BRAZIL_STATES.map(s => (
-                      <SelectItem key={s.uf} value={s.uf}>{s.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  onChange={v => setForm({ ...form, estado: v === NONE ? '' : v, cidade: '' })}
+                  placeholder="Selecione..."
+                  searchPlaceholder="Buscar estado..."
+                />
               </div>
               <div>
                 <Label>Cidade</Label>
-                <Select
+                <SearchableSelect
+                  options={cityPrincipalOptions}
                   value={form.cidade || NONE}
-                  onValueChange={v => setForm({ ...form, cidade: v === NONE ? '' : v })}
+                  onChange={v => setForm({ ...form, cidade: v === NONE ? '' : v })}
                   disabled={!form.estado}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={form.estado ? 'Selecione...' : 'Escolha o estado primeiro'} />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-[300px]">
-                    <SelectItem value={NONE}>Selecione</SelectItem>
-                    {cidadesPrincipais.map(c => (
-                      <SelectItem key={c} value={c}>{c}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  placeholder={form.estado ? 'Selecione...' : 'Escolha o estado primeiro'}
+                  searchPlaceholder="Buscar cidade..."
+                />
               </div>
             </div>
 
@@ -358,35 +372,25 @@ export function ProjectDialog({ open, onOpenChange, project, preset }: Props) {
             <div className="space-y-2">
               <Label>Cidades de Interesse</Label>
               <div className="flex gap-2">
-                <Select
-                  value={novoEstado || NONE}
-                  onValueChange={v => { setNovoEstado(v === NONE ? '' : v); setNovaCidade(''); }}
-                >
-                  <SelectTrigger className="w-[140px]">
-                    <SelectValue placeholder="Estado" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-[300px]">
-                    <SelectItem value={NONE}>Estado</SelectItem>
-                    {BRAZIL_STATES.map(s => (
-                      <SelectItem key={s.uf} value={s.uf}>{s.uf}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select
-                  value={novaCidade || NONE}
-                  onValueChange={v => setNovaCidade(v === NONE ? '' : v)}
-                  disabled={!novoEstado}
-                >
-                  <SelectTrigger className="flex-1">
-                    <SelectValue placeholder="Cidade" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-[300px]">
-                    <SelectItem value={NONE}>Cidade</SelectItem>
-                    {cidadesAdicionais.map(c => (
-                      <SelectItem key={c} value={c}>{c}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="w-[140px]">
+                  <SearchableSelect
+                    options={stateUfOptions}
+                    value={novoEstado || NONE}
+                    onChange={v => { setNovoEstado(v === NONE ? '' : v); setNovaCidade(''); }}
+                    placeholder="Estado"
+                    searchPlaceholder="UF"
+                  />
+                </div>
+                <div className="flex-1">
+                  <SearchableSelect
+                    options={cityAdicionalOptions}
+                    value={novaCidade || NONE}
+                    onChange={v => setNovaCidade(v === NONE ? '' : v)}
+                    disabled={!novoEstado}
+                    placeholder="Cidade"
+                    searchPlaceholder="Buscar cidade..."
+                  />
+                </div>
                 <Button
                   type="button"
                   size="icon"
