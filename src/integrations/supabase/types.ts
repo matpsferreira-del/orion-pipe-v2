@@ -1635,6 +1635,7 @@ export type Database = {
       }
       outplacement_contacts: {
         Row: {
+          ai_validated_at: string | null
           city: string | null
           company_name: string | null
           contact_type: string
@@ -1655,6 +1656,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          ai_validated_at?: string | null
           city?: string | null
           company_name?: string | null
           contact_type?: string
@@ -1675,6 +1677,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          ai_validated_at?: string | null
           city?: string | null
           company_name?: string | null
           contact_type?: string
