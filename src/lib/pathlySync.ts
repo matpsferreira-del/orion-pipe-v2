@@ -1,5 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
 
+type CityPreference = { estado: string; cidade: string };
+
 const PATHLY_CONTACT_TYPE_MAP: Record<string, string> = {
   decisor: 'decision_maker',
   rh: 'hr',
@@ -58,6 +60,17 @@ function pickCompanyTier(current: string | null | undefined, next: string | null
   if (!current) return next ?? 'B';
   if (!next) return current;
   return rank[next] > rank[current] ? next : current;
+}
+
+function normalizeCityPreferences(value: unknown): CityPreference[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((item): item is Record<string, unknown> => !!item && typeof item === 'object')
+    .map((item) => ({
+      estado: typeof item.estado === 'string' ? item.estado : '',
+      cidade: typeof item.cidade === 'string' ? item.cidade : '',
+    }))
+    .filter((item) => item.estado && item.cidade);
 }
 
 /**
@@ -304,7 +317,22 @@ export async function mirrorProjectToPathly(
   if (!projectResult.data) throw new Error('Projeto não encontrado');
 
   onProgress?.({ phase: 'link', processed: 0, total: 1 });
-  const link = await ensureProjectPathlyLink(projectResult.data as Parameters<typeof ensureProjectPathlyLink>[0]);
+  const project = projectResult.data;
+  const link = await ensureProjectPathlyLink({
+    id: project.id,
+    title: project.title,
+    pathly_plan_id: project.pathly_plan_id,
+    client_email: project.client_email,
+    target_role: project.target_role,
+    target_industry: project.target_industry,
+    target_location: project.target_location,
+    situacao_atual: project.situacao_atual,
+    modelo_trabalho: project.modelo_trabalho,
+    estado: project.estado,
+    cidade: project.cidade,
+    preferencia_regiao: project.preferencia_regiao,
+    cidades_interesse: normalizeCityPreferences(project.cidades_interesse),
+  });
   if (!link.ok || !link.planId) {
     throw new Error(link.error || 'Não foi possível vincular o projeto ao Pathly');
   }
