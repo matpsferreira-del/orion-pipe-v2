@@ -382,35 +382,67 @@ export default function Projetos() {
                   {allContacts.filter(c => !c.ai_validated_at).length} pendente(s) de validação
                 </span>
               </p>
-              <div className="flex items-center">
+              <div className="flex items-center gap-2 flex-wrap">
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => handleValidateAll(false)}
-                  disabled={validate.isPending}
-                  className="gap-1.5 rounded-r-none border-r-0"
+                  onClick={handleExportCSV}
+                  className="gap-1.5"
                 >
-                  <Sparkles className="h-4 w-4" />
-                  {validate.isPending ? 'Validando...' : 'Validar novos com IA'}
+                  <Download className="h-4 w-4" />
+                  Exportar CSV
                 </Button>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled={validate.isPending}
-                      className="rounded-l-none px-2"
-                    >
-                      <ChevronDown className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => handleValidateAll(true)}>
-                      <RefreshCw className="h-4 w-4 mr-2" />
-                      Revalidar todos (forçar)
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => document.getElementById('csv-import-input')?.click()}
+                  disabled={importing}
+                  className="gap-1.5"
+                >
+                  <Upload className="h-4 w-4" />
+                  {importing ? 'Importando...' : 'Importar CSV'}
+                </Button>
+                <input
+                  id="csv-import-input"
+                  type="file"
+                  accept=".csv,text/csv"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleImportCSV(file);
+                    e.target.value = '';
+                  }}
+                />
+                <div className="flex items-center">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleValidateAll(false)}
+                    disabled={validate.isPending}
+                    className="gap-1.5 rounded-r-none border-r-0"
+                  >
+                    <Sparkles className="h-4 w-4" />
+                    {validate.isPending ? 'Validando...' : 'Validar novos com IA'}
+                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={validate.isPending}
+                        className="rounded-l-none px-2"
+                      >
+                        <ChevronDown className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => handleValidateAll(true)}>
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                        Revalidar todos (forçar)
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               </div>
             </div>
             {filteredContacts.length === 0 ? (
