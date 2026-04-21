@@ -135,7 +135,7 @@ export default function Projetos() {
     for (const c of filteredContacts) {
       const row = CSV_COLUMNS.map(k => {
         if (k === 'project_title') return escapeCSV(projectMap[c.project_id] || '');
-        return escapeCSV((c as Record<string, unknown>)[k]);
+        return escapeCSV((c as unknown as Record<string, unknown>)[k]);
       });
       lines.push(row.join(','));
     }
