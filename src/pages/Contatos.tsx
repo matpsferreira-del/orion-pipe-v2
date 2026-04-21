@@ -73,6 +73,30 @@ export default function Contatos() {
     setPage(0);
   };
 
+  const handleValidateAll = async () => {
+    if (contacts.length === 0) {
+      toast.info('Nenhum contato para validar');
+      return;
+    }
+    setShowValidation(true);
+    setSuggestions([]);
+    const result = await validate.mutateAsync(
+      contacts.map(c => ({
+        id: c.id,
+        name: c.nome,
+        current_position: c.cargo,
+        company_name: getCompanyName(c.company_id),
+        linkedin_url: c.linkedin,
+      }))
+    );
+    const enriched = result.map(s => {
+      const orig = contacts.find(c => c.id === s.contact_id);
+      return { ...s, company_name_ref: orig ? getCompanyName(orig.company_id) : null };
+    });
+    setSuggestions(enriched);
+    if (result.length === 0) toast.success('Todos os contatos estão consistentes!');
+  };
+
   const filteredAndSortedContacts = useMemo(() => {
     let result = contacts.filter(contact => {
       const term = searchTerm.toLowerCase();
