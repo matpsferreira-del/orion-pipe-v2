@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { Plus, X } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useParties } from '@/hooks/useParties';
+// useParties removido — projeto não usa mais Cliente PF
 import { useCompanies } from '@/hooks/useCompanies';
 import { BRAZIL_STATES, BRAZIL_CITIES } from '@/data/brazilLocations';
 import {
