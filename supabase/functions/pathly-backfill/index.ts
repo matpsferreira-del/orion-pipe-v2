@@ -185,6 +185,7 @@ Deno.serve(async (req) => {
 
     let contactOk = 0, contactFail = 0;
     for (const c of contacts ?? []) {
+      if (timeUp()) break;
       try {
         if (c.company_name) {
           await safeCall('upsert_company', {
@@ -194,7 +195,7 @@ Deno.serve(async (req) => {
             has_openings: false,
             source: 'orion',
           });
-          await sleep(400);
+          await sleep(150);
         }
         const r = await safeCall('upsert_contact', {
           plan_id: planId,
@@ -221,9 +222,15 @@ Deno.serve(async (req) => {
         contactFail++;
         console.log(`[backfill] contact ${c.id} threw:`, (e as Error)?.message);
       }
-      await sleep(600);
+      await sleep(200);
     }
     entry.contacts = { ok: contactOk, failed: contactFail, total: contacts?.length ?? 0 };
+
+    if (timeUp()) {
+      entry.time_budget_reached = true;
+      report.push(entry);
+      break;
+    }
 
     // 3. Sincroniza vagas de mercado (apenas pendentes em modo padrão), também limitado.
     let jobsQuery = sb.from('outplacement_market_jobs').select('*').eq('project_id', proj.id).order('created_at', { ascending: true });
@@ -233,6 +240,7 @@ Deno.serve(async (req) => {
 
     let jobOk = 0, jobFail = 0;
     for (const j of jobs ?? []) {
+      if (timeUp()) break;
       try {
         const r = await safeCall('upsert_market_job', {
           plan_id: planId,
@@ -256,7 +264,7 @@ Deno.serve(async (req) => {
         jobFail++;
         console.log(`[backfill] market_job ${j.id} threw:`, (e as Error)?.message);
       }
-      await sleep(500);
+      await sleep(150);
     }
     entry.market_jobs = { ok: jobOk, failed: jobFail, total: jobs?.length ?? 0 };
 
