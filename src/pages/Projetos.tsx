@@ -1,12 +1,14 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Search, Loader2, Users, MapPin, Briefcase, Target, MoreVertical, Pencil, Trash2, Sparkles } from 'lucide-react';
+import { Plus, Search, Loader2, Users, MapPin, Briefcase, Target, MoreVertical, Pencil, Trash2, Sparkles, RefreshCw, ChevronDown } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import {
   useOutplacementProjects, useDeleteOutplacementProject,
@@ -24,6 +26,7 @@ const ALL = 'all';
 
 export default function Projetos() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { data: projects = [], isLoading } = useOutplacementProjects();
   const { data: allContacts = [] } = useOutplacementContacts();
   const { data: parties = [] } = useParties();
@@ -70,15 +73,26 @@ export default function Projetos() {
   const openEdit = (p: OutplacementProject) => { setEditing(p); setShowDialog(true); };
   const openNew = () => { setEditing(null); setShowDialog(true); };
 
-  const handleValidateAll = async () => {
+  const handleValidateAll = async (revalidateAll = false) => {
     if (allContacts.length === 0) {
       toast.info('Nenhum contato para validar');
       return;
     }
+    const toValidate = revalidateAll
+      ? allContacts
+      : allContacts.filter(c => !c.ai_validated_at);
+
+    if (toValidate.length === 0) {
+      toast.info('Todos os contatos já foram validados pela IA. Use "Revalidar todos" para forçar nova análise.');
+      return;
+    }
+
     setShowValidation(true);
     setSuggestions([]);
+    toast.info(`Analisando ${toValidate.length} contato(s)${revalidateAll ? ' (revalidação completa)' : ' novo(s)'}...`);
+
     const result = await validate.mutateAsync(
-      allContacts.map(c => ({
+      toValidate.map(c => ({
         id: c.id, name: c.name,
         current_position: c.current_position,
         company_name: c.company_name,
@@ -86,7 +100,17 @@ export default function Projetos() {
       }))
     );
     setSuggestions(result);
-    if (result.length === 0) toast.success('Todos os contatos estão consistentes!');
+
+    // Mark all sent contacts as validated (regardless of suggestion outcome)
+    const ids = toValidate.map(c => c.id);
+    const { error } = await supabase
+      .from('outplacement_contacts')
+      .update({ ai_validated_at: new Date().toISOString() })
+      .in('id', ids);
+    if (error) console.error('Failed to mark contacts as validated:', error);
+    else queryClient.invalidateQueries({ queryKey: ['outplacement_contacts'] });
+
+    if (result.length === 0) toast.success('Todos os contatos analisados estão consistentes!');
   };
 
   return (
@@ -221,17 +245,41 @@ export default function Projetos() {
             <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
               <p className="text-sm text-muted-foreground">
                 {filteredContacts.length} contato(s) em todos os projetos
+                {' · '}
+                <span className="text-amber-600 font-medium">
+                  {allContacts.filter(c => !c.ai_validated_at).length} pendente(s) de validação
+                </span>
               </p>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handleValidateAll}
-                disabled={validate.isPending}
-                className="gap-1.5"
-              >
-                <Sparkles className="h-4 w-4" />
-                {validate.isPending ? 'Validando...' : 'Validar com IA'}
-              </Button>
+              <div className="flex items-center">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleValidateAll(false)}
+                  disabled={validate.isPending}
+                  className="gap-1.5 rounded-r-none border-r-0"
+                >
+                  <Sparkles className="h-4 w-4" />
+                  {validate.isPending ? 'Validando...' : 'Validar novos com IA'}
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={validate.isPending}
+                      className="rounded-l-none px-2"
+                    >
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => handleValidateAll(true)}>
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Revalidar todos (forçar)
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
             {filteredContacts.length === 0 ? (
               <div className="text-center py-20 text-muted-foreground border-2 border-dashed rounded-lg">

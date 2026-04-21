@@ -43,6 +43,7 @@ export interface OutplacementContact {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  ai_validated_at: string | null;
 }
 
 export interface OutplacementActivity {
