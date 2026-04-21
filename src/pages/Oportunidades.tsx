@@ -14,6 +14,7 @@ import { useProfiles } from '@/hooks/useProfiles';
 import { OpportunityDialog } from '@/components/opportunities/OpportunityDialog';
 import { ActivityDialog } from '@/components/activities/ActivityDialog';
 import { JobDialog } from '@/components/jobs/JobDialog';
+import { ProjectDialog } from '@/components/projetos/ProjectDialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Plus, Search, Filter, MoreHorizontal, Target, Eye, Pencil, Trash2, Download, Loader2, Presentation, XCircle } from 'lucide-react';
@@ -61,6 +62,7 @@ export default function Oportunidades() {
   const [showNewDialog, setShowNewDialog] = useState(false);
   const [showActivityDialog, setShowActivityDialog] = useState(false);
   const [showJobDialog, setShowJobDialog] = useState(false);
+  const [showProjectDialog, setShowProjectDialog] = useState(false);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
 
@@ -384,7 +386,13 @@ export default function Oportunidades() {
             <OpportunityDetail
               opportunity={selectedOpportunity}
               onOpenActivityDialog={() => setShowActivityDialog(true)}
-              onOpenJobDialog={() => setShowJobDialog(true)}
+              onOpenJobDialog={() => {
+                if (selectedOpportunity?.tipo_servico === 'outplacement') {
+                  setShowProjectDialog(true);
+                } else {
+                  setShowJobDialog(true);
+                }
+              }}
               onOpenRejectDialog={() => setShowRejectDialog(true)}
             />
           )}
@@ -453,6 +461,19 @@ export default function Oportunidades() {
               ? (selectedOpportunity.observacoes?.match(/\[PF: (.+?)\]/)?.[1] || '')
               : undefined
             }
+          />
+          <ProjectDialog
+            open={showProjectDialog}
+            onOpenChange={setShowProjectDialog}
+            preset={{
+              opportunity_id: selectedOpportunity.id,
+              party_id: selectedOpportunity.outplacement_party_id || null,
+              company_id: selectedOpportunity.company_id || null,
+              responsavel_id: selectedOpportunity.responsavel_id || null,
+              title: selectedOpportunity.tipo_servico === 'outplacement' && !selectedOpportunity.company_id
+                ? `Outplacement - ${selectedOpportunity.observacoes?.match(/\[PF: (.+?)\]/)?.[1] || ''}`.trim()
+                : undefined,
+            }}
           />
         </>
       )}

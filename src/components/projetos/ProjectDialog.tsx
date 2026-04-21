@@ -16,10 +16,20 @@ import {
   useUpdateOutplacementProject,
 } from '@/hooks/useOutplacementProjects';
 
+interface ProjectPreset {
+  opportunity_id?: string | null;
+  party_id?: string | null;
+  company_id?: string | null;
+  responsavel_id?: string | null;
+  title?: string;
+  target_role?: string | null;
+}
+
 interface Props {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   project?: OutplacementProject | null;
+  preset?: ProjectPreset;
 }
 
 const NONE = 'none';
@@ -29,7 +39,7 @@ interface CidadeInteresse {
   cidade: string;
 }
 
-export function ProjectDialog({ open, onOpenChange, project }: Props) {
+export function ProjectDialog({ open, onOpenChange, project, preset }: Props) {
   const { profile } = useAuth();
   const { data: parties = [] } = useParties();
   const { data: companies = [] } = useCompanies();
@@ -81,9 +91,13 @@ export function ProjectDialog({ open, onOpenChange, project }: Props) {
       setCidadesInteresse(Array.isArray(project.cidades_interesse) ? project.cidades_interesse : []);
     } else {
       setForm({
-        title: '', project_type: 'outplacement', status: 'ativo',
-        party_id: NONE, company_id: NONE,
-        target_role: '', target_industry: '',
+        title: preset?.title || '',
+        project_type: 'outplacement',
+        status: 'ativo',
+        party_id: preset?.party_id || NONE,
+        company_id: preset?.company_id || NONE,
+        target_role: preset?.target_role || '',
+        target_industry: '',
         description: '', start_date: '', end_date: '',
         situacao_atual: '', modelo_trabalho: '',
         estado: '', cidade: '', preferencia_regiao: '',
@@ -92,7 +106,7 @@ export function ProjectDialog({ open, onOpenChange, project }: Props) {
     }
     setNovoEstado('');
     setNovaCidade('');
-  }, [project, open]);
+  }, [project, open, preset]);
 
   const cidadesPrincipais = useMemo(
     () => (form.estado ? BRAZIL_CITIES[form.estado] || [] : []),
@@ -128,6 +142,8 @@ export function ProjectDialog({ open, onOpenChange, project }: Props) {
       status: form.status,
       party_id: form.party_id === NONE ? null : form.party_id,
       company_id: form.company_id === NONE ? null : form.company_id,
+      opportunity_id: preset?.opportunity_id ?? null,
+      responsavel_id: preset?.responsavel_id ?? null,
       target_role: form.target_role.trim() || null,
       target_industry: form.target_industry.trim() || null,
       target_location: targetLocation,
