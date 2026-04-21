@@ -195,6 +195,15 @@ export default function Contatos() {
         description="Gerencie os contatos das empresas"
         actions={
           <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={handleValidateAll}
+              disabled={validate.isPending}
+              className="hidden sm:flex gap-1.5"
+            >
+              <Sparkles className="h-4 w-4" />
+              {validate.isPending ? 'Validando...' : 'Validar com IA'}
+            </Button>
             <Button variant="outline" className="hidden sm:flex">
               <Download className="h-4 w-4 mr-2" />
               Exportar
