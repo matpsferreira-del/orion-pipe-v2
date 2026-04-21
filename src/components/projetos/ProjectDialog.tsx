@@ -118,6 +118,31 @@ export function ProjectDialog({ open, onOpenChange, project, preset }: Props) {
     [novoEstado]
   );
 
+  const partyOptions = useMemo(
+    () => [{ value: NONE, label: 'Nenhum' }, ...parties.map(p => ({ value: p.id, label: p.full_name }))],
+    [parties]
+  );
+  const companyOptions = useMemo(
+    () => [{ value: NONE, label: 'Nenhuma' }, ...companies.map(c => ({ value: c.id, label: c.nome_fantasia }))],
+    [companies]
+  );
+  const stateOptions = useMemo(
+    () => [{ value: NONE, label: 'Selecione' }, ...BRAZIL_STATES.map(s => ({ value: s.uf, label: s.name }))],
+    []
+  );
+  const stateUfOptions = useMemo(
+    () => [{ value: NONE, label: 'Estado' }, ...BRAZIL_STATES.map(s => ({ value: s.uf, label: s.uf }))],
+    []
+  );
+  const cityPrincipalOptions = useMemo(
+    () => [{ value: NONE, label: 'Selecione' }, ...cidadesPrincipais.map(c => ({ value: c, label: c }))],
+    [cidadesPrincipais]
+  );
+  const cityAdicionalOptions = useMemo(
+    () => [{ value: NONE, label: 'Cidade' }, ...cidadesAdicionais.map(c => ({ value: c, label: c }))],
+    [cidadesAdicionais]
+  );
+
   const adicionarCidadeInteresse = () => {
     if (!novoEstado || !novaCidade) return;
     if (cidadesInteresse.some(c => c.estado === novoEstado && c.cidade === novaCidade)) return;
