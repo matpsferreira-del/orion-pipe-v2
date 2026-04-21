@@ -70,7 +70,7 @@ export default function Projetos() {
         <PageHeader
           title="Projetos"
           description="Outplacement e Consultoria"
-          action={
+          actions={
             <Button onClick={openNew} className="gap-1.5">
               <Plus className="h-4 w-4" /> Novo Projeto
             </Button>
