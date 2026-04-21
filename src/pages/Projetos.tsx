@@ -36,6 +36,9 @@ export default function Projetos() {
   const [filterType, setFilterType] = useState(ALL);
   const [filterStatus, setFilterStatus] = useState(ALL);
   const [view, setView] = useState<'projetos' | 'contatos'>('projetos');
+  const [showValidation, setShowValidation] = useState(false);
+  const [suggestions, setSuggestions] = useState<ContactSuggestion[]>([]);
+  const validate = useValidateContacts();
 
   const partyMap = useMemo(() => Object.fromEntries(parties.map(p => [p.id, p.full_name])), [parties]);
   const companyMap = useMemo(() => Object.fromEntries(companies.map(c => [c.id, c.nome_fantasia])), [companies]);
