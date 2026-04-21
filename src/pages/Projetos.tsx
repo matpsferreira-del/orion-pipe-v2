@@ -361,6 +361,11 @@ export default function Projetos() {
                     <div className="flex flex-wrap gap-1.5 mb-3">
                       <Badge variant="outline" className="text-xs">{p.project_type === 'outplacement' ? 'Outplacement' : 'Consultoria'}</Badge>
                       <Badge variant={p.status === 'ativo' ? 'default' : 'secondary'} className="text-xs">{p.status}</Badge>
+                      {p.pathly_plan_id && (
+                        <Badge variant="outline" className="text-xs bg-emerald-50 text-emerald-700 border-emerald-200">
+                          ✓ Pathly
+                        </Badge>
+                      )}
                     </div>
                     {clientName && <p className="text-sm text-muted-foreground mb-1 truncate">👤 {clientName}</p>}
                     {p.target_role && <p className="text-xs text-muted-foreground truncate">🎯 {p.target_role}</p>}
