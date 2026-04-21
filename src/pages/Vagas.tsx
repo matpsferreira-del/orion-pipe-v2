@@ -47,9 +47,11 @@ export default function Vagas() {
   const { data: profiles = [] } = useProfiles();
   const { data: applicationCounts = {} } = useApplicationCounts();
 
-  // Filter jobs
+  // Filter jobs (excluir outplacement/consultoria — esses ficam em /projetos)
   const filteredJobs = useMemo(() => {
     return jobs.filter(job => {
+      const isOutplacement = job.modelo_contrato === 'outplacement' || job.modelo_contrato === 'consultoria';
+      if (isOutplacement) return false;
       const company = companies.find(c => c.id === job.company_id);
       const matchesSearch = searchTerm === '' ||
         job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||

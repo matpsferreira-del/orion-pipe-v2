@@ -35,6 +35,8 @@ const PostGenerator = lazy(() => import("./pages/PostGenerator"));
 const FormatacaoCV = lazy(() => import("./pages/FormatacaoCV"));
 const ChromeExtension = lazy(() => import("./pages/ChromeExtension"));
 const CartaOferta = lazy(() => import("./pages/CartaOferta"));
+const Projetos = lazy(() => import("./pages/Projetos"));
+const ProjetoDetail = lazy(() => import("./pages/ProjetoDetail"));
 
 const PropostaOutplacement = lazy(() => import("./pages/PropostaOutplacement"));
 const PptInstitucional = lazy(() => import("./pages/PptInstitucional"));
@@ -128,6 +130,8 @@ const App = () => (
                 <Route path="/pessoas" element={<Pessoas />} />
                 <Route path="/recrutamento" element={<RecrutamentoDashboard />} />
                 <Route path="/vagas" element={<Vagas />} />
+                <Route path="/projetos" element={<Projetos />} />
+                <Route path="/projetos/:id" element={<ProjetoDetail />} />
                 <Route path="/jobs/:id/shortlist-presentation" element={<ShortlistPresentation />} />
                 <Route path="/vagas/:jobId/questionario" element={<QuestionnaireBuilder />} />
                 <Route path="/formatacao-cv" element={<FormatacaoCV />} />
