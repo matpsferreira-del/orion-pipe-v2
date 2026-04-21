@@ -75,15 +75,28 @@ export function ContactValidationDialog({ open, onOpenChange, suggestions, isLoa
                     }`}
                   >
                     <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <h4 className="font-semibold text-sm">{s.name}</h4>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h4 className="font-semibold text-sm">{s.name}</h4>
+                          {s.linkedin_url && (
+                            <a
+                              href={s.linkedin_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-xs text-[#0A66C2] hover:underline"
+                            >
+                              <Linkedin className="h-3.5 w-3.5" />
+                              LinkedIn
+                            </a>
+                          )}
+                        </div>
                         <p className="text-xs text-muted-foreground mt-0.5">{s.reason}</p>
                       </div>
                       {status === 'accepted' && (
-                        <span className="text-xs text-emerald-600 font-medium">✓ Aplicada</span>
+                        <span className="text-xs text-emerald-600 font-medium whitespace-nowrap">✓ Aplicada</span>
                       )}
                       {status === 'rejected' && (
-                        <span className="text-xs text-muted-foreground font-medium">Ignorada</span>
+                        <span className="text-xs text-muted-foreground font-medium whitespace-nowrap">Ignorada</span>
                       )}
                     </div>
 
