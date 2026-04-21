@@ -86,7 +86,7 @@ Deno.serve(async (req) => {
   // evitando rate limit do runtime Deno).
   let mode: 'all' | 'plans_only' | 'force' = 'all';
   let onlyProjectId: string | null = null;
-  let batchSize = 40;
+  let batchSize = 15;
   try {
     const body = await req.json().catch(() => ({}));
     if (body?.mode === 'plans_only' || body?.mode === 'force') mode = body.mode;
@@ -95,6 +95,12 @@ Deno.serve(async (req) => {
       batchSize = body.batch_size;
     }
   } catch { /* ignore */ }
+
+  // Hard time budget per invocation. The platform kills idle requests at 150s,
+  // so we stop early and return what was processed; the client loop continues.
+  const startedAt = Date.now();
+  const TIME_BUDGET_MS = 90_000;
+  const timeUp = () => Date.now() - startedAt > TIME_BUDGET_MS;
 
   let projectsQuery = sb
     .from('outplacement_projects')
