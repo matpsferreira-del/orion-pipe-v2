@@ -335,6 +335,15 @@ export default function Projetos() {
           description="Outplacement e Consultoria"
           actions={
             <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                onClick={handleMirrorAll}
+                disabled={mirroringAll || projects.length === 0}
+                className="gap-1.5"
+              >
+                <RefreshCw className={`h-4 w-4 ${mirroringAll ? 'animate-spin' : ''}`} />
+                {mirroringAll ? 'Espelhando...' : 'Espelhar TODOS no Pathly'}
+              </Button>
               <Button onClick={openNew} className="gap-1.5">
                 <Plus className="h-4 w-4" /> Novo Projeto
               </Button>
