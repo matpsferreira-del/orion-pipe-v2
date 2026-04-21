@@ -42,7 +42,26 @@ export default function Projetos() {
   const [showValidation, setShowValidation] = useState(false);
   const [suggestions, setSuggestions] = useState<ContactSuggestion[]>([]);
   const [importing, setImporting] = useState(false);
+  const [syncingPathly, setSyncingPathly] = useState(false);
   const validate = useValidateContacts();
+
+  const handleSyncPathly = async (force = false) => {
+    setSyncingPathly(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('pathly-backfill', {
+        body: { mode: force ? 'force' : 'all' },
+      });
+      if (error) throw error;
+      const processed = (data as { projects_processed?: number })?.projects_processed ?? 0;
+      toast.success(`Sincronização concluída · ${processed} projeto(s) processado(s)`);
+      queryClient.invalidateQueries({ queryKey: ['outplacement-projects'] });
+      queryClient.invalidateQueries({ queryKey: ['outplacement-contacts'] });
+    } catch (e) {
+      toast.error('Erro ao sincronizar: ' + (e as Error).message);
+    } finally {
+      setSyncingPathly(false);
+    }
+  };
 
   const partyMap = useMemo(() => Object.fromEntries(parties.map(p => [p.id, p.full_name])), [parties]);
   const companyMap = useMemo(() => Object.fromEntries(companies.map(c => [c.id, c.nome_fantasia])), [companies]);
