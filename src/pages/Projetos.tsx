@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Search, Loader2, Users, MapPin, Briefcase, Target, MoreVertical, Pencil, Trash2, Sparkles, RefreshCw, ChevronDown } from 'lucide-react';
+import { Plus, Search, Loader2, Users, MapPin, Briefcase, Target, MoreVertical, Pencil, Trash2, Sparkles, RefreshCw, ChevronDown, Download, Upload } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import {
   useOutplacementProjects, useDeleteOutplacementProject,
@@ -41,6 +41,7 @@ export default function Projetos() {
   const [view, setView] = useState<'projetos' | 'contatos'>('projetos');
   const [showValidation, setShowValidation] = useState(false);
   const [suggestions, setSuggestions] = useState<ContactSuggestion[]>([]);
+  const [importing, setImporting] = useState(false);
   const validate = useValidateContacts();
 
   const partyMap = useMemo(() => Object.fromEntries(parties.map(p => [p.id, p.full_name])), [parties]);
@@ -111,6 +112,137 @@ export default function Projetos() {
     else queryClient.invalidateQueries({ queryKey: ['outplacement_contacts'] });
 
     if (result.length === 0) toast.success('Todos os contatos analisados estão consistentes!');
+  };
+
+  const CSV_COLUMNS = [
+    'name', 'current_position', 'company_name', 'linkedin_url',
+    'email', 'phone', 'city', 'state', 'contact_type', 'tier',
+    'kanban_stage', 'notes', 'project_id', 'project_title',
+  ] as const;
+
+  const escapeCSV = (v: unknown) => {
+    if (v === null || v === undefined) return '';
+    const s = String(v);
+    return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  };
+
+  const handleExportCSV = () => {
+    if (filteredContacts.length === 0) {
+      toast.info('Nenhum contato para exportar');
+      return;
+    }
+    const lines = [CSV_COLUMNS.join(',')];
+    for (const c of filteredContacts) {
+      const row = CSV_COLUMNS.map(k => {
+        if (k === 'project_title') return escapeCSV(projectMap[c.project_id] || '');
+        return escapeCSV((c as unknown as Record<string, unknown>)[k]);
+      });
+      lines.push(row.join(','));
+    }
+    const blob = new Blob(['\uFEFF' + lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `contatos-projetos-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success(`${filteredContacts.length} contato(s) exportado(s)`);
+  };
+
+  const parseCSV = (text: string): Record<string, string>[] => {
+    const rows: string[][] = [];
+    let cur: string[] = [];
+    let field = '';
+    let inQuotes = false;
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i];
+      if (inQuotes) {
+        if (ch === '"' && text[i + 1] === '"') { field += '"'; i++; }
+        else if (ch === '"') inQuotes = false;
+        else field += ch;
+      } else {
+        if (ch === '"') inQuotes = true;
+        else if (ch === ',') { cur.push(field); field = ''; }
+        else if (ch === '\n' || ch === '\r') {
+          if (field !== '' || cur.length) { cur.push(field); rows.push(cur); cur = []; field = ''; }
+          if (ch === '\r' && text[i + 1] === '\n') i++;
+        } else field += ch;
+      }
+    }
+    if (field !== '' || cur.length) { cur.push(field); rows.push(cur); }
+    if (rows.length < 2) return [];
+    const headers = rows[0].map(h => h.trim().replace(/^\uFEFF/, ''));
+    return rows.slice(1).filter(r => r.some(c => c.trim() !== '')).map(r => {
+      const obj: Record<string, string> = {};
+      headers.forEach((h, i) => { obj[h] = (r[i] ?? '').trim(); });
+      return obj;
+    });
+  };
+
+  const handleImportCSV = async (file: File) => {
+    setImporting(true);
+    try {
+      const text = await file.text();
+      const rows = parseCSV(text);
+      if (rows.length === 0) { toast.error('CSV vazio ou inválido'); return; }
+
+      // Match project: by project_id or project_title
+      const titleToId = Object.fromEntries(
+        projects.map(p => [p.title.toLowerCase().trim(), p.id])
+      );
+      const validProjectIds = new Set(projects.map(p => p.id));
+
+      const toInsert: Record<string, unknown>[] = [];
+      const errors: string[] = [];
+
+      rows.forEach((r, idx) => {
+        const name = (r.name || '').trim();
+        if (!name) { errors.push(`Linha ${idx + 2}: nome vazio`); return; }
+        let projectId = (r.project_id || '').trim();
+        if (!projectId || !validProjectIds.has(projectId)) {
+          const title = (r.project_title || '').trim().toLowerCase();
+          projectId = titleToId[title] || '';
+        }
+        if (!projectId) { errors.push(`Linha ${idx + 2} (${name}): projeto não encontrado`); return; }
+
+        toInsert.push({
+          project_id: projectId,
+          name,
+          current_position: r.current_position || null,
+          company_name: r.company_name || null,
+          linkedin_url: r.linkedin_url || null,
+          email: r.email || null,
+          phone: r.phone || null,
+          city: r.city || null,
+          state: r.state || null,
+          contact_type: r.contact_type || 'outro',
+          tier: r.tier || 'B',
+          kanban_stage: r.kanban_stage || 'identificado',
+          notes: r.notes || null,
+        });
+      });
+
+      if (toInsert.length === 0) {
+        toast.error(`Nenhum contato válido. ${errors[0] || ''}`);
+        return;
+      }
+
+      // Insert in chunks
+      const chunkSize = 200;
+      let inserted = 0;
+      for (let i = 0; i < toInsert.length; i += chunkSize) {
+        const chunk = toInsert.slice(i, i + chunkSize);
+        const { error } = await supabase.from('outplacement_contacts').insert(chunk as never);
+        if (error) { toast.error('Erro ao importar: ' + error.message); break; }
+        inserted += chunk.length;
+      }
+      queryClient.invalidateQueries({ queryKey: ['outplacement-contacts'] });
+      toast.success(`${inserted} contato(s) importado(s)${errors.length ? ` · ${errors.length} ignorado(s)` : ''}`);
+    } catch (e) {
+      toast.error('Erro ao processar CSV: ' + (e as Error).message);
+    } finally {
+      setImporting(false);
+    }
   };
 
   return (
@@ -250,35 +382,67 @@ export default function Projetos() {
                   {allContacts.filter(c => !c.ai_validated_at).length} pendente(s) de validação
                 </span>
               </p>
-              <div className="flex items-center">
+              <div className="flex items-center gap-2 flex-wrap">
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => handleValidateAll(false)}
-                  disabled={validate.isPending}
-                  className="gap-1.5 rounded-r-none border-r-0"
+                  onClick={handleExportCSV}
+                  className="gap-1.5"
                 >
-                  <Sparkles className="h-4 w-4" />
-                  {validate.isPending ? 'Validando...' : 'Validar novos com IA'}
+                  <Download className="h-4 w-4" />
+                  Exportar CSV
                 </Button>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled={validate.isPending}
-                      className="rounded-l-none px-2"
-                    >
-                      <ChevronDown className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => handleValidateAll(true)}>
-                      <RefreshCw className="h-4 w-4 mr-2" />
-                      Revalidar todos (forçar)
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => document.getElementById('csv-import-input')?.click()}
+                  disabled={importing}
+                  className="gap-1.5"
+                >
+                  <Upload className="h-4 w-4" />
+                  {importing ? 'Importando...' : 'Importar CSV'}
+                </Button>
+                <input
+                  id="csv-import-input"
+                  type="file"
+                  accept=".csv,text/csv"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleImportCSV(file);
+                    e.target.value = '';
+                  }}
+                />
+                <div className="flex items-center">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleValidateAll(false)}
+                    disabled={validate.isPending}
+                    className="gap-1.5 rounded-r-none border-r-0"
+                  >
+                    <Sparkles className="h-4 w-4" />
+                    {validate.isPending ? 'Validando...' : 'Validar novos com IA'}
+                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={validate.isPending}
+                        className="rounded-l-none px-2"
+                      >
+                        <ChevronDown className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => handleValidateAll(true)}>
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                        Revalidar todos (forçar)
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               </div>
             </div>
             {filteredContacts.length === 0 ? (
