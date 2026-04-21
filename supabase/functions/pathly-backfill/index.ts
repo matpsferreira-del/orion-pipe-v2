@@ -170,8 +170,10 @@ Deno.serve(async (req) => {
     }
 
     // 2. Sincroniza contatos (em modo padrão, apenas pendentes; em 'force', todos)
-    let contactsQuery = sb.from('outplacement_contacts').select('*').eq('project_id', proj.id);
+    // Limitado a batchSize por invocação para evitar rate limit do runtime Deno.
+    let contactsQuery = sb.from('outplacement_contacts').select('*').eq('project_id', proj.id).order('created_at', { ascending: true });
     if (mode !== 'force') contactsQuery = contactsQuery.is('pathly_synced_at', null);
+    contactsQuery = contactsQuery.limit(batchSize);
     const { data: contacts } = await contactsQuery;
 
     let contactOk = 0, contactFail = 0;
