@@ -126,10 +126,7 @@ export function ProjectDialog({ open, onOpenChange, project, preset }: Props) {
     [novoEstado]
   );
 
-  const partyOptions = useMemo(
-    () => [{ value: NONE, label: 'Nenhum' }, ...parties.map(p => ({ value: p.id, label: p.full_name }))],
-    [parties]
-  );
+  // partyOptions removido
   const companyOptions = useMemo(
     () => [{ value: NONE, label: 'Nenhuma' }, ...companies.map(c => ({ value: c.id, label: c.nome_fantasia }))],
     [companies]
