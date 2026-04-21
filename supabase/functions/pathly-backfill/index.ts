@@ -37,16 +37,28 @@ Deno.serve(async (req) => {
   const sb = createClient(SUPABASE_URL, SERVICE_KEY);
   const bridge = `${PATHLY_FUNCTIONS_URL.replace(/\/+$/, '')}/orion-bridge`;
 
-  async function callBridge(action: string, payload: unknown) {
-    const r = await fetch(bridge, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-orion-secret': ORION_BRIDGE_SECRET! },
-      body: JSON.stringify({ action, payload }),
-    });
-    const text = await r.text();
-    let data: any;
-    try { data = JSON.parse(text); } catch { data = { raw: text }; }
-    return { ok: r.ok && !data?.error, status: r.status, data };
+  const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+  async function callBridge(action: string, payload: unknown, retries = 3): Promise<{ ok: boolean; status: number; data: any }> {
+    for (let attempt = 0; attempt < retries; attempt++) {
+      const r = await fetch(bridge, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-orion-secret': ORION_BRIDGE_SECRET! },
+        body: JSON.stringify({ action, payload }),
+      });
+      const text = await r.text();
+      let data: any;
+      try { data = JSON.parse(text); } catch { data = { raw: text }; }
+      // Rate limit -> wait and retry
+      if (r.status === 429 || /rate limit/i.test(text)) {
+        const waitMs = data?.retryAfterMs || 5000 * (attempt + 1);
+        console.log(`[backfill] rate limit on ${action}, waiting ${waitMs}ms`);
+        await sleep(Math.min(waitMs, 35000));
+        continue;
+      }
+      return { ok: r.ok && !data?.error, status: r.status, data };
+    }
+    return { ok: false, status: 429, data: { error: 'rate limit retries exhausted' } };
   }
 
   // Buscar projetos sem pathly_plan_id
