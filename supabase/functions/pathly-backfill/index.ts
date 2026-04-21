@@ -218,9 +218,10 @@ Deno.serve(async (req) => {
     }
     entry.contacts = { ok: contactOk, failed: contactFail, total: contacts?.length ?? 0 };
 
-    // 3. Sincroniza vagas de mercado (apenas pendentes em modo padrão)
-    let jobsQuery = sb.from('outplacement_market_jobs').select('*').eq('project_id', proj.id);
+    // 3. Sincroniza vagas de mercado (apenas pendentes em modo padrão), também limitado.
+    let jobsQuery = sb.from('outplacement_market_jobs').select('*').eq('project_id', proj.id).order('created_at', { ascending: true });
     if (mode !== 'force') jobsQuery = jobsQuery.is('pathly_synced_at', null);
+    jobsQuery = jobsQuery.limit(batchSize);
     const { data: jobs } = await jobsQuery;
 
     let jobOk = 0, jobFail = 0;
