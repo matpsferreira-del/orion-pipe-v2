@@ -8,9 +8,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useAuth } from '@/contexts/AuthContext';
 import { useParties } from '@/hooks/useParties';
 import { useCompanies } from '@/hooks/useCompanies';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { listPathlyPlans } from '@/lib/pathlySync';
 import {
   OutplacementProject,
   useCreateOutplacementProject,
