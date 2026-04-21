@@ -1649,6 +1649,7 @@ export type Database = {
           name: string
           notes: string | null
           party_id: string | null
+          pathly_synced_at: string | null
           phone: string | null
           project_id: string
           state: string | null
@@ -1670,6 +1671,7 @@ export type Database = {
           name: string
           notes?: string | null
           party_id?: string | null
+          pathly_synced_at?: string | null
           phone?: string | null
           project_id: string
           state?: string | null
@@ -1691,6 +1693,7 @@ export type Database = {
           name?: string
           notes?: string | null
           party_id?: string | null
+          pathly_synced_at?: string | null
           phone?: string | null
           project_id?: string
           state?: string | null
@@ -1725,6 +1728,7 @@ export type Database = {
           job_url: string | null
           location: string | null
           notes: string | null
+          pathly_synced_at: string | null
           project_id: string
           source: string | null
           status: string
@@ -1740,6 +1744,7 @@ export type Database = {
           job_url?: string | null
           location?: string | null
           notes?: string | null
+          pathly_synced_at?: string | null
           project_id: string
           source?: string | null
           status?: string
@@ -1755,6 +1760,7 @@ export type Database = {
           job_url?: string | null
           location?: string | null
           notes?: string | null
+          pathly_synced_at?: string | null
           project_id?: string
           source?: string | null
           status?: string
@@ -1782,6 +1788,8 @@ export type Database = {
           notes: string | null
           opportunity_id: string | null
           party_id: string | null
+          pathly_plan_id: string | null
+          pathly_synced_at: string | null
           project_type: string
           responsavel_id: string | null
           start_date: string | null
@@ -1803,6 +1811,8 @@ export type Database = {
           notes?: string | null
           opportunity_id?: string | null
           party_id?: string | null
+          pathly_plan_id?: string | null
+          pathly_synced_at?: string | null
           project_type?: string
           responsavel_id?: string | null
           start_date?: string | null
@@ -1824,6 +1834,8 @@ export type Database = {
           notes?: string | null
           opportunity_id?: string | null
           party_id?: string | null
+          pathly_plan_id?: string | null
+          pathly_synced_at?: string | null
           project_type?: string
           responsavel_id?: string | null
           start_date?: string | null
