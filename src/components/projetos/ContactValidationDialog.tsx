@@ -39,28 +39,27 @@ export function ContactValidationDialog({ open, onOpenChange, suggestions, isLoa
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-3xl max-h-[85vh] flex flex-col overflow-hidden p-0">
-        <div className="px-6 pt-6">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-3xl max-h-[85vh] flex flex-col gap-0 p-0">
+        <DialogHeader className="px-6 pt-6 pb-2 shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-primary" />
             Sugestões de Correção (IA)
           </DialogTitle>
         </DialogHeader>
 
-        {isLoading ? (
-          <div className="py-12 text-center text-muted-foreground">
-            <Sparkles className="h-8 w-8 mx-auto mb-3 animate-pulse text-primary" />
-            <p>Analisando contatos com IA...</p>
-          </div>
-        ) : suggestions.length === 0 ? (
-          <div className="py-12 text-center text-muted-foreground">
-            <Check className="h-10 w-10 mx-auto mb-3 text-emerald-500" />
-            <p className="font-medium">Tudo certo!</p>
-            <p className="text-sm mt-1">Nenhuma inconsistência encontrada nos contatos.</p>
-          </div>
-        ) : (
-          <ScrollArea className="flex-1 -mx-6 px-6">
+        <div className="flex-1 min-h-0 overflow-y-auto px-6 py-3">
+          {isLoading ? (
+            <div className="py-12 text-center text-muted-foreground">
+              <Sparkles className="h-8 w-8 mx-auto mb-3 animate-pulse text-primary" />
+              <p>Analisando contatos com IA...</p>
+            </div>
+          ) : suggestions.length === 0 ? (
+            <div className="py-12 text-center text-muted-foreground">
+              <Check className="h-10 w-10 mx-auto mb-3 text-emerald-500" />
+              <p className="font-medium">Tudo certo!</p>
+              <p className="text-sm mt-1">Nenhuma inconsistência encontrada nos contatos.</p>
+            </div>
+          ) : (
             <div className="space-y-3">
               <p className="text-sm text-muted-foreground">
                 A IA encontrou <strong>{suggestions.length}</strong> contato(s) com possíveis inconsistências.
@@ -139,10 +138,10 @@ export function ContactValidationDialog({ open, onOpenChange, suggestions, isLoa
                 );
               })}
             </div>
-          </ScrollArea>
-        )}
+          )}
+        </div>
 
-        <DialogFooter>
+        <DialogFooter className="px-6 py-4 border-t shrink-0">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             {pending.length === 0 ? 'Fechar' : 'Concluir'}
           </Button>
