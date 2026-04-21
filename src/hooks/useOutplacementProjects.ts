@@ -31,6 +31,9 @@ export interface OutplacementProject {
   cidade: string | null;
   preferencia_regiao: string | null;
   cidades_interesse: Array<{ estado: string; cidade: string }> | null;
+  client_linkedin_url: string | null;
+  client_email: string | null;
+  client_phone: string | null;
   notes: string | null;
   created_at: string;
   updated_at: string;
