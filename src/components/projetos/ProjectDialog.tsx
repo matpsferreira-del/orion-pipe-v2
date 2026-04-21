@@ -16,10 +16,20 @@ import {
   useUpdateOutplacementProject,
 } from '@/hooks/useOutplacementProjects';
 
+interface ProjectPreset {
+  opportunity_id?: string | null;
+  party_id?: string | null;
+  company_id?: string | null;
+  responsavel_id?: string | null;
+  title?: string;
+  target_role?: string | null;
+}
+
 interface Props {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   project?: OutplacementProject | null;
+  preset?: ProjectPreset;
 }
 
 const NONE = 'none';
@@ -29,7 +39,7 @@ interface CidadeInteresse {
   cidade: string;
 }
 
-export function ProjectDialog({ open, onOpenChange, project }: Props) {
+export function ProjectDialog({ open, onOpenChange, project, preset }: Props) {
   const { profile } = useAuth();
   const { data: parties = [] } = useParties();
   const { data: companies = [] } = useCompanies();
