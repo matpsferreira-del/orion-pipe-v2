@@ -174,14 +174,7 @@ Use a função report_inconsistencies. Inclua TODOS os contatos com problemas, e
 
     const data = await response.json();
     const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
-    if (!toolCall) {
-      return new Response(JSON.stringify({ suggestions: [] }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    const parsed = JSON.parse(toolCall.function.arguments);
-    const rawSuggestions = parsed.suggestions || [];
+    const rawSuggestions = toolCall ? (JSON.parse(toolCall.function.arguments).suggestions || []) : [];
 
     // Build full suggestion objects with originals
     const contactMap = new Map(candidates.map(c => [c.id, c]));
@@ -191,24 +184,36 @@ Use a função report_inconsistencies. Inclua TODOS os contatos com problemas, e
         if (!original) return null;
         const suggestedPos = s.suggested_position?.trim() || null;
         const suggestedComp = s.suggested_company?.trim() || null;
-        // Skip if no actual change
         if (suggestedPos === original.current_position && suggestedComp === original.company_name) return null;
         return {
           contact_id: s.contact_id,
           name: s.name || original.name,
           linkedin_url: original.linkedin_url ?? null,
-          original: {
-            current_position: original.current_position,
-            company_name: original.company_name,
-          },
-          suggested: {
-            current_position: suggestedPos,
-            company_name: suggestedComp,
-          },
+          original: { current_position: original.current_position, company_name: original.company_name },
+          suggested: { current_position: suggestedPos, company_name: suggestedComp },
           reason: s.reason,
         };
       })
       .filter(Boolean);
+
+    // Deterministic safety net: catch cargo == empresa cases the AI may have missed
+    const norm = (s: string | null) => (s ?? '').toLowerCase().replace(/\s+/g, ' ').trim();
+    const alreadyFlagged = new Set(suggestions.map(s => s.contact_id));
+    for (const c of candidates) {
+      if (alreadyFlagged.has(c.id)) continue;
+      const pos = norm(c.current_position);
+      const comp = norm(c.company_name);
+      if (pos && comp && pos === comp) {
+        suggestions.push({
+          contact_id: c.id,
+          name: c.name,
+          linkedin_url: c.linkedin_url ?? null,
+          original: { current_position: c.current_position, company_name: c.company_name },
+          suggested: { current_position: null, company_name: c.company_name },
+          reason: 'Cargo idêntico ao nome da empresa — cargo deve ficar vazio.',
+        });
+      }
+    }
 
     return new Response(JSON.stringify({ suggestions }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
