@@ -141,15 +141,13 @@ Deno.serve(async (req) => {
       continue;
     }
 
-    // 2. Sincroniza contatos
-    const { data: contacts } = await sb
-      .from('outplacement_contacts')
-      .select('*')
-      .eq('project_id', proj.id);
+    // 2. Sincroniza contatos (em modo padrão, apenas pendentes; em 'force', todos)
+    let contactsQuery = sb.from('outplacement_contacts').select('*').eq('project_id', proj.id);
+    if (mode !== 'force') contactsQuery = contactsQuery.is('pathly_synced_at', null);
+    const { data: contacts } = await contactsQuery;
 
     let contactOk = 0, contactFail = 0;
     for (const c of contacts ?? []) {
-      // upsert empresa se houver
       if (c.company_name) {
         await callBridge('upsert_company', {
           plan_id: planId,
@@ -183,11 +181,10 @@ Deno.serve(async (req) => {
     }
     entry.contacts = { ok: contactOk, failed: contactFail, total: contacts?.length ?? 0 };
 
-    // 3. Sincroniza vagas de mercado
-    const { data: jobs } = await sb
-      .from('outplacement_market_jobs')
-      .select('*')
-      .eq('project_id', proj.id);
+    // 3. Sincroniza vagas de mercado (apenas pendentes em modo padrão)
+    let jobsQuery = sb.from('outplacement_market_jobs').select('*').eq('project_id', proj.id);
+    if (mode !== 'force') jobsQuery = jobsQuery.is('pathly_synced_at', null);
+    const { data: jobs } = await jobsQuery;
 
     let jobOk = 0, jobFail = 0;
     for (const j of jobs ?? []) {
