@@ -25,13 +25,11 @@ const json = (body: unknown, status = 200) =>
 const TYPE_REVERSE: Record<string, string> = {
   decision_maker: "decisor",
   hr: "rh",
-  recruiter: "recrutador",
-  referral: "indicacao",
   other: "outro",
 };
 const STAGE_REVERSE: Record<string, string> = {
   identified: "identificado",
-  invite_sent: "convite_enviado",
+  connection_sent: "convite_enviado",
   connected: "conectado",
   message_sent: "msg_enviada",
   replied: "respondeu",
@@ -119,14 +117,14 @@ Deno.serve(async (req) => {
     if (!planId) continue;
 
     try {
-      const result = await callBridge("list_plan_data", { plan_id: planId });
+      const result = await callBridge("list_mentee_contributions", { plan_id: planId });
       if (result?.error) {
         summary.errors.push(`plan ${planId}: ${result.error}`);
         continue;
       }
 
       const contacts: PathlyContact[] = result.contacts ?? [];
-      const marketJobs: PathlyMarketJob[] = result.market_jobs ?? [];
+      const marketJobs: PathlyMarketJob[] = [];
 
       // ===== CONTACTS =====
       // Carrega contatos existentes do projeto para deduplicar

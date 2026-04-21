@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { mirrorProjectToPathly } from '@/lib/pathlySync';
 import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -42,56 +43,36 @@ export default function Projetos() {
   const [showValidation, setShowValidation] = useState(false);
   const [suggestions, setSuggestions] = useState<ContactSuggestion[]>([]);
   const [importing, setImporting] = useState(false);
-  const [syncingPathly, setSyncingPathly] = useState(false);
+  const [syncingProjectId, setSyncingProjectId] = useState<string | null>(null);
   const validate = useValidateContacts();
 
-  const handleSyncPathly = async (force = false) => {
-    setSyncingPathly(true);
-    const toastId = toast.loading('Sincronizando com Pathly...');
+  const handleMirrorProject = async (projectId: string, title: string) => {
+    setSyncingProjectId(projectId);
+    const toastId = toast.loading(`Espelhando ${title} no Pathly...`);
     try {
-      const BATCH_SIZE = 15;
-      const MAX_ITERATIONS = 60; // ~900 registros por clique
-      let totalOk = 0;
-      let totalFailed = 0;
-      let projectsTouched = 0;
+      const result = await mirrorProjectToPathly(projectId, {
+        onProgress: ({ phase, processed, total }) => {
+          const label = phase === 'link'
+            ? 'Vinculando projeto'
+            : phase === 'companies'
+              ? 'Espelhando empresas'
+              : phase === 'contacts'
+                ? 'Espelhando contatos'
+                : 'Espelhando vagas';
+          toast.loading(`${label} · ${processed}/${total}`, { id: toastId });
+        },
+      });
 
-      for (let i = 0; i < MAX_ITERATIONS; i++) {
-        const { data, error } = await supabase.functions.invoke('pathly-backfill', {
-          body: { mode: force ? 'force' : 'all', batch_size: BATCH_SIZE },
-        });
-        if (error) throw error;
-
-        const report = (data as { report?: any[] })?.report ?? [];
-        let processedThisRound = 0;
-        for (const r of report) {
-          const cOk = r?.contacts?.ok ?? 0;
-          const cFail = r?.contacts?.failed ?? 0;
-          const jOk = r?.market_jobs?.ok ?? 0;
-          const jFail = r?.market_jobs?.failed ?? 0;
-          totalOk += cOk + jOk;
-          totalFailed += cFail + jFail;
-          processedThisRound += cOk + jOk + cFail + jFail;
-          if (cOk + jOk + cFail + jFail > 0) projectsTouched++;
-        }
-
-        toast.loading(`Sincronizando... ${totalOk} enviado(s)`, { id: toastId });
-
-        // Se nada foi processado nesta rodada, terminamos
-        if (processedThisRound === 0) break;
-      }
-
-      toast.success(
-        `Sincronização concluída · ${totalOk} registro(s) enviado(s)` +
-          (totalFailed > 0 ? ` · ${totalFailed} falha(s)` : ''),
-        { id: toastId },
-      );
+      const totalOk = result.companies.ok + result.contacts.ok + result.jobs.ok;
+      const totalFailed = result.companies.failed + result.contacts.failed + result.jobs.failed;
+      toast.success(`Espelho concluído · ${totalOk} item(ns)` + (totalFailed ? ` · ${totalFailed} falha(s)` : ''), { id: toastId });
       queryClient.invalidateQueries({ queryKey: ['outplacement-projects'] });
       queryClient.invalidateQueries({ queryKey: ['outplacement-contacts'] });
       queryClient.invalidateQueries({ queryKey: ['outplacement-market-jobs'] });
     } catch (e) {
-      toast.error('Erro ao sincronizar: ' + (e as Error).message, { id: toastId });
+      toast.error('Erro ao espelhar projeto: ' + (e as Error).message, { id: toastId });
     } finally {
-      setSyncingPathly(false);
+      setSyncingProjectId(null);
     }
   };
 
@@ -304,23 +285,6 @@ export default function Projetos() {
           description="Outplacement e Consultoria"
           actions={
             <div className="flex items-center gap-2">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" disabled={syncingPathly} className="gap-1.5">
-                    {syncingPathly ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-                    Sincronizar Pathly
-                    <ChevronDown className="h-3 w-3" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => handleSyncPathly(false)}>
-                    Sincronizar pendentes
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleSyncPathly(true)}>
-                    Forçar re-sincronização completa
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
               <Button onClick={openNew} className="gap-1.5">
                 <Plus className="h-4 w-4" /> Novo Projeto
               </Button>
@@ -420,6 +384,10 @@ export default function Projetos() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" onClick={e => e.stopPropagation()}>
+                          <DropdownMenuItem onClick={() => handleMirrorProject(p.id, p.title)}>
+                            <RefreshCw className={`h-4 w-4 mr-2 ${syncingProjectId === p.id ? 'animate-spin' : ''}`} />
+                            {syncingProjectId === p.id ? 'Espelhando...' : 'Espelhar no Pathly'}
+                          </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => openEdit(p)}><Pencil className="h-4 w-4 mr-2" />Editar</DropdownMenuItem>
                           <DropdownMenuItem className="text-destructive"
                             onClick={() => confirm('Excluir projeto e todos os contatos/atividades?') && del.mutate(p.id)}>

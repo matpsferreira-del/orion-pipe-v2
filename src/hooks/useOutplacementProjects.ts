@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import {
-  createPathlyPlan,
+  ensureProjectPathlyLink,
   syncContactToPathly,
   syncMarketJobToPathly,
 } from '@/lib/pathlySync';
@@ -165,12 +165,13 @@ export function useCreateOutplacementProject() {
       if (error) throw error;
       const project = data as unknown as OutplacementProject;
 
-      // Best-effort: cria plano espelho no Pathly
+      // Best-effort: garante espelho do projeto no Pathly
       try {
-        const result = await createPathlyPlan({
+        const result = await ensureProjectPathlyLink({
+          id: project.id,
           title: project.title,
-          party_name: _party_name ?? null,
-          party_email: _party_email ?? null,
+          pathly_plan_id: project.pathly_plan_id,
+          client_email: _party_email ?? project.client_email,
           target_role: project.target_role,
           target_industry: project.target_industry,
           target_location: project.target_location,
@@ -181,12 +182,8 @@ export function useCreateOutplacementProject() {
           preferencia_regiao: project.preferencia_regiao,
           cidades_interesse: project.cidades_interesse,
         });
-        const planId = (result.data as { plan?: { id?: string } } | null)?.plan?.id;
+        const planId = result.planId;
         if (planId) {
-          await supabase
-            .from('outplacement_projects')
-            .update({ pathly_plan_id: planId, pathly_synced_at: new Date().toISOString() })
-            .eq('id', project.id);
           (project as OutplacementProject).pathly_plan_id = planId;
         }
       } catch (e) {
@@ -207,8 +204,21 @@ export function useUpdateOutplacementProject() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...updates }: Partial<OutplacementProject> & { id: string }) => {
-      const { error } = await supabase.from('outplacement_projects').update(updates).eq('id', id);
+      const { data, error } = await supabase
+        .from('outplacement_projects')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
       if (error) throw error;
+
+      try {
+        if (data) {
+          await ensureProjectPathlyLink(data as OutplacementProject);
+        }
+      } catch (e) {
+        console.warn('Pathly project sync failed (non-blocking):', e);
+      }
     },
     onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: ['outplacement-projects'] });
