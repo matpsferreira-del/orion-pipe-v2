@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Search, Loader2, Users, MapPin, Briefcase, Target, MoreVertical, Pencil, Trash2, Sparkles, RefreshCw, ChevronDown } from 'lucide-react';
+import { Plus, Search, Loader2, Users, MapPin, Briefcase, Target, MoreVertical, Pencil, Trash2, Sparkles, RefreshCw, ChevronDown, Download, Upload } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import {
   useOutplacementProjects, useDeleteOutplacementProject,
