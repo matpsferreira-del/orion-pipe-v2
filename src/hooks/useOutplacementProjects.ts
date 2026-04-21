@@ -1,6 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import {
+  createPathlyPlan,
+  syncContactToPathly,
+  syncMarketJobToPathly,
+} from '@/lib/pathlySync';
 
 export interface OutplacementProject {
   id: string;
@@ -22,6 +27,8 @@ export interface OutplacementProject {
   notes: string | null;
   created_at: string;
   updated_at: string;
+  pathly_plan_id: string | null;
+  pathly_synced_at: string | null;
 }
 
 export interface OutplacementContact {
@@ -44,6 +51,7 @@ export interface OutplacementContact {
   created_at: string;
   updated_at: string;
   ai_validated_at: string | null;
+  pathly_synced_at: string | null;
 }
 
 export interface OutplacementActivity {
@@ -72,6 +80,7 @@ export interface OutplacementMarketJob {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  pathly_synced_at: string | null;
 }
 
 export const KANBAN_STAGES = [
@@ -135,10 +144,40 @@ export function useOutplacementProject(id: string | undefined) {
 export function useCreateOutplacementProject() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (input: Partial<OutplacementProject> & { title: string; created_by: string }) => {
-      const { data, error } = await supabase.from('outplacement_projects').insert(input).select().single();
+    mutationFn: async (input: Partial<OutplacementProject> & {
+      title: string;
+      created_by: string;
+      _party_name?: string;
+      _party_email?: string;
+    }) => {
+      const { _party_name, _party_email, ...row } = input;
+      const { data, error } = await supabase.from('outplacement_projects').insert(row).select().single();
       if (error) throw error;
-      return data as OutplacementProject;
+      const project = data as OutplacementProject;
+
+      // Best-effort: cria plano espelho no Pathly
+      try {
+        const result = await createPathlyPlan({
+          title: project.title,
+          party_name: _party_name ?? null,
+          party_email: _party_email ?? null,
+          target_role: project.target_role,
+          target_industry: project.target_industry,
+          target_location: project.target_location,
+        });
+        const planId = (result.data as { plan?: { id?: string } } | null)?.plan?.id;
+        if (planId) {
+          await supabase
+            .from('outplacement_projects')
+            .update({ pathly_plan_id: planId, pathly_synced_at: new Date().toISOString() })
+            .eq('id', project.id);
+          (project as OutplacementProject).pathly_plan_id = planId;
+        }
+      } catch (e) {
+        console.warn('Pathly plan creation failed (non-blocking):', e);
+      }
+
+      return project;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['outplacement-projects'] });
@@ -192,13 +231,45 @@ export function useOutplacementContacts(projectId?: string) {
   });
 }
 
+async function syncContactIfLinked(contact: OutplacementContact) {
+  try {
+    const { data: project } = await supabase
+      .from('outplacement_projects')
+      .select('pathly_plan_id')
+      .eq('id', contact.project_id)
+      .maybeSingle();
+    const planId = (project as { pathly_plan_id?: string | null } | null)?.pathly_plan_id;
+    if (!planId) return;
+    const r = await syncContactToPathly(planId, {
+      name: contact.name,
+      current_position: contact.current_position,
+      company_name: contact.company_name,
+      linkedin_url: contact.linkedin_url,
+      contact_type: contact.contact_type,
+      tier: contact.tier,
+      kanban_stage: contact.kanban_stage,
+      notes: contact.notes,
+    });
+    if (r.ok) {
+      await supabase
+        .from('outplacement_contacts')
+        .update({ pathly_synced_at: new Date().toISOString() })
+        .eq('id', contact.id);
+    }
+  } catch (e) {
+    console.warn('Pathly contact sync failed (non-blocking):', e);
+  }
+}
+
 export function useCreateOutplacementContact() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: Partial<OutplacementContact> & { project_id: string; name: string }) => {
       const { data, error } = await supabase.from('outplacement_contacts').insert(input).select().single();
       if (error) throw error;
-      return data as OutplacementContact;
+      const contact = data as OutplacementContact;
+      syncContactIfLinked(contact); // fire-and-forget
+      return contact;
     },
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ['outplacement-contacts'] });
@@ -213,8 +284,14 @@ export function useUpdateOutplacementContact() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...updates }: Partial<OutplacementContact> & { id: string }) => {
-      const { error } = await supabase.from('outplacement_contacts').update(updates).eq('id', id);
+      const { data, error } = await supabase
+        .from('outplacement_contacts')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
       if (error) throw error;
+      if (data) syncContactIfLinked(data as OutplacementContact);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['outplacement-contacts'] });
@@ -300,13 +377,44 @@ export function useOutplacementMarketJobs(projectId: string | undefined) {
   });
 }
 
+async function syncMarketJobIfLinked(job: OutplacementMarketJob) {
+  try {
+    const { data: project } = await supabase
+      .from('outplacement_projects')
+      .select('pathly_plan_id')
+      .eq('id', job.project_id)
+      .maybeSingle();
+    const planId = (project as { pathly_plan_id?: string | null } | null)?.pathly_plan_id;
+    if (!planId) return;
+    const r = await syncMarketJobToPathly(planId, {
+      job_title: job.job_title,
+      company_name: job.company_name,
+      location: job.location,
+      job_url: job.job_url,
+      source: job.source,
+      status: job.status,
+      notes: job.notes,
+    });
+    if (r.ok) {
+      await supabase
+        .from('outplacement_market_jobs')
+        .update({ pathly_synced_at: new Date().toISOString() })
+        .eq('id', job.id);
+    }
+  } catch (e) {
+    console.warn('Pathly market job sync failed (non-blocking):', e);
+  }
+}
+
 export function useCreateOutplacementMarketJob() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: Partial<OutplacementMarketJob> & { project_id: string; job_title: string; company_name: string }) => {
       const { data, error } = await supabase.from('outplacement_market_jobs').insert(input).select().single();
       if (error) throw error;
-      return data as OutplacementMarketJob;
+      const job = data as OutplacementMarketJob;
+      syncMarketJobIfLinked(job);
+      return job;
     },
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ['outplacement-market-jobs', data.project_id] });
@@ -320,8 +428,14 @@ export function useUpdateOutplacementMarketJob() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...updates }: Partial<OutplacementMarketJob> & { id: string }) => {
-      const { error } = await supabase.from('outplacement_market_jobs').update(updates).eq('id', id);
+      const { data, error } = await supabase
+        .from('outplacement_market_jobs')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
       if (error) throw error;
+      if (data) syncMarketJobIfLinked(data as OutplacementMarketJob);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['outplacement-market-jobs'] }),
   });
