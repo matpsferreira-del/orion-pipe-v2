@@ -180,6 +180,7 @@ Deno.serve(async (req) => {
       } else {
         jobFail++;
       }
+      await sleep(250);
     }
     entry.market_jobs = { ok: jobOk, failed: jobFail, total: jobs?.length ?? 0 };
 
