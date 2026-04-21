@@ -616,6 +616,12 @@ export default function Contatos() {
         contact={contactToEdit}
       />
       <ImportContactsDialog open={importDialogOpen} onOpenChange={setImportDialogOpen} />
+      <ContactsValidationDialog
+        open={showValidation}
+        onOpenChange={setShowValidation}
+        suggestions={suggestions}
+        isLoading={validate.isPending}
+      />
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
