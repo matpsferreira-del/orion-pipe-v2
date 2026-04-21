@@ -42,7 +42,7 @@ interface CidadeInteresse {
 
 export function ProjectDialog({ open, onOpenChange, project, preset }: Props) {
   const { profile } = useAuth();
-  const { data: parties = [] } = useParties();
+  // parties removido
   const { data: companies = [] } = useCompanies();
   const create = useCreateOutplacementProject();
   const update = useUpdateOutplacementProject();
