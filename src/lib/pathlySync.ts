@@ -130,7 +130,31 @@ export async function createPathlyPlan(project: {
   target_role?: string | null;
   target_industry?: string | null;
   target_location?: string | null;
+  // Novos campos alinhados ao formulário do Pathly
+  situacao_atual?: string | null;
+  modelo_trabalho?: string | null;
+  estado?: string | null;
+  cidade?: string | null;
+  preferencia_regiao?: string | null;
+  cidades_interesse?: Array<{ estado: string; cidade: string }> | null;
 }) {
+  // Mapeamento Orion -> Pathly (mantém vocabulário do Pathly)
+  const situacaoMap: Record<string, string> = {
+    empregado: 'employed',
+    desempregado: 'unemployed',
+    em_transicao: 'in_transition',
+  };
+  const modeloMap: Record<string, string> = {
+    presencial: 'on_site',
+    hibrido: 'hybrid',
+    remoto: 'remote',
+  };
+  const regiaoMap: Record<string, string> = {
+    mesma_regiao: 'same_region',
+    outras_regioes: 'other_regions',
+    indiferente: 'any',
+  };
+
   return callPathly('create_plan', {
     mentee_name: project.party_name || project.title,
     mentee_email: project.party_email ?? null,
@@ -138,6 +162,13 @@ export async function createPathlyPlan(project: {
     current_area: project.target_industry ?? '',
     target_role: project.target_role ?? null,
     target_location: project.target_location ?? null,
+    // Novos campos
+    employment_status: project.situacao_atual ? situacaoMap[project.situacao_atual] ?? project.situacao_atual : null,
+    work_model: project.modelo_trabalho ? modeloMap[project.modelo_trabalho] ?? project.modelo_trabalho : null,
+    state: project.estado ?? null,
+    city: project.cidade ?? null,
+    region_preference: project.preferencia_regiao ? regiaoMap[project.preferencia_regiao] ?? project.preferencia_regiao : null,
+    cities_of_interest: project.cidades_interesse ?? [],
     source: 'orion',
   });
 }

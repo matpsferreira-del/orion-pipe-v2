@@ -1778,20 +1778,26 @@ export type Database = {
       }
       outplacement_projects: {
         Row: {
+          cidade: string | null
+          cidades_interesse: Json | null
           company_id: string | null
           contact_id: string | null
           created_at: string
           created_by: string
           description: string | null
           end_date: string | null
+          estado: string | null
           id: string
+          modelo_trabalho: string | null
           notes: string | null
           opportunity_id: string | null
           party_id: string | null
           pathly_plan_id: string | null
           pathly_synced_at: string | null
+          preferencia_regiao: string | null
           project_type: string
           responsavel_id: string | null
+          situacao_atual: string | null
           start_date: string | null
           status: string
           target_industry: string | null
@@ -1801,20 +1807,26 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          cidade?: string | null
+          cidades_interesse?: Json | null
           company_id?: string | null
           contact_id?: string | null
           created_at?: string
           created_by: string
           description?: string | null
           end_date?: string | null
+          estado?: string | null
           id?: string
+          modelo_trabalho?: string | null
           notes?: string | null
           opportunity_id?: string | null
           party_id?: string | null
           pathly_plan_id?: string | null
           pathly_synced_at?: string | null
+          preferencia_regiao?: string | null
           project_type?: string
           responsavel_id?: string | null
+          situacao_atual?: string | null
           start_date?: string | null
           status?: string
           target_industry?: string | null
@@ -1824,20 +1836,26 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          cidade?: string | null
+          cidades_interesse?: Json | null
           company_id?: string | null
           contact_id?: string | null
           created_at?: string
           created_by?: string
           description?: string | null
           end_date?: string | null
+          estado?: string | null
           id?: string
+          modelo_trabalho?: string | null
           notes?: string | null
           opportunity_id?: string | null
           party_id?: string | null
           pathly_plan_id?: string | null
           pathly_synced_at?: string | null
+          preferencia_regiao?: string | null
           project_type?: string
           responsavel_id?: string | null
+          situacao_atual?: string | null
           start_date?: string | null
           status?: string
           target_industry?: string | null
