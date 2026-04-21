@@ -39,26 +39,45 @@ Deno.serve(async (req) => {
 
   const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-  async function callBridge(action: string, payload: unknown, retries = 3): Promise<{ ok: boolean; status: number; data: any }> {
+  async function callBridge(action: string, payload: unknown, retries = 5): Promise<{ ok: boolean; status: number; data: any }> {
     for (let attempt = 0; attempt < retries; attempt++) {
-      const r = await fetch(bridge, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-orion-secret': ORION_BRIDGE_SECRET! },
-        body: JSON.stringify({ action, payload }),
-      });
-      const text = await r.text();
-      let data: any;
-      try { data = JSON.parse(text); } catch { data = { raw: text }; }
-      // Rate limit -> wait and retry
-      if (r.status === 429 || /rate limit/i.test(text)) {
-        const waitMs = data?.retryAfterMs || 5000 * (attempt + 1);
-        console.log(`[backfill] rate limit on ${action}, waiting ${waitMs}ms`);
-        await sleep(Math.min(waitMs, 35000));
+      try {
+        const r = await fetch(bridge, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-orion-secret': ORION_BRIDGE_SECRET! },
+          body: JSON.stringify({ action, payload }),
+        });
+        const text = await r.text();
+        let data: any;
+        try { data = JSON.parse(text); } catch { data = { raw: text }; }
+        // Rate limit -> wait and retry
+        if (r.status === 429 || /rate limit/i.test(text)) {
+          const waitMs = data?.retryAfterMs || 8000 * (attempt + 1);
+          console.log(`[backfill] rate limit on ${action}, waiting ${waitMs}ms (attempt ${attempt + 1}/${retries})`);
+          await sleep(Math.min(waitMs, 60000));
+          continue;
+        }
+        return { ok: r.ok && !data?.error, status: r.status, data };
+      } catch (e) {
+        // Network/runtime error (incluindo Deno RateLimitError do fetch) — esperar e tentar de novo
+        const msg = (e as Error)?.message ?? String(e);
+        const match = msg.match(/Retry after (\d+)ms/i);
+        const waitMs = match ? parseInt(match[1], 10) : 8000 * (attempt + 1);
+        console.log(`[backfill] fetch error on ${action}: ${msg} — waiting ${waitMs}ms (attempt ${attempt + 1}/${retries})`);
+        await sleep(Math.min(waitMs + 500, 60000));
         continue;
       }
-      return { ok: r.ok && !data?.error, status: r.status, data };
     }
     return { ok: false, status: 429, data: { error: 'rate limit retries exhausted' } };
+  }
+
+  async function safeCall(action: string, payload: unknown) {
+    try {
+      return await callBridge(action, payload);
+    } catch (e) {
+      console.log(`[backfill] safeCall caught ${action}:`, (e as Error)?.message);
+      return { ok: false, status: 500, data: { error: (e as Error)?.message } };
+    }
   }
 
   // Modo: 'all' (default) processa projetos sem plano E re-sincroniza contatos pendentes
