@@ -64,6 +64,10 @@ export function ProjectDialog({ open, onOpenChange, project, preset }: Props) {
     estado: '',
     cidade: '',
     preferencia_regiao: '',
+    // Contato do cliente
+    client_linkedin_url: '',
+    client_email: '',
+    client_phone: '',
   });
 
   const [cidadesInteresse, setCidadesInteresse] = useState<CidadeInteresse[]>([]);
