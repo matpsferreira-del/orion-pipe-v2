@@ -129,7 +129,7 @@ export function useOutplacementProjects() {
         .select('*')
         .order('created_at', { ascending: false });
       if (error) throw error;
-      return data as OutplacementProject[];
+      return data as unknown as OutplacementProject[];
     },
   });
 }
