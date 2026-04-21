@@ -8,9 +8,12 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useContacts, useDeleteContact, ContactRow } from '@/hooks/useContacts';
 import { useCompanies } from '@/hooks/useCompanies';
-import { Plus, Search, Filter, MoreHorizontal, User, Pencil, Trash2, Download, Loader2, Mail, Phone, Building2, Upload, Linkedin, ArrowUpDown, ArrowUp, ArrowDown, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Search, Filter, MoreHorizontal, User, Pencil, Trash2, Download, Loader2, Mail, Phone, Building2, Upload, Linkedin, ArrowUpDown, ArrowUp, ArrowDown, X, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
 import { ContactDialog } from '@/components/contacts/ContactDialog';
 import { ImportContactsDialog } from '@/components/contacts/ImportContactsDialog';
+import { ContactsValidationDialog } from '@/components/contacts/ContactValidationDialog';
+import { useValidateContacts, ContactSuggestion } from '@/hooks/useContactValidation';
+import { toast } from 'sonner';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { MobileListCard } from '@/components/ui/mobile-list-card';
