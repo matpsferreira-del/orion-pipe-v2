@@ -48,12 +48,18 @@ export const routeToTab: Record<string, TabType> = {
   '/recrutamento': 'recrutamento',
   '/pessoas': 'recrutamento',
   '/vagas': 'recrutamento',
+  '/projetos': 'recrutamento',
   '/equipe': 'configuracoes',
   '/configuracoes': 'configuracoes',
 };
 
 export const getActiveTab = (pathname: string): TabType => {
-  return routeToTab[pathname] || 'comercial';
+  if (routeToTab[pathname]) return routeToTab[pathname];
+  // Prefix match for nested routes (e.g. /projetos/:id)
+  const match = Object.keys(routeToTab).find(
+    (route) => route !== '/' && pathname.startsWith(route + '/')
+  );
+  return match ? routeToTab[match] : 'comercial';
 };
 
 interface TopNavProps {
