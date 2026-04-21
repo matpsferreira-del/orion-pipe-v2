@@ -245,17 +245,41 @@ export default function Projetos() {
             <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
               <p className="text-sm text-muted-foreground">
                 {filteredContacts.length} contato(s) em todos os projetos
+                {' · '}
+                <span className="text-amber-600 font-medium">
+                  {allContacts.filter(c => !c.ai_validated_at).length} pendente(s) de validação
+                </span>
               </p>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handleValidateAll}
-                disabled={validate.isPending}
-                className="gap-1.5"
-              >
-                <Sparkles className="h-4 w-4" />
-                {validate.isPending ? 'Validando...' : 'Validar com IA'}
-              </Button>
+              <div className="flex items-center">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleValidateAll(false)}
+                  disabled={validate.isPending}
+                  className="gap-1.5 rounded-r-none border-r-0"
+                >
+                  <Sparkles className="h-4 w-4" />
+                  {validate.isPending ? 'Validando...' : 'Validar novos com IA'}
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={validate.isPending}
+                      className="rounded-l-none px-2"
+                    >
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => handleValidateAll(true)}>
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Revalidar todos (forçar)
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
             {filteredContacts.length === 0 ? (
               <div className="text-center py-20 text-muted-foreground border-2 border-dashed rounded-lg">
