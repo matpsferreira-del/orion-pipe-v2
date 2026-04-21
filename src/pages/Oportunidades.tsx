@@ -14,6 +14,7 @@ import { useProfiles } from '@/hooks/useProfiles';
 import { OpportunityDialog } from '@/components/opportunities/OpportunityDialog';
 import { ActivityDialog } from '@/components/activities/ActivityDialog';
 import { JobDialog } from '@/components/jobs/JobDialog';
+import { ProjectDialog } from '@/components/projetos/ProjectDialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Plus, Search, Filter, MoreHorizontal, Target, Eye, Pencil, Trash2, Download, Loader2, Presentation, XCircle } from 'lucide-react';
