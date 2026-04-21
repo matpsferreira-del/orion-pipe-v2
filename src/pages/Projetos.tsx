@@ -42,7 +42,26 @@ export default function Projetos() {
   const [showValidation, setShowValidation] = useState(false);
   const [suggestions, setSuggestions] = useState<ContactSuggestion[]>([]);
   const [importing, setImporting] = useState(false);
+  const [syncingPathly, setSyncingPathly] = useState(false);
   const validate = useValidateContacts();
+
+  const handleSyncPathly = async (force = false) => {
+    setSyncingPathly(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('pathly-backfill', {
+        body: { mode: force ? 'force' : 'all' },
+      });
+      if (error) throw error;
+      const processed = (data as { projects_processed?: number })?.projects_processed ?? 0;
+      toast.success(`Sincronização concluída · ${processed} projeto(s) processado(s)`);
+      queryClient.invalidateQueries({ queryKey: ['outplacement-projects'] });
+      queryClient.invalidateQueries({ queryKey: ['outplacement-contacts'] });
+    } catch (e) {
+      toast.error('Erro ao sincronizar: ' + (e as Error).message);
+    } finally {
+      setSyncingPathly(false);
+    }
+  };
 
   const partyMap = useMemo(() => Object.fromEntries(parties.map(p => [p.id, p.full_name])), [parties]);
   const companyMap = useMemo(() => Object.fromEntries(companies.map(c => [c.id, c.nome_fantasia])), [companies]);
@@ -252,9 +271,28 @@ export default function Projetos() {
           title="Projetos"
           description="Outplacement e Consultoria"
           actions={
-            <Button onClick={openNew} className="gap-1.5">
-              <Plus className="h-4 w-4" /> Novo Projeto
-            </Button>
+            <div className="flex items-center gap-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" disabled={syncingPathly} className="gap-1.5">
+                    {syncingPathly ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                    Sincronizar Pathly
+                    <ChevronDown className="h-3 w-3" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => handleSyncPathly(false)}>
+                    Sincronizar pendentes
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleSyncPathly(true)}>
+                    Forçar re-sincronização completa
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button onClick={openNew} className="gap-1.5">
+                <Plus className="h-4 w-4" /> Novo Projeto
+              </Button>
+            </div>
           }
         />
 

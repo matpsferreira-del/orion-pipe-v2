@@ -61,66 +61,93 @@ Deno.serve(async (req) => {
     return { ok: false, status: 429, data: { error: 'rate limit retries exhausted' } };
   }
 
-  // Buscar projetos sem pathly_plan_id
+  // Modo: 'all' (default) processa projetos sem plano E re-sincroniza contatos pendentes
+  // de projetos já vinculados; 'plans_only' apenas cria planos faltantes.
+  let mode: 'all' | 'plans_only' | 'force' = 'all';
+  try {
+    const body = await req.json().catch(() => ({}));
+    if (body?.mode === 'plans_only' || body?.mode === 'force') mode = body.mode;
+  } catch { /* ignore */ }
+
+  // Buscar TODOS os projetos (vamos decidir por projeto se cria plano ou só re-sync)
   const { data: projects, error } = await sb
     .from('outplacement_projects')
-    .select('id, title, target_role, target_industry, target_location, party_id, pathly_plan_id')
-    .is('pathly_plan_id', null);
+    .select('id, title, target_role, target_industry, target_location, party_id, client_email, pathly_plan_id, situacao_atual, modelo_trabalho, estado, cidade, preferencia_regiao, cidades_interesse');
 
   if (error) return json({ error: error.message }, 500);
 
   const report: any[] = [];
 
+  const SITUACAO_MAP: Record<string, string> = { empregado: 'employed', desempregado: 'unemployed', em_transicao: 'in_transition' };
+  const MODELO_MAP: Record<string, string> = { presencial: 'on_site', hibrido: 'hybrid', remoto: 'remote' };
+  const REGIAO_MAP: Record<string, string> = { mesma_regiao: 'same_region', outras_regioes: 'other_regions', indiferente: 'any' };
+
   for (const proj of projects ?? []) {
     const entry: any = { project_id: proj.id, title: proj.title };
 
-    // Buscar party (nome/email do mentorado)
-    let menteeName = proj.title;
-    let menteeEmail: string | null = null;
-    if (proj.party_id) {
-      const { data: party } = await sb
-        .from('party')
-        .select('full_name, email_raw')
-        .eq('id', proj.party_id)
-        .maybeSingle();
-      if (party?.full_name) menteeName = party.full_name;
-      if (party?.email_raw) menteeEmail = party.email_raw;
+    let planId = proj.pathly_plan_id as string | null;
+
+    // Se não tem plano, cria
+    if (!planId) {
+      // Buscar party (nome/email do mentorado)
+      let menteeName = proj.title;
+      let menteeEmail: string | null = proj.client_email ?? null;
+      if (proj.party_id) {
+        const { data: party } = await sb
+          .from('party')
+          .select('full_name, email_raw')
+          .eq('id', proj.party_id)
+          .maybeSingle();
+        if (party?.full_name) menteeName = party.full_name;
+        if (party?.email_raw && !menteeEmail) menteeEmail = party.email_raw;
+      }
+
+      const planRes = await callBridge('create_plan', {
+        mentee_name: menteeName,
+        mentee_email: menteeEmail,
+        current_position: proj.target_role ?? '',
+        current_area: proj.target_industry ?? '',
+        target_role: proj.target_role,
+        target_location: proj.target_location,
+        employment_status: proj.situacao_atual ? SITUACAO_MAP[proj.situacao_atual] ?? proj.situacao_atual : null,
+        work_model: proj.modelo_trabalho ? MODELO_MAP[proj.modelo_trabalho] ?? proj.modelo_trabalho : null,
+        state: proj.estado ?? null,
+        city: proj.cidade ?? null,
+        region_preference: proj.preferencia_regiao ? REGIAO_MAP[proj.preferencia_regiao] ?? proj.preferencia_regiao : null,
+        cities_of_interest: proj.cidades_interesse ?? [],
+        source: 'orion',
+      });
+
+      planId = planRes.data?.plan?.id ?? null;
+      if (!planId) {
+        entry.error = `create_plan failed: ${JSON.stringify(planRes.data)}`;
+        report.push(entry);
+        continue;
+      }
+      entry.plan_created = true;
+
+      await sb.from('outplacement_projects').update({
+        pathly_plan_id: planId,
+        pathly_synced_at: new Date().toISOString(),
+      }).eq('id', proj.id);
+    } else {
+      entry.plan_existing = true;
     }
 
-    // 1. Cria plano no Pathly
-    const planRes = await callBridge('create_plan', {
-      mentee_name: menteeName,
-      mentee_email: menteeEmail,
-      current_position: proj.target_role ?? '',
-      current_area: proj.target_industry ?? '',
-      target_role: proj.target_role,
-      target_location: proj.target_location,
-      source: 'orion',
-    });
+    entry.plan_id = planId;
 
-    const planId = planRes.data?.plan?.id;
-    if (!planId) {
-      entry.error = `create_plan failed: ${JSON.stringify(planRes.data)}`;
+    if (mode === 'plans_only') {
       report.push(entry);
       continue;
     }
-    entry.plan_id = planId;
 
-    // Salva o pathly_plan_id no Orion
-    await sb.from('outplacement_projects').update({
-      pathly_plan_id: planId,
-      pathly_synced_at: new Date().toISOString(),
-    }).eq('id', proj.id);
-
-    // 2. Sincroniza contatos
-    const { data: contacts } = await sb
-      .from('outplacement_contacts')
-      .select('*')
-      .eq('project_id', proj.id);
+    // 2. Sincroniza contatos (em modo padrão, apenas pendentes; em 'force', todos)
+    let contactsQuery = sb.from('outplacement_contacts').select('*').eq('project_id', proj.id);
+    if (mode !== 'force') contactsQuery = contactsQuery.is('pathly_synced_at', null);
+    const { data: contacts } = await contactsQuery;
 
     let contactOk = 0, contactFail = 0;
     for (const c of contacts ?? []) {
-      // upsert empresa se houver
       if (c.company_name) {
         await callBridge('upsert_company', {
           plan_id: planId,
@@ -154,11 +181,10 @@ Deno.serve(async (req) => {
     }
     entry.contacts = { ok: contactOk, failed: contactFail, total: contacts?.length ?? 0 };
 
-    // 3. Sincroniza vagas de mercado
-    const { data: jobs } = await sb
-      .from('outplacement_market_jobs')
-      .select('*')
-      .eq('project_id', proj.id);
+    // 3. Sincroniza vagas de mercado (apenas pendentes em modo padrão)
+    let jobsQuery = sb.from('outplacement_market_jobs').select('*').eq('project_id', proj.id);
+    if (mode !== 'force') jobsQuery = jobsQuery.is('pathly_synced_at', null);
+    const { data: jobs } = await jobsQuery;
 
     let jobOk = 0, jobFail = 0;
     for (const j of jobs ?? []) {
