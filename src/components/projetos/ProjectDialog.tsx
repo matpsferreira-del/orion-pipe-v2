@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { Plus, X } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useParties } from '@/hooks/useParties';
+// useParties removido — projeto não usa mais Cliente PF
 import { useCompanies } from '@/hooks/useCompanies';
 import { BRAZIL_STATES, BRAZIL_CITIES } from '@/data/brazilLocations';
 import {
@@ -42,7 +42,7 @@ interface CidadeInteresse {
 
 export function ProjectDialog({ open, onOpenChange, project, preset }: Props) {
   const { profile } = useAuth();
-  const { data: parties = [] } = useParties();
+  // parties removido
   const { data: companies = [] } = useCompanies();
   const create = useCreateOutplacementProject();
   const update = useUpdateOutplacementProject();
@@ -64,6 +64,10 @@ export function ProjectDialog({ open, onOpenChange, project, preset }: Props) {
     estado: '',
     cidade: '',
     preferencia_regiao: '',
+    // Contato do cliente
+    client_linkedin_url: '',
+    client_email: '',
+    client_phone: '',
   });
 
   const [cidadesInteresse, setCidadesInteresse] = useState<CidadeInteresse[]>([]);
@@ -88,6 +92,9 @@ export function ProjectDialog({ open, onOpenChange, project, preset }: Props) {
         estado: project.estado || '',
         cidade: project.cidade || '',
         preferencia_regiao: project.preferencia_regiao || '',
+        client_linkedin_url: project.client_linkedin_url || '',
+        client_email: project.client_email || '',
+        client_phone: project.client_phone || '',
       });
       setCidadesInteresse(Array.isArray(project.cidades_interesse) ? project.cidades_interesse : []);
     } else {
@@ -102,6 +109,7 @@ export function ProjectDialog({ open, onOpenChange, project, preset }: Props) {
         description: '', start_date: '', end_date: '',
         situacao_atual: '', modelo_trabalho: '',
         estado: '', cidade: '', preferencia_regiao: '',
+        client_linkedin_url: '', client_email: '', client_phone: '',
       });
       setCidadesInteresse([]);
     }
@@ -118,10 +126,7 @@ export function ProjectDialog({ open, onOpenChange, project, preset }: Props) {
     [novoEstado]
   );
 
-  const partyOptions = useMemo(
-    () => [{ value: NONE, label: 'Nenhum' }, ...parties.map(p => ({ value: p.id, label: p.full_name }))],
-    [parties]
-  );
+  // partyOptions removido
   const companyOptions = useMemo(
     () => [{ value: NONE, label: 'Nenhuma' }, ...companies.map(c => ({ value: c.id, label: c.nome_fantasia }))],
     [companies]
@@ -182,17 +187,19 @@ export function ProjectDialog({ open, onOpenChange, project, preset }: Props) {
       cidade: form.cidade || null,
       preferencia_regiao: form.preferencia_regiao || null,
       cidades_interesse: cidadesInteresse,
+      client_linkedin_url: form.client_linkedin_url.trim() || null,
+      client_email: form.client_email.trim() || null,
+      client_phone: form.client_phone.trim() || null,
     };
     if (project) {
       await update.mutateAsync({ id: project.id, ...payload });
     } else {
       if (!profile?.id) return;
-      const selectedParty = form.party_id !== NONE ? parties.find(p => p.id === form.party_id) : null;
       await create.mutateAsync({
         ...payload,
         created_by: profile.id,
-        _party_name: selectedParty?.full_name,
-        _party_email: selectedParty?.email_raw ?? undefined,
+        _party_name: form.title.trim(),
+        _party_email: form.client_email.trim() || undefined,
       });
     }
     onOpenChange(false);
@@ -244,25 +251,49 @@ export function ProjectDialog({ open, onOpenChange, project, preset }: Props) {
               </div>
             </div>
 
+            <div>
+              <Label>Cliente PJ (Empresa)</Label>
+              <SearchableSelect
+                options={companyOptions}
+                value={form.company_id}
+                onChange={v => setForm({ ...form, company_id: v })}
+                placeholder="Selecione..."
+                searchPlaceholder="Buscar empresa..."
+              />
+            </div>
+          </section>
+
+          {/* ===== Contato do Cliente ===== */}
+          <section className="space-y-4">
+            <h3 className="text-sm font-semibold text-primary">Contato do Cliente</h3>
+
+            <div>
+              <Label>LinkedIn URL</Label>
+              <Input
+                type="url"
+                value={form.client_linkedin_url}
+                onChange={e => setForm({ ...form, client_linkedin_url: e.target.value })}
+                placeholder="https://linkedin.com/in/..."
+              />
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <Label>Cliente PF (Pessoa)</Label>
-                <SearchableSelect
-                  options={partyOptions}
-                  value={form.party_id}
-                  onChange={v => setForm({ ...form, party_id: v })}
-                  placeholder="Selecione..."
-                  searchPlaceholder="Buscar pessoa..."
+                <Label>E-mail</Label>
+                <Input
+                  type="email"
+                  value={form.client_email}
+                  onChange={e => setForm({ ...form, client_email: e.target.value })}
+                  placeholder="cliente@email.com"
                 />
               </div>
               <div>
-                <Label>Cliente PJ (Empresa)</Label>
-                <SearchableSelect
-                  options={companyOptions}
-                  value={form.company_id}
-                  onChange={v => setForm({ ...form, company_id: v })}
-                  placeholder="Selecione..."
-                  searchPlaceholder="Buscar empresa..."
+                <Label>Telefone</Label>
+                <Input
+                  type="tel"
+                  value={form.client_phone}
+                  onChange={e => setForm({ ...form, client_phone: e.target.value })}
+                  placeholder="(11) 99999-9999"
                 />
               </div>
             </div>

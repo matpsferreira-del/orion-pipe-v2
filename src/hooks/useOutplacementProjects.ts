@@ -31,6 +31,9 @@ export interface OutplacementProject {
   cidade: string | null;
   preferencia_regiao: string | null;
   cidades_interesse: Array<{ estado: string; cidade: string }> | null;
+  client_linkedin_url: string | null;
+  client_email: string | null;
+  client_phone: string | null;
   notes: string | null;
   created_at: string;
   updated_at: string;
@@ -126,7 +129,7 @@ export function useOutplacementProjects() {
         .select('*')
         .order('created_at', { ascending: false });
       if (error) throw error;
-      return data as OutplacementProject[];
+      return data as unknown as OutplacementProject[];
     },
   });
 }
@@ -142,7 +145,7 @@ export function useOutplacementProject(id: string | undefined) {
         .eq('id', id)
         .single();
       if (error) throw error;
-      return data as OutplacementProject;
+      return data as unknown as OutplacementProject;
     },
     enabled: !!id,
   });
@@ -160,7 +163,7 @@ export function useCreateOutplacementProject() {
       const { _party_name, _party_email, ...row } = input;
       const { data, error } = await supabase.from('outplacement_projects').insert(row).select().single();
       if (error) throw error;
-      const project = data as OutplacementProject;
+      const project = data as unknown as OutplacementProject;
 
       // Best-effort: cria plano espelho no Pathly
       try {
