@@ -150,6 +150,7 @@ Deno.serve(async (req) => {
       } else {
         contactFail++;
       }
+      await sleep(250);
     }
     entry.contacts = { ok: contactOk, failed: contactFail, total: contacts?.length ?? 0 };
 
