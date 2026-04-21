@@ -41,6 +41,7 @@ export default function Projetos() {
   const [view, setView] = useState<'projetos' | 'contatos'>('projetos');
   const [showValidation, setShowValidation] = useState(false);
   const [suggestions, setSuggestions] = useState<ContactSuggestion[]>([]);
+  const [importing, setImporting] = useState(false);
   const validate = useValidateContacts();
 
   const partyMap = useMemo(() => Object.fromEntries(parties.map(p => [p.id, p.full_name])), [parties]);
