@@ -26,6 +26,7 @@ const ALL = 'all';
 
 export default function Projetos() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { data: projects = [], isLoading } = useOutplacementProjects();
   const { data: allContacts = [] } = useOutplacementContacts();
   const { data: parties = [] } = useParties();
