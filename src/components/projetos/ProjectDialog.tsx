@@ -255,25 +255,49 @@ export function ProjectDialog({ open, onOpenChange, project, preset }: Props) {
               </div>
             </div>
 
+            <div>
+              <Label>Cliente PJ (Empresa)</Label>
+              <SearchableSelect
+                options={companyOptions}
+                value={form.company_id}
+                onChange={v => setForm({ ...form, company_id: v })}
+                placeholder="Selecione..."
+                searchPlaceholder="Buscar empresa..."
+              />
+            </div>
+          </section>
+
+          {/* ===== Contato do Cliente ===== */}
+          <section className="space-y-4">
+            <h3 className="text-sm font-semibold text-primary">Contato do Cliente</h3>
+
+            <div>
+              <Label>LinkedIn URL</Label>
+              <Input
+                type="url"
+                value={form.client_linkedin_url}
+                onChange={e => setForm({ ...form, client_linkedin_url: e.target.value })}
+                placeholder="https://linkedin.com/in/..."
+              />
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <Label>Cliente PF (Pessoa)</Label>
-                <SearchableSelect
-                  options={partyOptions}
-                  value={form.party_id}
-                  onChange={v => setForm({ ...form, party_id: v })}
-                  placeholder="Selecione..."
-                  searchPlaceholder="Buscar pessoa..."
+                <Label>E-mail</Label>
+                <Input
+                  type="email"
+                  value={form.client_email}
+                  onChange={e => setForm({ ...form, client_email: e.target.value })}
+                  placeholder="cliente@email.com"
                 />
               </div>
               <div>
-                <Label>Cliente PJ (Empresa)</Label>
-                <SearchableSelect
-                  options={companyOptions}
-                  value={form.company_id}
-                  onChange={v => setForm({ ...form, company_id: v })}
-                  placeholder="Selecione..."
-                  searchPlaceholder="Buscar empresa..."
+                <Label>Telefone</Label>
+                <Input
+                  type="tel"
+                  value={form.client_phone}
+                  onChange={e => setForm({ ...form, client_phone: e.target.value })}
+                  placeholder="(11) 99999-9999"
                 />
               </div>
             </div>
