@@ -16,6 +16,7 @@ interface ContactInput {
   name: string;
   current_position: string | null;
   company_name: string | null;
+  linkedin_url?: string | null;
 }
 
 export function useValidateContacts() {
