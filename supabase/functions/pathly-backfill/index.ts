@@ -82,16 +82,25 @@ Deno.serve(async (req) => {
 
   // Modo: 'all' (default) processa projetos sem plano E re-sincroniza contatos pendentes
   // de projetos já vinculados; 'plans_only' apenas cria planos faltantes.
+  // Suporta project_id (limita a um projeto) e batch_size (limita contatos/vagas por invocação,
+  // evitando rate limit do runtime Deno).
   let mode: 'all' | 'plans_only' | 'force' = 'all';
+  let onlyProjectId: string | null = null;
+  let batchSize = 40;
   try {
     const body = await req.json().catch(() => ({}));
     if (body?.mode === 'plans_only' || body?.mode === 'force') mode = body.mode;
+    if (typeof body?.project_id === 'string') onlyProjectId = body.project_id;
+    if (typeof body?.batch_size === 'number' && body.batch_size > 0 && body.batch_size <= 200) {
+      batchSize = body.batch_size;
+    }
   } catch { /* ignore */ }
 
-  // Buscar TODOS os projetos (vamos decidir por projeto se cria plano ou só re-sync)
-  const { data: projects, error } = await sb
+  let projectsQuery = sb
     .from('outplacement_projects')
     .select('id, title, target_role, target_industry, target_location, party_id, client_email, pathly_plan_id, situacao_atual, modelo_trabalho, estado, cidade, preferencia_regiao, cidades_interesse');
+  if (onlyProjectId) projectsQuery = projectsQuery.eq('id', onlyProjectId);
+  const { data: projects, error } = await projectsQuery;
 
   if (error) return json({ error: error.message }, 500);
 
