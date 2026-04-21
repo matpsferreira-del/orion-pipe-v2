@@ -27,12 +27,18 @@ export default function Pipeline() {
   const [filterResponsavel, setFilterResponsavel] = useState<string>('all');
   const [selectedOpportunity, setSelectedOpportunity] = useState<OpportunityRow | null>(null);
   const [showNewDialog, setShowNewDialog] = useState(false);
+  const [showActivityDialog, setShowActivityDialog] = useState(false);
+  const [showJobDialog, setShowJobDialog] = useState(false);
+  const [showProjectDialog, setShowProjectDialog] = useState(false);
+  const [showRejectDialog, setShowRejectDialog] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
 
   const { data: opportunities = [], isLoading: loadingOpps } = useOpportunities();
   const { data: companies = [] } = useCompanies();
   const { data: contacts = [] } = useContacts();
   const { data: profiles = [] } = useProfiles();
   const updateStage = useUpdateOpportunityStage();
+  const updateOpportunity = useUpdateOpportunity();
 
   const filteredOpportunities = useMemo(() => {
     return opportunities.filter(opp => {
