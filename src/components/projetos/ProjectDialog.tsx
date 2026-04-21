@@ -198,12 +198,11 @@ export function ProjectDialog({ open, onOpenChange, project, preset }: Props) {
       await update.mutateAsync({ id: project.id, ...payload });
     } else {
       if (!profile?.id) return;
-      const selectedParty = form.party_id !== NONE ? parties.find(p => p.id === form.party_id) : null;
       await create.mutateAsync({
         ...payload,
         created_by: profile.id,
-        _party_name: selectedParty?.full_name,
-        _party_email: selectedParty?.email_raw ?? undefined,
+        _party_name: form.title.trim(),
+        _party_email: form.client_email.trim() || undefined,
       });
     }
     onOpenChange(false);
