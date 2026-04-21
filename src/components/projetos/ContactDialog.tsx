@@ -68,8 +68,9 @@ export function ProjectContactDialog({ open, onOpenChange, projectId, contact, o
     if (contact) {
       await update.mutateAsync({ id: contact.id, ...payload });
     } else {
-      const created: any = await create.mutateAsync({ ...payload, project_id: projectId, created_by: profile?.id || null } as any);
-      if (onCreated && created?.id) onCreated(created.id);
+      const result: any = await create.mutateAsync({ ...payload, project_id: projectId, created_by: profile?.id || null } as any);
+      const newId = result?.contact?.id ?? result?.id;
+      if (onCreated && newId) onCreated(newId);
     }
     onOpenChange(false);
   };
