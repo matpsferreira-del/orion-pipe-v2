@@ -46,17 +46,53 @@ Deno.serve(async (req) => {
       });
     }
 
-    const systemPrompt = `Você é um validador de dados de contatos profissionais brasileiros (LinkedIn).
-Sua tarefa: identificar quando o CARGO e a EMPRESA estão trocados, ou quando algum dos campos está claramente incorreto.
+    const systemPrompt = `Você é um especialista sênior em validação de dados profissionais brasileiros, com profundo conhecimento do mercado corporativo, LinkedIn e estruturas organizacionais.
 
-Regras:
-- Cargo: profissão/posição (ex: "Diretor Comercial", "Head of HR", "CEO", "Gerente de RH")
-- Empresa: nome de organização (ex: "Ambev", "Itaú", "Magazine Luiza", "Google Brasil")
-- Se nome de empresa aparecer no campo cargo OU vice-versa, sugira a troca.
-- Se o cargo contiver " na " ou " at " (ex: "Diretor na Vale"), sugira separar.
-- Ignore contatos onde os dados parecem corretos. NÃO retorne sugestões para eles.
-- Se ambos campos estiverem vazios ou nulos, ignore.
-- Seja conservador: só sugira se tiver alta confiança.`;
+## SUA MISSÃO
+Identificar e CORRIGIR inconsistências nos campos CARGO e EMPRESA de contatos profissionais. Retorne APENAS contatos que precisam de correção.
+
+## DEFINIÇÕES
+- **CARGO**: função, posição ou senioridade (ex: "Diretor Comercial", "Head of People", "CEO", "Analista Sênior", "Sócio-fundador", "Gerente de RH", "VP of Engineering", "Coordenadora de Marketing")
+- **EMPRESA**: nome de organização/marca (ex: "Ambev", "Itaú Unibanco", "Magazine Luiza", "Google Brasil", "Stone", "iFood", "Banco BTG Pactual")
+
+## TIPOS DE INCONSISTÊNCIAS A DETECTAR
+
+### 1. CAMPOS TROCADOS (mais comum)
+Empresa no campo cargo e/ou cargo no campo empresa.
+- Cargo: "Itaú" / Empresa: "Diretor de TI" → trocar
+- Cargo: "Ambev" / Empresa: vazio → mover para empresa, cargo fica vazio
+
+### 2. CAMPOS COMBINADOS em um só
+Cargo contém empresa via conectores: " na ", " at ", " - ", " @ ", " | ", " da ", " do ", " no "
+- "Diretor na Vale" → cargo: "Diretor", empresa: "Vale"
+- "CEO @ Stone" → cargo: "CEO", empresa: "Stone"
+- "Gerente Comercial - Magazine Luiza" → separar
+- "Head of HR | iFood" → separar
+ATENÇÃO: NÃO separe se a parte após o conector for parte legítima do cargo, ex: "Diretor de Vendas" (não trocar), "Gerente de Projetos" (manter), "Head of People" (manter).
+
+### 3. CARGO INVÁLIDO
+Cargo é claramente um nome próprio, sigla de empresa, URL ou texto não-profissional.
+
+### 4. EMPRESA INVÁLIDA
+Empresa contém função (ex: "Diretor"), localização ("São Paulo"), ou descrição genérica ("Empresa de tecnologia").
+
+### 5. RUÍDO/FORMATAÇÃO
+- Remover sufixos de localização do cargo: "Diretor - São Paulo" → "Diretor"
+- Remover datas: "CEO (2020-presente)" → "CEO"
+- Remover departamento duplicado da empresa quando óbvio
+
+## REGRAS CRÍTICAS
+1. **Use o LINKEDIN_URL** como contexto: o slug pode confirmar nome (ex: /in/joao-silva-itau).
+2. **NÃO sugira** se ambos os campos parecem plausíveis e bem formatados, mesmo que você não conheça a empresa.
+3. **NÃO invente** empresas ou cargos que não estão nos dados. Se não conseguir determinar com clareza, deixe o campo como string vazia "".
+4. **NÃO sugira** apenas por questão de capitalização (ex: "diretor" vs "Diretor"), a menos que haja outro problema.
+5. **Empresas brasileiras conhecidas**: Itaú, Bradesco, Santander, BTG, XP, Nubank, Stone, PagSeguro, Mercado Livre, iFood, Magazine Luiza, Americanas, Vale, Petrobras, Ambev, JBS, Natura, Boticário, Globo, Embraer, WEG, Localiza, Renner, Lojas Americanas, B3, Itaú BBA, Suzano, Klabin, Gerdau, Usiminas, CSN, Braskem, Raia Drogasil, Cosan, Eletrobras, Banco do Brasil, Caixa, etc.
+6. **Cargos comuns**: C-level (CEO, CFO, CTO, COO, CMO, CHRO, CRO), VP, Diretor(a), Head, Gerente, Coordenador(a), Supervisor(a), Analista, Especialista, Consultor(a), Sócio(a), Fundador(a), Partner, Associate, Trainee, Estagiário(a).
+7. Seja **conservador mas decisivo**: se houver evidência clara de problema, corrija; se duvidoso, ignore.
+8. Para cada sugestão, escreva uma "reason" em PT-BR curta (máx 120 caracteres) explicando o problema detectado.
+
+## FORMATO DA RESPOSTA
+Use a função report_inconsistencies. Inclua APENAS contatos com problemas reais. Se nenhum problema, retorne lista vazia.`;
 
     const userPrompt = `Analise estes contatos e retorne SOMENTE os que precisam de correção:\n\n${JSON.stringify(candidates, null, 2)}`;
 

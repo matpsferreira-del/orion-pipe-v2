@@ -1,8 +1,9 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { ArrowRight, Check, X, Sparkles, Linkedin } from 'lucide-react';
-import { useState } from 'react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { ArrowRight, Check, X, Sparkles, Linkedin, Pencil } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { ContactSuggestion } from '@/hooks/useContactValidation';
 import { useUpdateOutplacementContact } from '@/hooks/useOutplacementProjects';
 import { toast } from 'sonner';
@@ -17,13 +18,41 @@ interface Props {
 export function ContactValidationDialog({ open, onOpenChange, suggestions, isLoading }: Props) {
   const update = useUpdateOutplacementContact();
   const [resolved, setResolved] = useState<Record<string, 'accepted' | 'rejected'>>({});
+  const [editing, setEditing] = useState<Record<string, { position: string; company: string }>>({});
 
-  const handleAccept = async (s: ContactSuggestion) => {
+  // Reset state when dialog opens with a new batch
+  useEffect(() => {
+    if (open) {
+      setResolved({});
+      setEditing({});
+    }
+  }, [open, suggestions]);
+
+  const getValues = (s: ContactSuggestion) => {
+    const e = editing[s.contact_id];
+    return {
+      position: e ? e.position : (s.suggested.current_position ?? ''),
+      company: e ? e.company : (s.suggested.company_name ?? ''),
+    };
+  };
+
+  const setEdit = (id: string, patch: Partial<{ position: string; company: string }>) => {
+    setEditing(prev => {
+      const current = prev[id] ?? {
+        position: suggestions.find(s => s.contact_id === id)?.suggested.current_position ?? '',
+        company: suggestions.find(s => s.contact_id === id)?.suggested.company_name ?? '',
+      };
+      return { ...prev, [id]: { ...current, ...patch } };
+    });
+  };
+
+  const handleApply = async (s: ContactSuggestion) => {
+    const { position, company } = getValues(s);
     try {
       await update.mutateAsync({
         id: s.contact_id,
-        current_position: s.suggested.current_position,
-        company_name: s.suggested.company_name,
+        current_position: position.trim() || null,
+        company_name: company.trim() || null,
       } as any);
       setResolved(prev => ({ ...prev, [s.contact_id]: 'accepted' }));
     } catch {
@@ -63,10 +92,12 @@ export function ContactValidationDialog({ open, onOpenChange, suggestions, isLoa
             <div className="space-y-3">
               <p className="text-sm text-muted-foreground">
                 A IA encontrou <strong>{suggestions.length}</strong> contato(s) com possíveis inconsistências.
-                Revise e aprove as correções desejadas.
+                Você pode editar os valores antes de aplicar.
               </p>
               {suggestions.map(s => {
                 const status = resolved[s.contact_id];
+                const { position, company } = getValues(s);
+                const isEdited = !!editing[s.contact_id];
                 return (
                   <div
                     key={s.contact_id}
@@ -89,6 +120,11 @@ export function ContactValidationDialog({ open, onOpenChange, suggestions, isLoa
                               LinkedIn
                             </a>
                           )}
+                          {isEdited && !status && (
+                            <span className="inline-flex items-center gap-1 text-xs text-amber-600 font-medium">
+                              <Pencil className="h-3 w-3" /> Editado
+                            </span>
+                          )}
                         </div>
                         <p className="text-xs text-muted-foreground mt-0.5">{s.reason}</p>
                       </div>
@@ -100,8 +136,10 @@ export function ContactValidationDialog({ open, onOpenChange, suggestions, isLoa
                       )}
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] gap-2 md:gap-3 items-center text-xs">
+                    <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] gap-2 md:gap-3 md:items-stretch text-xs">
+                      {/* Original */}
                       <div className="space-y-1.5 bg-muted/40 p-2.5 rounded">
+                        <p className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold">Original</p>
                         <div>
                           <span className="text-muted-foreground">Cargo: </span>
                           <span className="font-medium">{s.original.current_position || '—'}</span>
@@ -111,15 +149,31 @@ export function ContactValidationDialog({ open, onOpenChange, suggestions, isLoa
                           <span className="font-medium">{s.original.company_name || '—'}</span>
                         </div>
                       </div>
-                      <ArrowRight className="h-4 w-4 text-muted-foreground mx-auto hidden md:block" />
-                      <div className="space-y-1.5 bg-primary/5 border border-primary/20 p-2.5 rounded">
-                        <div>
-                          <span className="text-muted-foreground">Cargo: </span>
-                          <span className="font-medium">{s.suggested.current_position || '—'}</span>
+                      <ArrowRight className="h-4 w-4 text-muted-foreground mx-auto self-center hidden md:block" />
+                      {/* Editable */}
+                      <div className="space-y-2 bg-primary/5 border border-primary/20 p-2.5 rounded">
+                        <p className="text-[10px] uppercase tracking-wide text-primary font-semibold">Sugerido (editável)</p>
+                        <div className="space-y-1">
+                          <Label htmlFor={`pos-${s.contact_id}`} className="text-[11px] text-muted-foreground">Cargo</Label>
+                          <Input
+                            id={`pos-${s.contact_id}`}
+                            value={position}
+                            onChange={e => setEdit(s.contact_id, { position: e.target.value })}
+                            disabled={!!status}
+                            className="h-8 text-xs"
+                            placeholder="—"
+                          />
                         </div>
-                        <div>
-                          <span className="text-muted-foreground">Empresa: </span>
-                          <span className="font-medium">{s.suggested.company_name || '—'}</span>
+                        <div className="space-y-1">
+                          <Label htmlFor={`comp-${s.contact_id}`} className="text-[11px] text-muted-foreground">Empresa</Label>
+                          <Input
+                            id={`comp-${s.contact_id}`}
+                            value={company}
+                            onChange={e => setEdit(s.contact_id, { company: e.target.value })}
+                            disabled={!!status}
+                            className="h-8 text-xs"
+                            placeholder="—"
+                          />
                         </div>
                       </div>
                     </div>
@@ -129,7 +183,7 @@ export function ContactValidationDialog({ open, onOpenChange, suggestions, isLoa
                         <Button size="sm" variant="ghost" onClick={() => handleReject(s)} className="gap-1.5">
                           <X className="h-3.5 w-3.5" /> Ignorar
                         </Button>
-                        <Button size="sm" onClick={() => handleAccept(s)} disabled={update.isPending} className="gap-1.5">
+                        <Button size="sm" onClick={() => handleApply(s)} disabled={update.isPending} className="gap-1.5">
                           <Check className="h-3.5 w-3.5" /> Aplicar
                         </Button>
                       </div>
