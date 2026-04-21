@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Search, Loader2, Users, MapPin, Briefcase, Target, MoreVertical, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Search, Loader2, Users, MapPin, Briefcase, Target, MoreVertical, Pencil, Trash2, Sparkles } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import {
   useOutplacementProjects, useDeleteOutplacementProject,
@@ -16,6 +16,9 @@ import { useParties } from '@/hooks/useParties';
 import { useCompanies } from '@/hooks/useCompanies';
 import { ProjectDialog } from '@/components/projetos/ProjectDialog';
 import { ContactList } from '@/components/projetos/ContactList';
+import { ContactValidationDialog } from '@/components/projetos/ContactValidationDialog';
+import { useValidateContacts, ContactSuggestion } from '@/hooks/useContactValidation';
+import { toast } from 'sonner';
 
 const ALL = 'all';
 
