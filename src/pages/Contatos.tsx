@@ -33,13 +33,10 @@ export default function Contatos() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [contactToDelete, setContactToDelete] = useState<ContactRow | null>(null);
   const [page, setPage] = useState(0);
-  const [showValidation, setShowValidation] = useState(false);
-  const [suggestions, setSuggestions] = useState<(ContactSuggestion & { company_name_ref?: string | null })[]>([]);
 
   const { data: contacts = [], isLoading } = useContacts();
   const { data: companies = [] } = useCompanies();
   const deleteContact = useDeleteContact();
-  const validate = useValidateContacts();
 
   const companyMap = useMemo(() => {
     const map = new Map<string, string>();
