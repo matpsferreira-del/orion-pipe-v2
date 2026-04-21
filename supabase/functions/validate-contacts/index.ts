@@ -12,11 +12,13 @@ interface ContactInput {
   name: string;
   current_position: string | null;
   company_name: string | null;
+  linkedin_url?: string | null;
 }
 
 interface Suggestion {
   contact_id: string;
   name: string;
+  linkedin_url: string | null;
   original: { current_position: string | null; company_name: string | null };
   suggested: { current_position: string | null; company_name: string | null };
   reason: string;
