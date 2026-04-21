@@ -372,35 +372,25 @@ export function ProjectDialog({ open, onOpenChange, project, preset }: Props) {
             <div className="space-y-2">
               <Label>Cidades de Interesse</Label>
               <div className="flex gap-2">
-                <Select
-                  value={novoEstado || NONE}
-                  onValueChange={v => { setNovoEstado(v === NONE ? '' : v); setNovaCidade(''); }}
-                >
-                  <SelectTrigger className="w-[140px]">
-                    <SelectValue placeholder="Estado" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-[300px]">
-                    <SelectItem value={NONE}>Estado</SelectItem>
-                    {BRAZIL_STATES.map(s => (
-                      <SelectItem key={s.uf} value={s.uf}>{s.uf}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select
-                  value={novaCidade || NONE}
-                  onValueChange={v => setNovaCidade(v === NONE ? '' : v)}
-                  disabled={!novoEstado}
-                >
-                  <SelectTrigger className="flex-1">
-                    <SelectValue placeholder="Cidade" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-[300px]">
-                    <SelectItem value={NONE}>Cidade</SelectItem>
-                    {cidadesAdicionais.map(c => (
-                      <SelectItem key={c} value={c}>{c}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="w-[140px]">
+                  <SearchableSelect
+                    options={stateUfOptions}
+                    value={novoEstado || NONE}
+                    onChange={v => { setNovoEstado(v === NONE ? '' : v); setNovaCidade(''); }}
+                    placeholder="Estado"
+                    searchPlaceholder="UF"
+                  />
+                </div>
+                <div className="flex-1">
+                  <SearchableSelect
+                    options={cityAdicionalOptions}
+                    value={novaCidade || NONE}
+                    onChange={v => setNovaCidade(v === NONE ? '' : v)}
+                    disabled={!novoEstado}
+                    placeholder="Cidade"
+                    searchPlaceholder="Buscar cidade..."
+                  />
+                </div>
                 <Button
                   type="button"
                   size="icon"
