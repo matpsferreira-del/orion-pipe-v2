@@ -124,9 +124,22 @@ export default function ProjetoDetail() {
               {project.target_location && <span>📍 {project.target_location}</span>}
             </div>
           </div>
-          <Button variant="outline" size="sm" onClick={() => setShowProjectDialog(true)} className="gap-1.5">
-            <Pencil className="h-4 w-4" /> Editar
-          </Button>
+          <div className="flex gap-2 shrink-0">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                exportProjetoMapeamento(project, contacts, marketJobs);
+                toast.success('Exportação iniciada');
+              }}
+              className="gap-1.5"
+            >
+              <Download className="h-4 w-4" /> Exportar
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setShowProjectDialog(true)} className="gap-1.5">
+              <Pencil className="h-4 w-4" /> Editar
+            </Button>
+          </div>
         </div>
 
         {/* Tabs */}
