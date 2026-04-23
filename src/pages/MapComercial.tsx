@@ -535,6 +535,9 @@ export default function MapComercial() {
                         })()}
                       </TableCell>
                       <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
+                        {member.party?.current_title || '—'}
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
                         {member.party?.current_company || '—'}
                       </TableCell>
                       <TableCell className="hidden lg:table-cell">
