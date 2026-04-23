@@ -64,7 +64,7 @@ export default function ChromeExtension() {
       const { data, error } = await supabase
         .from('outplacement_projects')
         .select('id, title, status')
-        .in('status', ['planning', 'active'])
+        .in('status', ['ativo', 'planejamento', 'planning', 'active'])
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data;
