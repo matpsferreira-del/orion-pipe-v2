@@ -13,9 +13,11 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Plus, Search, Users, Trash2, Loader2, ExternalLink, FolderOpen, ChevronRight,
-  Building, BadgeCheck, ArrowLeft, UserPlus, MoreHorizontal, Upload, Download, Pencil,
+  Building, BadgeCheck, ArrowLeft, UserPlus, MoreHorizontal, Upload, Download, Pencil, Mail,
 } from 'lucide-react';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
@@ -25,6 +27,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { ImportLeadsDialog } from '@/components/commercial/ImportLeadsDialog';
+import { EmailCampaignDialog } from '@/components/commercial/EmailCampaignDialog';
 
 interface StrategyGroup {
   id: string;
@@ -70,6 +73,10 @@ export default function MapComercial() {
   const [editMemberData, setEditMemberData] = useState({
     full_name: '', current_title: '', current_company: '', linkedin_url: '', email_raw: '', phone_raw: '', city: '', state: '',
   });
+  const [companyFilter, setCompanyFilter] = useState<string>('all');
+  const [onlyWithEmail, setOnlyWithEmail] = useState(false);
+  const [selectedMemberIds, setSelectedMemberIds] = useState<Set<string>>(new Set());
+  const [showEmailCampaign, setShowEmailCampaign] = useState(false);
 
   // Fetch groups
   const { data: groups = [], isLoading: loadingGroups } = useQuery({
@@ -249,14 +256,57 @@ export default function MapComercial() {
   };
 
   const filteredMembers = members.filter(m => {
-    if (!search) return true;
-    const q = search.toLowerCase();
-    return (
-      m.party?.full_name?.toLowerCase().includes(q) ||
-      m.party?.current_company?.toLowerCase().includes(q) ||
-      m.party?.current_title?.toLowerCase().includes(q)
-    );
+    if (search) {
+      const q = search.toLowerCase();
+      const match =
+        m.party?.full_name?.toLowerCase().includes(q) ||
+        m.party?.current_company?.toLowerCase().includes(q) ||
+        m.party?.current_title?.toLowerCase().includes(q);
+      if (!match) return false;
+    }
+    if (companyFilter !== 'all' && (m.party?.current_company || '__none__') !== companyFilter) return false;
+    if (onlyWithEmail && !(m.party?.email_raw && m.party.email_raw.trim())) return false;
+    return true;
   });
+
+  const uniqueCompanies = Array.from(
+    new Set(members.map(m => m.party?.current_company).filter((c): c is string => !!c && c.trim().length > 0))
+  ).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+
+  const visibleIds = filteredMembers.map(m => m.id);
+  const allVisibleSelected = visibleIds.length > 0 && visibleIds.every(id => selectedMemberIds.has(id));
+  const someVisibleSelected = visibleIds.some(id => selectedMemberIds.has(id));
+
+  const toggleSelectAll = () => {
+    setSelectedMemberIds(prev => {
+      const next = new Set(prev);
+      if (allVisibleSelected) {
+        visibleIds.forEach(id => next.delete(id));
+      } else {
+        visibleIds.forEach(id => next.add(id));
+      }
+      return next;
+    });
+  };
+
+  const toggleSelectOne = (id: string) => {
+    setSelectedMemberIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const selectedContactsForCampaign = members
+    .filter(m => selectedMemberIds.has(m.id) && m.party)
+    .map(m => ({
+      id: m.party!.id,
+      full_name: m.party!.full_name,
+      current_title: m.party!.current_title,
+      current_company: m.party!.current_company,
+      email_raw: m.party!.email_raw,
+    }));
 
   const existingPartyIds = new Set(members.map(m => m.party_id));
 
@@ -286,6 +336,12 @@ export default function MapComercial() {
               )}
             </div>
             <div className="flex items-center gap-2">
+              {selectedMemberIds.size > 0 && (
+                <Button size="sm" onClick={() => setShowEmailCampaign(true)} className="gap-1.5" variant="default">
+                  <Mail className="h-4 w-4" />
+                  Enviar E-mail ({selectedMemberIds.size})
+                </Button>
+              )}
               <Button size="sm" variant="ghost" onClick={handleDownloadTemplate} className="gap-1.5 text-muted-foreground">
                 <Download className="h-4 w-4" />
                 Baixar Modelo
@@ -301,11 +357,37 @@ export default function MapComercial() {
             </div>
           </div>
 
-          {/* Search */}
-          <div className="relative max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input className="pl-9 h-9" placeholder="Buscar perfis..." value={search} onChange={e => setSearch(e.target.value)} />
+          {/* Filters bar */}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:flex-wrap">
+            <div className="relative flex-1 min-w-[200px] max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input className="pl-9 h-9" placeholder="Buscar perfis..." value={search} onChange={e => setSearch(e.target.value)} />
+            </div>
+            <Select value={companyFilter} onValueChange={setCompanyFilter}>
+              <SelectTrigger className="h-9 w-full sm:w-[220px]">
+                <SelectValue placeholder="Filtrar por empresa" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as empresas</SelectItem>
+                {uniqueCompanies.map(c => (
+                  <SelectItem key={c} value={c}>{c}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer select-none">
+              <Checkbox
+                checked={onlyWithEmail}
+                onCheckedChange={(v) => setOnlyWithEmail(v === true)}
+              />
+              Somente com e-mail
+            </label>
+            {selectedMemberIds.size > 0 && (
+              <Badge variant="secondary" className="ml-auto">
+                {selectedMemberIds.size} selecionado{selectedMemberIds.size !== 1 ? 's' : ''}
+              </Badge>
+            )}
           </div>
+
 
           <p className="text-sm text-muted-foreground">
             {filteredMembers.length} perfil{filteredMembers.length !== 1 ? 's' : ''} nesta estratégia
@@ -324,6 +406,13 @@ export default function MapComercial() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-[40px]">
+                      <Checkbox
+                        checked={allVisibleSelected ? true : someVisibleSelected ? 'indeterminate' : false}
+                        onCheckedChange={toggleSelectAll}
+                        aria-label="Selecionar todos visíveis"
+                      />
+                    </TableHead>
                     <TableHead>Nome Completo</TableHead>
                     <TableHead className="hidden md:table-cell">Cargo</TableHead>
                     <TableHead className="hidden md:table-cell">Nome da Empresa</TableHead>
@@ -337,7 +426,14 @@ export default function MapComercial() {
                 </TableHeader>
                 <TableBody>
                   {filteredMembers.map(member => (
-                    <TableRow key={member.id}>
+                    <TableRow key={member.id} data-state={selectedMemberIds.has(member.id) ? 'selected' : undefined}>
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedMemberIds.has(member.id)}
+                          onCheckedChange={() => toggleSelectOne(member.id)}
+                          aria-label={`Selecionar ${member.party?.full_name || ''}`}
+                        />
+                      </TableCell>
                       <TableCell>
                         <span className="font-medium whitespace-nowrap">{member.party?.full_name || '—'}</span>
                       </TableCell>
@@ -449,6 +545,12 @@ export default function MapComercial() {
             open={showImportDialog}
             onOpenChange={setShowImportDialog}
             groupId={selectedGroupId!}
+          />
+
+          <EmailCampaignDialog
+            open={showEmailCampaign}
+            onOpenChange={setShowEmailCampaign}
+            contacts={selectedContactsForCampaign}
           />
 
           {/* Edit Member Dialog */}
