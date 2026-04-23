@@ -510,8 +510,29 @@ export default function MapComercial() {
                       <TableCell>
                         <span className="font-medium whitespace-nowrap">{member.party?.full_name || '—'}</span>
                       </TableCell>
-                      <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
-                        {member.party?.current_title || '—'}
+                      <TableCell>
+                        {(() => {
+                          const last = lastActivityByMember.get(member.id);
+                          if (!last) {
+                            return (
+                              <button
+                                onClick={() => setHistoryMember(member)}
+                                className="text-xs text-muted-foreground hover:text-primary underline-offset-2 hover:underline"
+                              >
+                                Sem atividade
+                              </button>
+                            );
+                          }
+                          return (
+                            <button
+                              onClick={() => setHistoryMember(member)}
+                              className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium hover:opacity-80 transition ${LEAD_STATUS_COLORS[last.lead_status]}`}
+                              title={`Última: ${ACTIVITY_TYPE_LABELS[last.activity_type]}`}
+                            >
+                              {LEAD_STATUS_LABELS[last.lead_status]}
+                            </button>
+                          );
+                        })()}
                       </TableCell>
                       <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
                         {member.party?.current_company || '—'}
