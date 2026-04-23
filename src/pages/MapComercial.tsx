@@ -423,6 +423,29 @@ export default function MapComercial() {
                 ))}
               </SelectContent>
             </Select>
+            <Select value={activityStatusFilter} onValueChange={setActivityStatusFilter}>
+              <SelectTrigger className="h-9 w-full sm:w-[180px]">
+                <SelectValue placeholder="Status do lead" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os status</SelectItem>
+                <SelectItem value="sem_atividade">Sem atividade</SelectItem>
+                {Object.entries(LEAD_STATUS_LABELS).map(([v, l]) => (
+                  <SelectItem key={v} value={v}>{l}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={activityTypeFilter} onValueChange={setActivityTypeFilter}>
+              <SelectTrigger className="h-9 w-full sm:w-[180px]">
+                <SelectValue placeholder="Tipo de atividade" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os tipos</SelectItem>
+                {Object.entries(ACTIVITY_TYPE_LABELS).map(([v, l]) => (
+                  <SelectItem key={v} value={v}>{l}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer select-none">
               <Checkbox
                 checked={onlyWithEmail}
