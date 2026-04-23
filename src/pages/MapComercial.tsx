@@ -486,6 +486,7 @@ export default function MapComercial() {
                       />
                     </TableHead>
                     <TableHead>Nome Completo</TableHead>
+                    <TableHead>Status</TableHead>
                     <TableHead className="hidden md:table-cell">Cargo</TableHead>
                     <TableHead className="hidden md:table-cell">Nome da Empresa</TableHead>
                     <TableHead className="hidden lg:table-cell">LinkedIn</TableHead>
@@ -493,7 +494,7 @@ export default function MapComercial() {
                     <TableHead className="hidden xl:table-cell">Contato Empresa</TableHead>
                     <TableHead className="hidden xl:table-cell">Cidade</TableHead>
                     <TableHead className="hidden xl:table-cell">Estado</TableHead>
-                    <TableHead className="w-[60px]" />
+                    <TableHead className="w-[90px]" />
                   </TableRow>
                 </TableHeader>
                 <TableBody>
