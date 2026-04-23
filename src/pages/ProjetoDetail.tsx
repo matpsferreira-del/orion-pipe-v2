@@ -4,9 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, Plus, Loader2, Search, Pencil, Sparkles } from 'lucide-react';
+import { ArrowLeft, Plus, Loader2, Search, Pencil, Sparkles, Download } from 'lucide-react';
 import {
-  useOutplacementProject, useOutplacementContacts, OutplacementContact,
+  useOutplacementProject, useOutplacementContacts, useOutplacementMarketJobs, OutplacementContact,
 } from '@/hooks/useOutplacementProjects';
 import { useParties } from '@/hooks/useParties';
 import { useCompanies } from '@/hooks/useCompanies';
@@ -18,6 +18,7 @@ import { MarketJobsTab } from '@/components/projetos/MarketJobsTab';
 import { ActivitiesTab } from '@/components/projetos/ActivitiesTab';
 import { ContactValidationDialog } from '@/components/projetos/ContactValidationDialog';
 import { useValidateContacts, ContactSuggestion } from '@/hooks/useContactValidation';
+import { exportProjetoMapeamento } from '@/lib/exportProjeto';
 import { toast } from 'sonner';
 
 export default function ProjetoDetail() {
