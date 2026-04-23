@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent } from '@/components/ui/card';
-import { CheckCircle, Loader2, Briefcase, User, Link as LinkIcon, Building, BadgeCheck, Crosshair, ArrowRight, Target } from 'lucide-react';
+import { CheckCircle, Loader2, Briefcase, User, Link as LinkIcon, Building, BadgeCheck, Crosshair, ArrowRight, Target, Compass } from 'lucide-react';
 
 export default function ChromeExtension() {
   const [searchParams] = useSearchParams();
