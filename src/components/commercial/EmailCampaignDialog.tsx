@@ -48,6 +48,7 @@ function applyVars(template: string, c: CampaignContact): string {
 }
 
 export function EmailCampaignDialog({ open, onOpenChange, contacts, groupId }: Props) {
+  const queryClient = useQueryClient();
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
   const [progress, setProgress] = useState<{ current: number; total: number } | null>(null);
