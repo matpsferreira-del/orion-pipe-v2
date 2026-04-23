@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent } from '@/components/ui/card';
-import { CheckCircle, Loader2, Briefcase, User, Link as LinkIcon, Building, BadgeCheck, Crosshair, ArrowRight, Target } from 'lucide-react';
+import { CheckCircle, Loader2, Briefcase, User, Link as LinkIcon, Building, BadgeCheck, Crosshair, ArrowRight, Target, Compass } from 'lucide-react';
 
 export default function ChromeExtension() {
   const [searchParams] = useSearchParams();
@@ -17,6 +17,7 @@ export default function ChromeExtension() {
   const [empresaAtual, setEmpresaAtual] = useState('');
   const [selectedJobId, setSelectedJobId] = useState('');
   const [selectedGroupId, setSelectedGroupId] = useState('');
+  const [selectedProjectId, setSelectedProjectId] = useState('');
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
@@ -55,10 +56,23 @@ export default function ChromeExtension() {
     },
   });
 
+  const { data: projects = [], isLoading: loadingProjects } = useQuery({
+    queryKey: ['chrome-ext-outplacement-projects'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('outplacement_projects')
+        .select('id, title, status')
+        .in('status', ['planning', 'active'])
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const saveMutation = useMutation({
     mutationFn: async () => {
       if (!nome.trim()) throw new Error('Preencha o nome');
-      if (!selectedJobId && !selectedGroupId) throw new Error('Selecione uma vaga ou estratégia');
+      if (!selectedJobId && !selectedGroupId && !selectedProjectId) throw new Error('Selecione uma vaga, estratégia ou projeto');
 
       const { data: partyId, error: partyError } = await supabase.rpc('resolve_party', {
         p_full_name: nome.trim(),
@@ -107,6 +121,51 @@ export default function ChromeExtension() {
           .insert({ group_id: selectedGroupId, party_id: partyId });
         if (memberError && memberError.code !== '23505') throw memberError;
       }
+
+      // Save to outplacement project if selected
+      if (selectedProjectId) {
+        // Dedup by linkedin within project
+        const normalizedNew = linkedinUrl.trim().toLowerCase().replace(/\/+$/, '').replace(/^https?:\/\/(www\.)?/, '') || null;
+        let existingId: string | null = null;
+        if (normalizedNew) {
+          const { data: existing } = await supabase
+            .from('outplacement_contacts')
+            .select('id, linkedin_url')
+            .eq('project_id', selectedProjectId)
+            .not('linkedin_url', 'is', null);
+          const match = (existing || []).find((c: { linkedin_url: string | null }) => {
+            const n = (c.linkedin_url || '').trim().toLowerCase().replace(/\/+$/, '').replace(/^https?:\/\/(www\.)?/, '');
+            return n === normalizedNew;
+          });
+          if (match) existingId = match.id;
+        }
+
+        if (existingId) {
+          const updates: Record<string, string> = {};
+          if (nome.trim()) updates.name = nome.trim();
+          if (cargo.trim()) updates.current_position = cargo.trim();
+          if (empresaAtual.trim()) updates.company_name = empresaAtual.trim();
+          if (linkedinUrl.trim()) updates.linkedin_url = linkedinUrl.trim();
+          const { error: updErr } = await supabase
+            .from('outplacement_contacts')
+            .update(updates)
+            .eq('id', existingId);
+          if (updErr) throw updErr;
+        } else {
+          const { error: insErr } = await supabase.from('outplacement_contacts').insert({
+            project_id: selectedProjectId,
+            party_id: partyId,
+            name: nome.trim(),
+            current_position: cargo.trim() || null,
+            company_name: empresaAtual.trim() || null,
+            linkedin_url: linkedinUrl.trim() || null,
+            contact_type: 'decisor',
+            tier: 'B',
+            kanban_stage: 'identificado',
+          });
+          if (insErr) throw insErr;
+        }
+      }
     },
     onSuccess: () => setSaved(true),
   });
@@ -130,6 +189,7 @@ export default function ChromeExtension() {
                 setSaved(false);
                 setSelectedJobId('');
                 setSelectedGroupId('');
+                setSelectedProjectId('');
               }}
             >
               <ArrowRight className="h-4 w-4 mr-2" />
@@ -141,7 +201,7 @@ export default function ChromeExtension() {
     );
   }
 
-  const isValid = nome.trim() && (selectedJobId || selectedGroupId);
+  const isValid = nome.trim() && (selectedJobId || selectedGroupId || selectedProjectId);
 
   return (
     <div className="min-h-screen bg-muted/30 flex items-start justify-center p-4 md:p-8">
@@ -254,6 +314,32 @@ export default function ChromeExtension() {
                         ))}
                         {groups.length === 0 && (
                           <div className="px-2 py-3 text-xs text-muted-foreground text-center">Nenhuma estratégia criada</div>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
+
+                {/* Destination: Outplacement Project */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium flex items-center gap-1.5">
+                    <Compass className="h-3.5 w-3.5 text-primary/60" />
+                    Projeto de Outplacement
+                  </Label>
+                  {loadingProjects ? (
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground py-3">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
+                      Carregando projetos...
+                    </div>
+                  ) : (
+                    <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
+                      <SelectTrigger className="h-10 text-sm"><SelectValue placeholder="Selecione um projeto (opcional)" /></SelectTrigger>
+                      <SelectContent>
+                        {projects.map((p) => (
+                          <SelectItem key={p.id} value={p.id}>{p.title}</SelectItem>
+                        ))}
+                        {projects.length === 0 && (
+                          <div className="px-2 py-3 text-xs text-muted-foreground text-center">Nenhum projeto ativo</div>
                         )}
                       </SelectContent>
                     </Select>
