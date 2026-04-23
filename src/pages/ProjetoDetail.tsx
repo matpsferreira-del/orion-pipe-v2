@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, Plus, Loader2, Search, Pencil, Sparkles, Download, Crosshair } from 'lucide-react';
+import { ArrowLeft, Plus, Loader2, Search, Pencil, Sparkles, Download, Crosshair, RefreshCw } from 'lucide-react';
 import {
   useOutplacementProject, useOutplacementContacts, useOutplacementMarketJobs, OutplacementContact,
 } from '@/hooks/useOutplacementProjects';
@@ -19,6 +19,7 @@ import { ActivitiesTab } from '@/components/projetos/ActivitiesTab';
 import { ContactValidationDialog } from '@/components/projetos/ContactValidationDialog';
 import { useValidateContacts, ContactSuggestion } from '@/hooks/useContactValidation';
 import { exportProjetoMapeamento } from '@/lib/exportProjeto';
+import { mirrorProjectToPathly } from '@/lib/pathlySync';
 import { toast } from 'sonner';
 
 export default function ProjetoDetail() {
@@ -36,7 +37,35 @@ export default function ProjetoDetail() {
   const [search, setSearch] = useState('');
   const [showValidation, setShowValidation] = useState(false);
   const [suggestions, setSuggestions] = useState<ContactSuggestion[]>([]);
+  const [isMirroring, setIsMirroring] = useState(false);
   const validate = useValidateContacts();
+
+  const handleMirrorPathly = async () => {
+    if (!project) return;
+    setIsMirroring(true);
+    const toastId = toast.loading('Espelhando projeto no Pathly...');
+    try {
+      const result = await mirrorProjectToPathly(project.id, {
+        onProgress: (p) => {
+          const phaseLabel: Record<string, string> = {
+            link: 'Vinculando plano',
+            companies: 'Empresas',
+            contacts: 'Contatos',
+            jobs: 'Vagas',
+          };
+          toast.loading(`${phaseLabel[p.phase] ?? p.phase}: ${p.processed}/${p.total}`, { id: toastId });
+        },
+      });
+      toast.success(
+        `Espelhado: ${result.contacts.ok}/${result.contacts.total} contatos, ${result.jobs.ok}/${result.jobs.total} vagas`,
+        { id: toastId },
+      );
+    } catch (e) {
+      toast.error(`Falha ao espelhar: ${(e as Error).message}`, { id: toastId });
+    } finally {
+      setIsMirroring(false);
+    }
+  };
 
   const handleValidateAll = async () => {
     if (contacts.length === 0) {
@@ -143,6 +172,17 @@ export default function ProjetoDetail() {
               className="gap-1.5"
             >
               <Crosshair className="h-4 w-4" /> Mapear Perfil
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleMirrorPathly}
+              disabled={isMirroring}
+              className="gap-1.5"
+              title="Sincroniza projeto, contatos e vagas com o Pathly"
+            >
+              {isMirroring ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+              Espelhar Pathly
             </Button>
             <Button variant="outline" size="sm" onClick={() => setShowProjectDialog(true)} className="gap-1.5">
               <Pencil className="h-4 w-4" /> Editar
