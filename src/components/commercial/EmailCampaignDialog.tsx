@@ -46,7 +46,7 @@ function applyVars(template: string, c: CampaignContact): string {
     .split('{cargo}').join(c.current_title || '');
 }
 
-export function EmailCampaignDialog({ open, onOpenChange, contacts }: Props) {
+export function EmailCampaignDialog({ open, onOpenChange, contacts, groupId }: Props) {
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
   const [progress, setProgress] = useState<{ current: number; total: number } | null>(null);
