@@ -253,20 +253,61 @@ export async function ensureProjectPathlyLink(project: {
 }) {
   const syncedAt = new Date().toISOString();
 
+  // Mapeamentos de vocabulário Orion -> Pathly (mesmos usados em createPathlyPlan)
+  const modeloMap: Record<string, string> = {
+    presencial: 'presencial',
+    hibrido: 'hibrido',
+    remoto: 'remoto',
+  };
+  const regiaoMap: Record<string, string> = {
+    mesma_regiao: 'same_region',
+    outras_regioes: 'open_to_change',
+    indiferente: 'open_to_change',
+  };
+  const rawState = (project.estado ?? '').trim();
+  const state = rawState.length === 2
+    ? rawState.toUpperCase()
+    : (rawState.slice(0, 2).toUpperCase() || null);
+
   if (project.pathly_plan_id) {
-    const result = await callPathlyWithRetry('activate_plan', {
+    // Plano já existe: atualiza dados cadastrais + ativa vínculo
+    const updateResult = await callPathlyWithRetry('update_plan', {
+      plan_id: project.pathly_plan_id,
+      mentee_name: project.title,
+      mentee_email: project.client_email ?? null,
+      current_position: project.target_role || 'A definir',
+      current_area: project.target_industry || 'A definir',
+      target_role: project.target_role ?? null,
+      work_model: project.modelo_trabalho ? modeloMap[project.modelo_trabalho] ?? project.modelo_trabalho : null,
+      state,
+      city: project.cidade ?? null,
+      region_preference: project.preferencia_regiao
+        ? regiaoMap[project.preferencia_regiao] ?? project.preferencia_regiao
+        : null,
+      cities_of_interest: project.cidades_interesse ?? [],
+      orionpipe_client_id: project.id,
+    });
+
+    const activateResult = await callPathlyWithRetry('activate_plan', {
       plan_id: project.pathly_plan_id,
       orionpipe_client_id: project.id,
     });
 
-    if (result.ok) {
+    const ok = updateResult.ok && activateResult.ok;
+    if (ok) {
       await supabase
         .from('outplacement_projects')
         .update({ pathly_synced_at: syncedAt })
         .eq('id', project.id);
     }
 
-    return { ...result, planId: project.pathly_plan_id, created: false };
+    return {
+      ok,
+      error: !ok ? (updateResult.error || activateResult.error) : null,
+      data: updateResult.data ?? activateResult.data,
+      planId: project.pathly_plan_id,
+      created: false,
+    };
   }
 
   const result = await createPathlyPlan({
