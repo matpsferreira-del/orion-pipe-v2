@@ -215,6 +215,15 @@ export function useUpdateOutplacementProject() {
 
       try {
         if (data) {
+          // Espelha projeto + contatos + vagas em background (best-effort).
+          // Necessário porque editar o projeto pode mexer em campos compartilhados
+          // (estado/cidade/região) e triggers do banco atualizam contatos sem
+          // passar pelos hooks individuais — sem isso o sync ficaria desatualizado.
+          mirrorProjectToPathly(id).catch((e) =>
+            console.warn('Pathly mirror after project update failed (non-blocking):', e)
+          );
+          // Garante o vínculo (cria plan se ainda não existir) de forma síncrona,
+          // para que o pathly_plan_id fique disponível imediatamente.
           await ensureProjectPathlyLink(data as OutplacementProject);
         }
       } catch (e) {
