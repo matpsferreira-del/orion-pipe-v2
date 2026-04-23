@@ -270,7 +270,9 @@ export async function ensureProjectPathlyLink(project: {
     : (rawState.slice(0, 2).toUpperCase() || null);
 
   if (project.pathly_plan_id) {
-    // Plano já existe: atualiza dados cadastrais + ativa vínculo
+    // Plano já existe: tenta atualizar dados cadastrais (se a bridge suportar)
+    // + ativa vínculo. update_plan é opcional — se a bridge no Pathly ainda
+    // não conhecer essa action (Unknown action), seguimos só com activate_plan.
     const updateResult = await callPathlyWithRetry('update_plan', {
       plan_id: project.pathly_plan_id,
       mentee_name: project.title,
@@ -288,12 +290,22 @@ export async function ensureProjectPathlyLink(project: {
       orionpipe_client_id: project.id,
     });
 
+    const updateUnsupported = !updateResult.ok
+      && /unknown action|update_plan/i.test(updateResult.error ?? '');
+    if (!updateResult.ok && updateUnsupported) {
+      console.warn(
+        '[pathly-sync] update_plan ainda não está disponível na bridge do Pathly. '
+        + 'Atualize supabase/functions/orion-bridge/index.ts no Pathly para sincronizar dados cadastrais.',
+      );
+    }
+
     const activateResult = await callPathlyWithRetry('activate_plan', {
       plan_id: project.pathly_plan_id,
       orionpipe_client_id: project.id,
     });
 
-    const ok = updateResult.ok && activateResult.ok;
+    // Se update_plan não existe na bridge, não tratamos como falha de espelhamento.
+    const ok = activateResult.ok && (updateResult.ok || updateUnsupported);
     if (ok) {
       await supabase
         .from('outplacement_projects')
@@ -303,7 +315,7 @@ export async function ensureProjectPathlyLink(project: {
 
     return {
       ok,
-      error: !ok ? (updateResult.error || activateResult.error) : null,
+      error: !ok ? (activateResult.error || updateResult.error) : null,
       data: updateResult.data ?? activateResult.data,
       planId: project.pathly_plan_id,
       created: false,
