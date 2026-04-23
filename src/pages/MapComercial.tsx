@@ -336,6 +336,12 @@ export default function MapComercial() {
               )}
             </div>
             <div className="flex items-center gap-2">
+              {selectedMemberIds.size > 0 && (
+                <Button size="sm" onClick={() => setShowEmailCampaign(true)} className="gap-1.5" variant="default">
+                  <Mail className="h-4 w-4" />
+                  Enviar E-mail ({selectedMemberIds.size})
+                </Button>
+              )}
               <Button size="sm" variant="ghost" onClick={handleDownloadTemplate} className="gap-1.5 text-muted-foreground">
                 <Download className="h-4 w-4" />
                 Baixar Modelo
@@ -349,6 +355,37 @@ export default function MapComercial() {
                 Adicionar Perfil
               </Button>
             </div>
+          </div>
+
+          {/* Filters bar */}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:flex-wrap">
+            <div className="relative flex-1 min-w-[200px] max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input className="pl-9 h-9" placeholder="Buscar perfis..." value={search} onChange={e => setSearch(e.target.value)} />
+            </div>
+            <Select value={companyFilter} onValueChange={setCompanyFilter}>
+              <SelectTrigger className="h-9 w-full sm:w-[220px]">
+                <SelectValue placeholder="Filtrar por empresa" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as empresas</SelectItem>
+                {uniqueCompanies.map(c => (
+                  <SelectItem key={c} value={c}>{c}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer select-none">
+              <Checkbox
+                checked={onlyWithEmail}
+                onCheckedChange={(v) => setOnlyWithEmail(v === true)}
+              />
+              Somente com e-mail
+            </label>
+            {selectedMemberIds.size > 0 && (
+              <Badge variant="secondary" className="ml-auto">
+                {selectedMemberIds.size} selecionado{selectedMemberIds.size !== 1 ? 's' : ''}
+              </Badge>
+            )}
           </div>
 
           {/* Search */}
