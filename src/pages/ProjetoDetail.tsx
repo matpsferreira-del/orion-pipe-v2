@@ -26,6 +26,7 @@ export default function ProjetoDetail() {
   const navigate = useNavigate();
   const { data: project, isLoading } = useOutplacementProject(id);
   const { data: contacts = [] } = useOutplacementContacts(id);
+  const { data: marketJobs = [] } = useOutplacementMarketJobs(id);
   const { data: parties = [] } = useParties();
   const { data: companies = [] } = useCompanies();
 
