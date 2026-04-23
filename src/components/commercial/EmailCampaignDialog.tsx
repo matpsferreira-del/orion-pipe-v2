@@ -35,10 +35,10 @@ const VARIABLES = [
 function applyVars(template: string, c: CampaignContact): string {
   const firstName = (c.full_name || '').trim().split(/\s+/)[0] || '';
   return template
-    .replaceAll('{first_name}', firstName)
-    .replaceAll('{full_name}', c.full_name || '')
-    .replaceAll('{company}', c.current_company || '')
-    .replaceAll('{cargo}', c.current_title || '');
+    .split('{first_name}').join(firstName)
+    .split('{full_name}').join(c.full_name || '')
+    .split('{company}').join(c.current_company || '')
+    .split('{cargo}').join(c.current_title || '');
 }
 
 export function EmailCampaignDialog({ open, onOpenChange, contacts }: Props) {
