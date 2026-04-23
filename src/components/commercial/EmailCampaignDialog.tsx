@@ -123,6 +123,29 @@ export function EmailCampaignDialog({ open, onOpenChange, contacts, groupId }: P
           throw new Error(data.error || 'Erro');
         }
         success++;
+
+        // Auto-log activity if a strategy group is in scope and we know the member id
+        if (groupId && c.member_id) {
+          try {
+            const { data: userRes } = await supabase.auth.getUser();
+            const profileId = userRes.user
+              ? (await supabase.from('profiles').select('id').eq('user_id', userRes.user.id).maybeSingle()).data?.id
+              : null;
+            await supabase.from('commercial_strategy_activities' as any).insert({
+              group_id: groupId,
+              member_id: c.member_id,
+              party_id: c.id,
+              activity_type: 'email',
+              lead_status: 'morno',
+              title: `E-mail: ${personalizedSubject || '(sem assunto)'}`,
+              description: `Rascunho criado no Gmail para ${c.email_raw}`,
+              activity_date: new Date().toISOString(),
+              created_by: profileId ?? null,
+            });
+          } catch (logErr) {
+            console.warn('Failed to auto-log activity', logErr);
+          }
+        }
       } catch (e) {
         failed++;
         console.error('Draft failed for', c.email_raw, e);
