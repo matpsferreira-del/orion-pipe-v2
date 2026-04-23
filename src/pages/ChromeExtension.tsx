@@ -17,6 +17,7 @@ export default function ChromeExtension() {
   const [empresaAtual, setEmpresaAtual] = useState('');
   const [selectedJobId, setSelectedJobId] = useState('');
   const [selectedGroupId, setSelectedGroupId] = useState('');
+  const [selectedProjectId, setSelectedProjectId] = useState('');
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
@@ -49,6 +50,19 @@ export default function ChromeExtension() {
       const { data, error } = await supabase
         .from('commercial_strategy_groups')
         .select('id, name')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: projects = [], isLoading: loadingProjects } = useQuery({
+    queryKey: ['chrome-ext-outplacement-projects'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('outplacement_projects')
+        .select('id, title, status')
+        .in('status', ['planning', 'active'])
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data;
