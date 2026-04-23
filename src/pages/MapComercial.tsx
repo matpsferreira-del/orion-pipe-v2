@@ -28,6 +28,12 @@ import {
 } from '@/components/ui/alert-dialog';
 import { ImportLeadsDialog } from '@/components/commercial/ImportLeadsDialog';
 import { EmailCampaignDialog } from '@/components/commercial/EmailCampaignDialog';
+import { StrategyActivityHistoryDialog } from '@/components/commercial/StrategyActivityHistoryDialog';
+import {
+  ACTIVITY_TYPE_LABELS, LEAD_STATUS_COLORS, LEAD_STATUS_LABELS,
+  StrategyActivityType, StrategyLeadStatus, useStrategyActivitiesByGroup,
+} from '@/hooks/useStrategyActivities';
+import { History as HistoryIcon } from 'lucide-react';
 
 interface StrategyGroup {
   id: string;
