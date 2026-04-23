@@ -275,6 +275,66 @@ export type Database = {
         }
         Relationships: []
       }
+      commercial_strategy_activities: {
+        Row: {
+          activity_date: string
+          activity_type: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          group_id: string
+          id: string
+          lead_status: string
+          member_id: string
+          party_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          activity_date?: string
+          activity_type?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          group_id: string
+          id?: string
+          lead_status?: string
+          member_id: string
+          party_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          activity_date?: string
+          activity_type?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          group_id?: string
+          id?: string
+          lead_status?: string
+          member_id?: string
+          party_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commercial_strategy_activities_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_strategy_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commercial_strategy_activities_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_strategy_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       commercial_strategy_groups: {
         Row: {
           created_at: string
