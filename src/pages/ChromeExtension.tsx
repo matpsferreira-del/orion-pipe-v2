@@ -319,6 +319,32 @@ export default function ChromeExtension() {
                     </Select>
                   )}
                 </div>
+
+                {/* Destination: Outplacement Project */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium flex items-center gap-1.5">
+                    <Compass className="h-3.5 w-3.5 text-primary/60" />
+                    Projeto de Outplacement
+                  </Label>
+                  {loadingProjects ? (
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground py-3">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
+                      Carregando projetos...
+                    </div>
+                  ) : (
+                    <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
+                      <SelectTrigger className="h-10 text-sm"><SelectValue placeholder="Selecione um projeto (opcional)" /></SelectTrigger>
+                      <SelectContent>
+                        {projects.map((p) => (
+                          <SelectItem key={p.id} value={p.id}>{p.title}</SelectItem>
+                        ))}
+                        {projects.length === 0 && (
+                          <div className="px-2 py-3 text-xs text-muted-foreground text-center">Nenhum projeto ativo</div>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
               </div>
             </div>
           </CardContent>
