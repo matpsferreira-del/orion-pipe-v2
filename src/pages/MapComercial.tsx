@@ -657,7 +657,19 @@ export default function MapComercial() {
             open={showEmailCampaign}
             onOpenChange={setShowEmailCampaign}
             contacts={selectedContactsForCampaign}
+            groupId={selectedGroupId!}
           />
+
+          {historyMember && (
+            <StrategyActivityHistoryDialog
+              open={!!historyMember}
+              onOpenChange={(o) => { if (!o) setHistoryMember(null); }}
+              groupId={selectedGroupId!}
+              memberId={historyMember.id}
+              partyId={historyMember.party_id}
+              contactName={historyMember.party?.full_name || 'Contato'}
+            />
+          )}
 
           {/* Edit Member Dialog */}
           <Dialog open={!!editingMember} onOpenChange={(open) => { if (!open) setEditingMember(null); }}>
