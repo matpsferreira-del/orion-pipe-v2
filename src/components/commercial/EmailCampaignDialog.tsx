@@ -157,6 +157,10 @@ export function EmailCampaignDialog({ open, onOpenChange, contacts, groupId }: P
     setIsSending(false);
     setProgress(null);
 
+    if (groupId && success > 0) {
+      queryClient.invalidateQueries({ queryKey: ['strategy-activities', 'group', groupId] });
+    }
+
     if (success > 0) {
       toast.success(`${success} rascunho${success !== 1 ? 's' : ''} criado${success !== 1 ? 's' : ''} no Gmail com sucesso`);
     }
