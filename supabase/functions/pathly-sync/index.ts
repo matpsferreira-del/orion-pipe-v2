@@ -66,6 +66,13 @@ Deno.serve(async (req) => {
       data = { raw: text };
     }
 
+    if (!resp.ok) {
+      console.error(
+        `[pathly-sync] bridge ${action} -> ${resp.status}`,
+        JSON.stringify({ payload, response: data }).slice(0, 800),
+      );
+    }
+
     return new Response(JSON.stringify(data), {
       status: resp.status,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
