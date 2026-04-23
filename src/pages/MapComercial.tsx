@@ -83,6 +83,31 @@ export default function MapComercial() {
   const [onlyWithEmail, setOnlyWithEmail] = useState(false);
   const [selectedMemberIds, setSelectedMemberIds] = useState<Set<string>>(new Set());
   const [showEmailCampaign, setShowEmailCampaign] = useState(false);
+  const [activityStatusFilter, setActivityStatusFilter] = useState<string>('all');
+  const [activityTypeFilter, setActivityTypeFilter] = useState<string>('all');
+  const [historyMember, setHistoryMember] = useState<StrategyMember | null>(null);
+
+  // All activities for the current group, used for inline status + filtering
+  const { data: groupActivities = [] } = useStrategyActivitiesByGroup(selectedGroupId);
+
+  /** Map memberId -> most recent activity (already sorted desc by hook) */
+  const lastActivityByMember = useMemo(() => {
+    const map = new Map<string, typeof groupActivities[number]>();
+    for (const a of groupActivities) {
+      if (!map.has(a.member_id)) map.set(a.member_id, a);
+    }
+    return map;
+  }, [groupActivities]);
+
+  /** Set of memberIds that have at least one activity of a given type */
+  const memberIdsByActivityType = useMemo(() => {
+    const map = new Map<string, Set<string>>();
+    for (const a of groupActivities) {
+      if (!map.has(a.activity_type)) map.set(a.activity_type, new Set());
+      map.get(a.activity_type)!.add(a.member_id);
+    }
+    return map;
+  }, [groupActivities]);
 
   // Fetch groups
   const { data: groups = [], isLoading: loadingGroups } = useQuery({
