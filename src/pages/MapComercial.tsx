@@ -388,11 +388,6 @@ export default function MapComercial() {
             )}
           </div>
 
-          {/* Search */}
-          <div className="relative max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input className="pl-9 h-9" placeholder="Buscar perfis..." value={search} onChange={e => setSearch(e.target.value)} />
-          </div>
 
           <p className="text-sm text-muted-foreground">
             {filteredMembers.length} perfil{filteredMembers.length !== 1 ? 's' : ''} nesta estratégia
@@ -411,6 +406,13 @@ export default function MapComercial() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-[40px]">
+                      <Checkbox
+                        checked={allVisibleSelected ? true : someVisibleSelected ? 'indeterminate' : false}
+                        onCheckedChange={toggleSelectAll}
+                        aria-label="Selecionar todos visíveis"
+                      />
+                    </TableHead>
                     <TableHead>Nome Completo</TableHead>
                     <TableHead className="hidden md:table-cell">Cargo</TableHead>
                     <TableHead className="hidden md:table-cell">Nome da Empresa</TableHead>
@@ -424,7 +426,14 @@ export default function MapComercial() {
                 </TableHeader>
                 <TableBody>
                   {filteredMembers.map(member => (
-                    <TableRow key={member.id}>
+                    <TableRow key={member.id} data-state={selectedMemberIds.has(member.id) ? 'selected' : undefined}>
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedMemberIds.has(member.id)}
+                          onCheckedChange={() => toggleSelectOne(member.id)}
+                          aria-label={`Selecionar ${member.party?.full_name || ''}`}
+                        />
+                      </TableCell>
                       <TableCell>
                         <span className="font-medium whitespace-nowrap">{member.party?.full_name || '—'}</span>
                       </TableCell>
