@@ -189,6 +189,7 @@ export default function ChromeExtension() {
                 setSaved(false);
                 setSelectedJobId('');
                 setSelectedGroupId('');
+                setSelectedProjectId('');
               }}
             >
               <ArrowRight className="h-4 w-4 mr-2" />
@@ -200,7 +201,7 @@ export default function ChromeExtension() {
     );
   }
 
-  const isValid = nome.trim() && (selectedJobId || selectedGroupId);
+  const isValid = nome.trim() && (selectedJobId || selectedGroupId || selectedProjectId);
 
   return (
     <div className="min-h-screen bg-muted/30 flex items-start justify-center p-4 md:p-8">
