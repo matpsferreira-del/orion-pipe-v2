@@ -192,34 +192,42 @@ export async function createPathlyPlan(project: {
   preferencia_regiao?: string | null;
   cidades_interesse?: Array<{ estado: string; cidade: string }> | null;
 }) {
-  // Mapeamento Orion -> Pathly (mantém vocabulário do Pathly)
+  // Mapeamento Orion -> Pathly (vocabulário direto do schema do Pathly)
+  // employment_status NÃO existe em mentorship_plans do Pathly — enviado para
+  // log/extensibilidade futura, ignorado pela bridge atual.
   const situacaoMap: Record<string, string> = {
     empregado: 'employed',
     desempregado: 'unemployed',
     em_transicao: 'in_transition',
   };
+  // work_model do Pathly aceita: presencial | hibrido | remoto (PT-BR)
   const modeloMap: Record<string, string> = {
-    presencial: 'on_site',
-    hibrido: 'hybrid',
-    remoto: 'remote',
+    presencial: 'presencial',
+    hibrido: 'hibrido',
+    remoto: 'remoto',
   };
+  // region_preference do Pathly aceita: same_region | open_to_change
   const regiaoMap: Record<string, string> = {
     mesma_regiao: 'same_region',
-    outras_regioes: 'other_regions',
-    indiferente: 'any',
+    outras_regioes: 'open_to_change',
+    indiferente: 'open_to_change',
   };
+
+  // Pathly exige state como VARCHAR(2). Se vier em formato longo, tenta extrair UF.
+  const rawState = (project.estado ?? '').trim();
+  const state = rawState.length === 2 ? rawState.toUpperCase() : (rawState.slice(0, 2).toUpperCase() || null);
 
   return callPathly('create_plan', {
     mentee_name: project.party_name || project.title,
     mentee_email: project.party_email ?? null,
-    current_position: project.target_role ?? '',
-    current_area: project.target_industry ?? '',
+    // current_position/current_area são obrigatórios no Pathly (NOT NULL)
+    current_position: project.target_role || 'A definir',
+    current_area: project.target_industry || 'A definir',
     target_role: project.target_role ?? null,
     target_location: project.target_location ?? null,
-    // Novos campos
     employment_status: project.situacao_atual ? situacaoMap[project.situacao_atual] ?? project.situacao_atual : null,
     work_model: project.modelo_trabalho ? modeloMap[project.modelo_trabalho] ?? project.modelo_trabalho : null,
-    state: project.estado ?? null,
+    state,
     city: project.cidade ?? null,
     region_preference: project.preferencia_regiao ? regiaoMap[project.preferencia_regiao] ?? project.preferencia_regiao : null,
     cities_of_interest: project.cidades_interesse ?? [],

@@ -1,6 +1,6 @@
 ---
 name: pathly-sync
-description: Integração bidirecional automática Orion ↔ Pathly. Push instantâneo Orion→Pathly via pathly-sync edge function; pull reverso Pathly→Orion via cron job pathly-pull rodando a cada 30s. Conflitos resolvidos com "Orion sempre ganha" (só insere registros novos no pull, nunca sobrescreve). Cadastro de projetos espelha o formulário do Pathly (situação, modelo, estado/cidade, preferência de região, cidades de interesse).
+description: Integração bidirecional automática Orion ↔ Pathly. Push instantâneo Orion→Pathly via pathly-sync edge function; pull reverso Pathly→Orion via cron job pathly-pull rodando a cada 30s. Conflitos resolvidos com "Orion sempre ganha" (só insere registros novos no pull, nunca sobrescreve). Cadastro de projetos espelha o formulário do Pathly (situação, modelo, estado/cidade, preferência de região, cidades de interesse). Bridge orion-bridge no Pathly persiste work_model, region_preference, available_cities, target_positions e wants_career_change quando o plano é criado.
 type: feature
 ---
 
@@ -19,22 +19,16 @@ O pull reverso **nunca atualiza** registros existentes — só insere novos. Ded
 - `PATHLY_FUNCTIONS_URL`: base URL das edge functions do projeto Pathly
 - `ORION_BRIDGE_SECRET`: shared secret entre Orion e bridge `orion-bridge`
 
-## Actions na bridge orion-bridge (Pathly)
-- `create_plan` (recebe employment_status, work_model, state, city, region_preference, cities_of_interest)
-- `activate_plan`, `upsert_company`, `upsert_contact`, `upsert_market_job`
-- `list_plan_data` (usado pelo pathly-pull), `list_mentee_contributions`, `list_active_plans`
+## Vocabulário Orion → Pathly aplicado em `createPathlyPlan`
+- empregado→employed, desempregado→unemployed, em_transicao→in_transition (não persistido no Pathly hoje — sem coluna)
+- presencial→presencial, hibrido→hibrido, remoto→remoto (Pathly aceita PT-BR direto)
+- mesma_regiao→same_region, outras_regioes→open_to_change, indiferente→open_to_change
+- estado é cortado em VARCHAR(2) antes do envio
+- target_role → vira `target_positions` jsonb na bridge e marca `wants_career_change=true` se diferir de `current_position`
+- cidades_interesse → `available_cities` jsonb
 
-## Cadastro de projeto (alinhado ao Pathly)
-O `ProjectDialog` captura os mesmos campos do "Novo Plano Estratégico" do Pathly:
-- **Perfil**: cargo (target_role), área (target_industry), situação atual (empregado/desempregado/em_transicao), modelo de trabalho (presencial/hibrido/remoto)
-- **Localização**: estado + cidade (selects da base BRAZIL_STATES/BRAZIL_CITIES), preferência de região (mesma_regiao/outras_regioes/indiferente), cidades de interesse (jsonb array)
-
-Vocabulário Orion → Pathly aplicado em `createPathlyPlan`:
-- empregado→employed, desempregado→unemployed, em_transicao→in_transition
-- presencial→on_site, hibrido→hybrid, remoto→remote
-- mesma_regiao→same_region, outras_regioes→other_regions, indiferente→any
-
-`target_location` é mantido sincronizado como `"Cidade, UF"` para retrocompatibilidade.
+## Schema relevante de `mentorship_plans` no Pathly
+Colunas usadas pela bridge: `current_position`, `current_area`, `state` (varchar(2)), `city`, `work_model` CHECK (`presencial|hibrido|remoto`), `region_preference` CHECK (`same_region|open_to_change`), `available_cities` (jsonb), `target_positions` (jsonb), `wants_career_change` (bool), `mentee_email`, `orionpipe_client_id`, `status`. **Não existe** coluna `employment_status` nem `target_role` direto.
 
 ## Tabelas no Orion com colunas pathly_*
 - `outplacement_projects.pathly_plan_id`, `pathly_synced_at`
@@ -45,7 +39,7 @@ Vocabulário Orion → Pathly aplicado em `createPathlyPlan`:
 ## Pacote para colar no Pathly
 Em `/mnt/documents/pathly-integration/`:
 - `migration.sql` — cria `market_jobs` + coluna `source` em `mentorship_plans`
-- `orion-bridge.ts` — substitui o arquivo da bridge, contém todas as actions
+- `orion-bridge.ts` — substitui o arquivo da bridge, persiste corretamente todos os campos do plano
 - `README.md` — passo a passo
 
-⚠️ A action `create_plan` na bridge do Pathly precisa aceitar os novos campos (employment_status, work_model, state, city, region_preference, cities_of_interest) e gravar nas colunas equivalentes de `mentorship_plans`. Se a bridge ainda não suportar, esses campos chegam como ignorados (não quebra o push), mas não serão persistidos lá até a bridge ser atualizada.
+⚠️ Ao mudar o vocabulário aceito por `region_preference` ou `work_model` no Pathly, atualizar o `regiaoMap`/`modeloMap` em `src/lib/pathlySync.ts` e a normalização correspondente na bridge.
