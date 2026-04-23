@@ -18,12 +18,16 @@ export interface CampaignContact {
   current_title: string | null;
   current_company: string | null;
   email_raw: string | null;
+  /** Optional: member id within the strategy group, used to auto-log activity. */
+  member_id?: string;
 }
 
 interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   contacts: CampaignContact[];
+  /** Optional: when provided, automatically log a sent-email activity per recipient. */
+  groupId?: string;
 }
 
 const VARIABLES = [
