@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, Plus, Loader2, Search, Pencil, Sparkles, Download } from 'lucide-react';
+import { ArrowLeft, Plus, Loader2, Search, Pencil, Sparkles, Download, Crosshair } from 'lucide-react';
 import {
   useOutplacementProject, useOutplacementContacts, useOutplacementMarketJobs, OutplacementContact,
 } from '@/hooks/useOutplacementProjects';
@@ -135,6 +135,14 @@ export default function ProjetoDetail() {
               className="gap-1.5"
             >
               <Download className="h-4 w-4" /> Exportar
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate(`/chrome-extension?project=${project.id}`)}
+              className="gap-1.5"
+            >
+              <Crosshair className="h-4 w-4" /> Mapear Perfil
             </Button>
             <Button variant="outline" size="sm" onClick={() => setShowProjectDialog(true)} className="gap-1.5">
               <Pencil className="h-4 w-4" /> Editar
