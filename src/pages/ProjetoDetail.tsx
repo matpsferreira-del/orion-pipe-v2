@@ -4,9 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, Plus, Loader2, Search, Pencil, Sparkles } from 'lucide-react';
+import { ArrowLeft, Plus, Loader2, Search, Pencil, Sparkles, Download } from 'lucide-react';
 import {
-  useOutplacementProject, useOutplacementContacts, OutplacementContact,
+  useOutplacementProject, useOutplacementContacts, useOutplacementMarketJobs, OutplacementContact,
 } from '@/hooks/useOutplacementProjects';
 import { useParties } from '@/hooks/useParties';
 import { useCompanies } from '@/hooks/useCompanies';
@@ -18,6 +18,7 @@ import { MarketJobsTab } from '@/components/projetos/MarketJobsTab';
 import { ActivitiesTab } from '@/components/projetos/ActivitiesTab';
 import { ContactValidationDialog } from '@/components/projetos/ContactValidationDialog';
 import { useValidateContacts, ContactSuggestion } from '@/hooks/useContactValidation';
+import { exportProjetoMapeamento } from '@/lib/exportProjeto';
 import { toast } from 'sonner';
 
 export default function ProjetoDetail() {
@@ -25,6 +26,7 @@ export default function ProjetoDetail() {
   const navigate = useNavigate();
   const { data: project, isLoading } = useOutplacementProject(id);
   const { data: contacts = [] } = useOutplacementContacts(id);
+  const { data: marketJobs = [] } = useOutplacementMarketJobs(id);
   const { data: parties = [] } = useParties();
   const { data: companies = [] } = useCompanies();
 
@@ -122,9 +124,22 @@ export default function ProjetoDetail() {
               {project.target_location && <span>📍 {project.target_location}</span>}
             </div>
           </div>
-          <Button variant="outline" size="sm" onClick={() => setShowProjectDialog(true)} className="gap-1.5">
-            <Pencil className="h-4 w-4" /> Editar
-          </Button>
+          <div className="flex gap-2 shrink-0">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                exportProjetoMapeamento(project, contacts, marketJobs);
+                toast.success('Exportação iniciada');
+              }}
+              className="gap-1.5"
+            >
+              <Download className="h-4 w-4" /> Exportar
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setShowProjectDialog(true)} className="gap-1.5">
+              <Pencil className="h-4 w-4" /> Editar
+            </Button>
+          </div>
         </div>
 
         {/* Tabs */}
