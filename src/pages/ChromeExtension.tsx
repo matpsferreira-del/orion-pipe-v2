@@ -25,10 +25,12 @@ export default function ChromeExtension() {
     const paramUrl = searchParams.get('url');
     const paramCargo = searchParams.get('cargo');
     const paramEmpresa = searchParams.get('empresa');
+    const paramProject = searchParams.get('project');
     if (paramNome) setNome(decodeURIComponent(paramNome));
     if (paramUrl) setLinkedinUrl(decodeURIComponent(paramUrl));
     if (paramCargo) setCargo(decodeURIComponent(paramCargo));
     if (paramEmpresa) setEmpresaAtual(decodeURIComponent(paramEmpresa));
+    if (paramProject) setSelectedProjectId(paramProject);
   }, [searchParams]);
 
   const { data: jobs = [], isLoading: loadingJobs } = useQuery({
