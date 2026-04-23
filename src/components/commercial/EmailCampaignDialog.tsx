@@ -161,10 +161,12 @@ export function EmailCampaignDialog({ open, onOpenChange, contacts }: Props) {
           </DialogDescription>
         </DialogHeader>
 
-        <div className="rounded-md border border-amber-500/40 bg-amber-50 dark:bg-amber-950/30 px-3 py-2 text-sm text-amber-900 dark:text-amber-100 flex items-start gap-2">
-          <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
-          <span>Os rascunhos serão criados no Gmail. Você precisará enviá-los manualmente.</span>
-        </div>
+        <Alert className="border-l-4 border-l-primary">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            Os rascunhos serão criados no Gmail. Você precisará enviá-los manualmente.
+          </AlertDescription>
+        </Alert>
 
         <Tabs defaultValue="compose" className="w-full">
           <TabsList className="grid w-full grid-cols-2">
