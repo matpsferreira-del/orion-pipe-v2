@@ -256,14 +256,57 @@ export default function MapComercial() {
   };
 
   const filteredMembers = members.filter(m => {
-    if (!search) return true;
-    const q = search.toLowerCase();
-    return (
-      m.party?.full_name?.toLowerCase().includes(q) ||
-      m.party?.current_company?.toLowerCase().includes(q) ||
-      m.party?.current_title?.toLowerCase().includes(q)
-    );
+    if (search) {
+      const q = search.toLowerCase();
+      const match =
+        m.party?.full_name?.toLowerCase().includes(q) ||
+        m.party?.current_company?.toLowerCase().includes(q) ||
+        m.party?.current_title?.toLowerCase().includes(q);
+      if (!match) return false;
+    }
+    if (companyFilter !== 'all' && (m.party?.current_company || '__none__') !== companyFilter) return false;
+    if (onlyWithEmail && !(m.party?.email_raw && m.party.email_raw.trim())) return false;
+    return true;
   });
+
+  const uniqueCompanies = Array.from(
+    new Set(members.map(m => m.party?.current_company).filter((c): c is string => !!c && c.trim().length > 0))
+  ).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+
+  const visibleIds = filteredMembers.map(m => m.id);
+  const allVisibleSelected = visibleIds.length > 0 && visibleIds.every(id => selectedMemberIds.has(id));
+  const someVisibleSelected = visibleIds.some(id => selectedMemberIds.has(id));
+
+  const toggleSelectAll = () => {
+    setSelectedMemberIds(prev => {
+      const next = new Set(prev);
+      if (allVisibleSelected) {
+        visibleIds.forEach(id => next.delete(id));
+      } else {
+        visibleIds.forEach(id => next.add(id));
+      }
+      return next;
+    });
+  };
+
+  const toggleSelectOne = (id: string) => {
+    setSelectedMemberIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const selectedContactsForCampaign = members
+    .filter(m => selectedMemberIds.has(m.id) && m.party)
+    .map(m => ({
+      id: m.party!.id,
+      full_name: m.party!.full_name,
+      current_title: m.party!.current_title,
+      current_company: m.party!.current_company,
+      email_raw: m.party!.email_raw,
+    }));
 
   const existingPartyIds = new Set(members.map(m => m.party_id));
 
