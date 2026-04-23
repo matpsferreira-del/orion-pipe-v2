@@ -13,9 +13,11 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Plus, Search, Users, Trash2, Loader2, ExternalLink, FolderOpen, ChevronRight,
-  Building, BadgeCheck, ArrowLeft, UserPlus, MoreHorizontal, Upload, Download, Pencil,
+  Building, BadgeCheck, ArrowLeft, UserPlus, MoreHorizontal, Upload, Download, Pencil, Mail,
 } from 'lucide-react';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
@@ -25,6 +27,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { ImportLeadsDialog } from '@/components/commercial/ImportLeadsDialog';
+import { EmailCampaignDialog } from '@/components/commercial/EmailCampaignDialog';
 
 interface StrategyGroup {
   id: string;
