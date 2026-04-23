@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import * as XLSX from 'xlsx';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -28,6 +28,12 @@ import {
 } from '@/components/ui/alert-dialog';
 import { ImportLeadsDialog } from '@/components/commercial/ImportLeadsDialog';
 import { EmailCampaignDialog } from '@/components/commercial/EmailCampaignDialog';
+import { StrategyActivityHistoryDialog } from '@/components/commercial/StrategyActivityHistoryDialog';
+import {
+  ACTIVITY_TYPE_LABELS, LEAD_STATUS_COLORS, LEAD_STATUS_LABELS,
+  StrategyActivityType, StrategyLeadStatus, useStrategyActivitiesByGroup,
+} from '@/hooks/useStrategyActivities';
+import { History as HistoryIcon } from 'lucide-react';
 
 interface StrategyGroup {
   id: string;
@@ -77,6 +83,31 @@ export default function MapComercial() {
   const [onlyWithEmail, setOnlyWithEmail] = useState(false);
   const [selectedMemberIds, setSelectedMemberIds] = useState<Set<string>>(new Set());
   const [showEmailCampaign, setShowEmailCampaign] = useState(false);
+  const [activityStatusFilter, setActivityStatusFilter] = useState<string>('all');
+  const [activityTypeFilter, setActivityTypeFilter] = useState<string>('all');
+  const [historyMember, setHistoryMember] = useState<StrategyMember | null>(null);
+
+  // All activities for the current group, used for inline status + filtering
+  const { data: groupActivities = [] } = useStrategyActivitiesByGroup(selectedGroupId);
+
+  /** Map memberId -> most recent activity (already sorted desc by hook) */
+  const lastActivityByMember = useMemo(() => {
+    const map = new Map<string, typeof groupActivities[number]>();
+    for (const a of groupActivities) {
+      if (!map.has(a.member_id)) map.set(a.member_id, a);
+    }
+    return map;
+  }, [groupActivities]);
+
+  /** Set of memberIds that have at least one activity of a given type */
+  const memberIdsByActivityType = useMemo(() => {
+    const map = new Map<string, Set<string>>();
+    for (const a of groupActivities) {
+      if (!map.has(a.activity_type)) map.set(a.activity_type, new Set());
+      map.get(a.activity_type)!.add(a.member_id);
+    }
+    return map;
+  }, [groupActivities]);
 
   // Fetch groups
   const { data: groups = [], isLoading: loadingGroups } = useQuery({
@@ -266,6 +297,23 @@ export default function MapComercial() {
     }
     if (companyFilter !== 'all' && (m.party?.current_company || '__none__') !== companyFilter) return false;
     if (onlyWithEmail && !(m.party?.email_raw && m.party.email_raw.trim())) return false;
+
+    // Filter by current lead status (last activity)
+    if (activityStatusFilter !== 'all') {
+      const last = lastActivityByMember.get(m.id);
+      if (activityStatusFilter === 'sem_atividade') {
+        if (last) return false;
+      } else if (last?.lead_status !== activityStatusFilter) {
+        return false;
+      }
+    }
+
+    // Filter by activity type in history
+    if (activityTypeFilter !== 'all') {
+      const set = memberIdsByActivityType.get(activityTypeFilter);
+      if (!set || !set.has(m.id)) return false;
+    }
+
     return true;
   });
 
@@ -302,6 +350,7 @@ export default function MapComercial() {
     .filter(m => selectedMemberIds.has(m.id) && m.party)
     .map(m => ({
       id: m.party!.id,
+      member_id: m.id,
       full_name: m.party!.full_name,
       current_title: m.party!.current_title,
       current_company: m.party!.current_company,
@@ -374,6 +423,29 @@ export default function MapComercial() {
                 ))}
               </SelectContent>
             </Select>
+            <Select value={activityStatusFilter} onValueChange={setActivityStatusFilter}>
+              <SelectTrigger className="h-9 w-full sm:w-[180px]">
+                <SelectValue placeholder="Status do lead" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os status</SelectItem>
+                <SelectItem value="sem_atividade">Sem atividade</SelectItem>
+                {Object.entries(LEAD_STATUS_LABELS).map(([v, l]) => (
+                  <SelectItem key={v} value={v}>{l}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={activityTypeFilter} onValueChange={setActivityTypeFilter}>
+              <SelectTrigger className="h-9 w-full sm:w-[180px]">
+                <SelectValue placeholder="Tipo de atividade" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os tipos</SelectItem>
+                {Object.entries(ACTIVITY_TYPE_LABELS).map(([v, l]) => (
+                  <SelectItem key={v} value={v}>{l}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer select-none">
               <Checkbox
                 checked={onlyWithEmail}
@@ -414,6 +486,7 @@ export default function MapComercial() {
                       />
                     </TableHead>
                     <TableHead>Nome Completo</TableHead>
+                    <TableHead>Status</TableHead>
                     <TableHead className="hidden md:table-cell">Cargo</TableHead>
                     <TableHead className="hidden md:table-cell">Nome da Empresa</TableHead>
                     <TableHead className="hidden lg:table-cell">LinkedIn</TableHead>
@@ -421,7 +494,7 @@ export default function MapComercial() {
                     <TableHead className="hidden xl:table-cell">Contato Empresa</TableHead>
                     <TableHead className="hidden xl:table-cell">Cidade</TableHead>
                     <TableHead className="hidden xl:table-cell">Estado</TableHead>
-                    <TableHead className="w-[60px]" />
+                    <TableHead className="w-[90px]" />
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -436,6 +509,30 @@ export default function MapComercial() {
                       </TableCell>
                       <TableCell>
                         <span className="font-medium whitespace-nowrap">{member.party?.full_name || '—'}</span>
+                      </TableCell>
+                      <TableCell>
+                        {(() => {
+                          const last = lastActivityByMember.get(member.id);
+                          if (!last) {
+                            return (
+                              <button
+                                onClick={() => setHistoryMember(member)}
+                                className="text-xs text-muted-foreground hover:text-primary underline-offset-2 hover:underline"
+                              >
+                                Sem atividade
+                              </button>
+                            );
+                          }
+                          return (
+                            <button
+                              onClick={() => setHistoryMember(member)}
+                              className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium hover:opacity-80 transition ${LEAD_STATUS_COLORS[last.lead_status]}`}
+                              title={`Última: ${ACTIVITY_TYPE_LABELS[last.activity_type]}`}
+                            >
+                              {LEAD_STATUS_LABELS[last.lead_status]}
+                            </button>
+                          );
+                        })()}
                       </TableCell>
                       <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
                         {member.party?.current_title || '—'}
@@ -464,6 +561,15 @@ export default function MapComercial() {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-primary"
+                            onClick={() => setHistoryMember(member)}
+                            title="Histórico de atividades"
+                          >
+                            <HistoryIcon className="h-4 w-4" />
+                          </Button>
                           <Button
                             variant="ghost"
                             size="icon"
@@ -551,7 +657,19 @@ export default function MapComercial() {
             open={showEmailCampaign}
             onOpenChange={setShowEmailCampaign}
             contacts={selectedContactsForCampaign}
+            groupId={selectedGroupId!}
           />
+
+          {historyMember && (
+            <StrategyActivityHistoryDialog
+              open={!!historyMember}
+              onOpenChange={(o) => { if (!o) setHistoryMember(null); }}
+              groupId={selectedGroupId!}
+              memberId={historyMember.id}
+              partyId={historyMember.party_id}
+              contactName={historyMember.party?.full_name || 'Contato'}
+            />
+          )}
 
           {/* Edit Member Dialog */}
           <Dialog open={!!editingMember} onOpenChange={(open) => { if (!open) setEditingMember(null); }}>

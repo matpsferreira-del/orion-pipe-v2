@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
@@ -18,12 +19,16 @@ export interface CampaignContact {
   current_title: string | null;
   current_company: string | null;
   email_raw: string | null;
+  /** Optional: member id within the strategy group, used to auto-log activity. */
+  member_id?: string;
 }
 
 interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   contacts: CampaignContact[];
+  /** Optional: when provided, automatically log a sent-email activity per recipient. */
+  groupId?: string;
 }
 
 const VARIABLES = [
@@ -42,7 +47,8 @@ function applyVars(template: string, c: CampaignContact): string {
     .split('{cargo}').join(c.current_title || '');
 }
 
-export function EmailCampaignDialog({ open, onOpenChange, contacts }: Props) {
+export function EmailCampaignDialog({ open, onOpenChange, contacts, groupId }: Props) {
+  const queryClient = useQueryClient();
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
   const [progress, setProgress] = useState<{ current: number; total: number } | null>(null);
@@ -119,6 +125,29 @@ export function EmailCampaignDialog({ open, onOpenChange, contacts }: Props) {
           throw new Error(data.error || 'Erro');
         }
         success++;
+
+        // Auto-log activity if a strategy group is in scope and we know the member id
+        if (groupId && c.member_id) {
+          try {
+            const { data: userRes } = await supabase.auth.getUser();
+            const profileId = userRes.user
+              ? (await supabase.from('profiles').select('id').eq('user_id', userRes.user.id).maybeSingle()).data?.id
+              : null;
+            await supabase.from('commercial_strategy_activities' as any).insert({
+              group_id: groupId,
+              member_id: c.member_id,
+              party_id: c.id,
+              activity_type: 'email',
+              lead_status: 'morno',
+              title: `E-mail: ${personalizedSubject || '(sem assunto)'}`,
+              description: `Rascunho criado no Gmail para ${c.email_raw}`,
+              activity_date: new Date().toISOString(),
+              created_by: profileId ?? null,
+            });
+          } catch (logErr) {
+            console.warn('Failed to auto-log activity', logErr);
+          }
+        }
       } catch (e) {
         failed++;
         console.error('Draft failed for', c.email_raw, e);
@@ -127,6 +156,10 @@ export function EmailCampaignDialog({ open, onOpenChange, contacts }: Props) {
 
     setIsSending(false);
     setProgress(null);
+
+    if (groupId && success > 0) {
+      queryClient.invalidateQueries({ queryKey: ['strategy-activities', 'group', groupId] });
+    }
 
     if (success > 0) {
       toast.success(`${success} rascunho${success !== 1 ? 's' : ''} criado${success !== 1 ? 's' : ''} no Gmail com sucesso`);
