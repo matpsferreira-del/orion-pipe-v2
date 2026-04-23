@@ -565,6 +565,15 @@ export default function MapComercial() {
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8 text-muted-foreground hover:text-primary"
+                            onClick={() => setHistoryMember(member)}
+                            title="Histórico de atividades"
+                          >
+                            <HistoryIcon className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-primary"
                             onClick={() => openEditMember(member)}
                           >
                             <Pencil className="h-4 w-4" />
