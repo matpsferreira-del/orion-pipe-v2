@@ -72,7 +72,7 @@ export default function ChromeExtension() {
   const saveMutation = useMutation({
     mutationFn: async () => {
       if (!nome.trim()) throw new Error('Preencha o nome');
-      if (!selectedJobId && !selectedGroupId) throw new Error('Selecione uma vaga ou estratégia');
+      if (!selectedJobId && !selectedGroupId && !selectedProjectId) throw new Error('Selecione uma vaga, estratégia ou projeto');
 
       const { data: partyId, error: partyError } = await supabase.rpc('resolve_party', {
         p_full_name: nome.trim(),
@@ -120,6 +120,51 @@ export default function ChromeExtension() {
           .from('commercial_strategy_members')
           .insert({ group_id: selectedGroupId, party_id: partyId });
         if (memberError && memberError.code !== '23505') throw memberError;
+      }
+
+      // Save to outplacement project if selected
+      if (selectedProjectId) {
+        // Dedup by linkedin within project
+        const normalizedNew = linkedinUrl.trim().toLowerCase().replace(/\/+$/, '').replace(/^https?:\/\/(www\.)?/, '') || null;
+        let existingId: string | null = null;
+        if (normalizedNew) {
+          const { data: existing } = await supabase
+            .from('outplacement_contacts')
+            .select('id, linkedin_url')
+            .eq('project_id', selectedProjectId)
+            .not('linkedin_url', 'is', null);
+          const match = (existing || []).find((c: { linkedin_url: string | null }) => {
+            const n = (c.linkedin_url || '').trim().toLowerCase().replace(/\/+$/, '').replace(/^https?:\/\/(www\.)?/, '');
+            return n === normalizedNew;
+          });
+          if (match) existingId = match.id;
+        }
+
+        if (existingId) {
+          const updates: Record<string, string> = {};
+          if (nome.trim()) updates.name = nome.trim();
+          if (cargo.trim()) updates.current_position = cargo.trim();
+          if (empresaAtual.trim()) updates.company_name = empresaAtual.trim();
+          if (linkedinUrl.trim()) updates.linkedin_url = linkedinUrl.trim();
+          const { error: updErr } = await supabase
+            .from('outplacement_contacts')
+            .update(updates)
+            .eq('id', existingId);
+          if (updErr) throw updErr;
+        } else {
+          const { error: insErr } = await supabase.from('outplacement_contacts').insert({
+            project_id: selectedProjectId,
+            party_id: partyId,
+            name: nome.trim(),
+            current_position: cargo.trim() || null,
+            company_name: empresaAtual.trim() || null,
+            linkedin_url: linkedinUrl.trim() || null,
+            contact_type: 'decisor',
+            tier: 'B',
+            kanban_stage: 'identificado',
+          });
+          if (insErr) throw insErr;
+        }
       }
     },
     onSuccess: () => setSaved(true),
