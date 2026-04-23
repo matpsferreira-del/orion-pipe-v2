@@ -39,7 +39,10 @@ Colunas usadas pela bridge: `current_position`, `current_area`, `state` (varchar
 ## Pacote para colar no Pathly
 Em `/mnt/documents/pathly-integration/`:
 - `migration.sql` — cria `market_jobs` + coluna `source` em `mentorship_plans`
-- `orion-bridge.ts` — substitui o arquivo da bridge, persiste corretamente todos os campos do plano
+- `orion-bridge.ts` — substitui o arquivo da bridge, persiste corretamente todos os campos do plano e expõe action `update_plan` para reenvio dos dados cadastrais
 - `README.md` — passo a passo
+
+## Sincronização dos dados cadastrais
+- `mirrorProjectToPathly` / `ensureProjectPathlyLink` chamam `update_plan` quando o plano já existe, garantindo que situação, modelo de trabalho, estado, cidade, preferência de região, cidades de interesse e cargo/área alvo sejam atualizados em cada espelho. Para planos novos, `create_plan` cobre os mesmos campos.
 
 ⚠️ Ao mudar o vocabulário aceito por `region_preference` ou `work_model` no Pathly, atualizar o `regiaoMap`/`modeloMap` em `src/lib/pathlySync.ts` e a normalização correspondente na bridge.
