@@ -547,6 +547,12 @@ export default function MapComercial() {
             groupId={selectedGroupId!}
           />
 
+          <EmailCampaignDialog
+            open={showEmailCampaign}
+            onOpenChange={setShowEmailCampaign}
+            contacts={selectedContactsForCampaign}
+          />
+
           {/* Edit Member Dialog */}
           <Dialog open={!!editingMember} onOpenChange={(open) => { if (!open) setEditingMember(null); }}>
             <DialogContent className="sm:max-w-lg">
