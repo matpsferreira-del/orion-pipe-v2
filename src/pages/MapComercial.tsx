@@ -73,6 +73,10 @@ export default function MapComercial() {
   const [editMemberData, setEditMemberData] = useState({
     full_name: '', current_title: '', current_company: '', linkedin_url: '', email_raw: '', phone_raw: '', city: '', state: '',
   });
+  const [companyFilter, setCompanyFilter] = useState<string>('all');
+  const [onlyWithEmail, setOnlyWithEmail] = useState(false);
+  const [selectedMemberIds, setSelectedMemberIds] = useState<Set<string>>(new Set());
+  const [showEmailCampaign, setShowEmailCampaign] = useState(false);
 
   // Fetch groups
   const { data: groups = [], isLoading: loadingGroups } = useQuery({
