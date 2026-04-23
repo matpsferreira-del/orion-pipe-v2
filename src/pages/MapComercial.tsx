@@ -297,6 +297,23 @@ export default function MapComercial() {
     }
     if (companyFilter !== 'all' && (m.party?.current_company || '__none__') !== companyFilter) return false;
     if (onlyWithEmail && !(m.party?.email_raw && m.party.email_raw.trim())) return false;
+
+    // Filter by current lead status (last activity)
+    if (activityStatusFilter !== 'all') {
+      const last = lastActivityByMember.get(m.id);
+      if (activityStatusFilter === 'sem_atividade') {
+        if (last) return false;
+      } else if (last?.lead_status !== activityStatusFilter) {
+        return false;
+      }
+    }
+
+    // Filter by activity type in history
+    if (activityTypeFilter !== 'all') {
+      const set = memberIdsByActivityType.get(activityTypeFilter);
+      if (!set || !set.has(m.id)) return false;
+    }
+
     return true;
   });
 
@@ -333,6 +350,7 @@ export default function MapComercial() {
     .filter(m => selectedMemberIds.has(m.id) && m.party)
     .map(m => ({
       id: m.party!.id,
+      member_id: m.id,
       full_name: m.party!.full_name,
       current_title: m.party!.current_title,
       current_company: m.party!.current_company,
