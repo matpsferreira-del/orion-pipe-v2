@@ -85,8 +85,20 @@ export async function callPathly(action: string, payload: Record<string, unknown
       body: { action, payload },
     });
     if (error) {
-      console.warn(`[pathly-sync] ${action} failed:`, error.message);
-      return { ok: false, error: error.message, data: null };
+      // supabase.functions.invoke não expõe o body em erros HTTP por padrão.
+      // Tentamos ler o response anexado (FunctionsHttpError) para capturar
+      // mensagens como "Unknown action: update_plan" e permitir fallback.
+      let bridgeMsg: string | null = null;
+      const resp = (error as unknown as { context?: { response?: Response } })?.context?.response;
+      if (resp && typeof resp.clone === 'function') {
+        try {
+          const body = await resp.clone().json();
+          if (body?.error) bridgeMsg = String(body.error);
+        } catch { /* ignore */ }
+      }
+      const finalMsg = bridgeMsg ?? error.message;
+      console.warn(`[pathly-sync] ${action} failed:`, finalMsg);
+      return { ok: false, error: finalMsg, data: null };
     }
     if (data?.error) {
       console.warn(`[pathly-sync] ${action} bridge error:`, data.error);
