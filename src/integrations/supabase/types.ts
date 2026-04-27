@@ -2556,37 +2556,22 @@ export type Database = {
       }
       normalize_email: { Args: { raw_email: string }; Returns: string }
       normalize_phone_br: { Args: { raw_phone: string }; Returns: string }
-      resolve_party:
-        | {
-            Args: {
-              p_city?: string
-              p_created_from?: Database["public"]["Enums"]["party_created_from"]
-              p_email?: string
-              p_full_name: string
-              p_headline?: string
-              p_linkedin_url?: string
-              p_notes?: string
-              p_phone?: string
-              p_state?: string
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              p_city?: string
-              p_created_from?: Database["public"]["Enums"]["party_created_from"]
-              p_current_company?: string
-              p_current_title?: string
-              p_email?: string
-              p_full_name: string
-              p_headline?: string
-              p_linkedin_url?: string
-              p_notes?: string
-              p_phone?: string
-              p_state?: string
-            }
-            Returns: string
-          }
+      resolve_party: {
+        Args: {
+          p_city?: string
+          p_created_from?: Database["public"]["Enums"]["party_created_from"]
+          p_current_company?: string
+          p_current_title?: string
+          p_email?: string
+          p_full_name: string
+          p_headline?: string
+          p_linkedin_url?: string
+          p_notes?: string
+          p_phone?: string
+          p_state?: string
+        }
+        Returns: string
+      }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
     }

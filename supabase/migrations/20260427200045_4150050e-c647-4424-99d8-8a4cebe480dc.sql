@@ -1,0 +1,1 @@
+DROP FUNCTION IF EXISTS public.resolve_party(text, text, text, text, text, text, public.party_created_from, text, text);
