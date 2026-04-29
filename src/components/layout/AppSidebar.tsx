@@ -26,6 +26,7 @@ import {
   BookOpen,
   Wallet,
   HandCoins,
+  ClipboardCheck,
 } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -89,6 +90,7 @@ const tabNavItems = {
     { to: '/recrutamento', icon: LayoutDashboard, label: 'Dashboard' },
     { to: '/pessoas', icon: UserCircle, label: 'Banco de Talentos' },
     { to: '/vagas', icon: Briefcase, label: 'Vagas' },
+    { to: '/avaliacoes', icon: ClipboardCheck, label: 'Avaliações' },
     { to: '/projetos', icon: HandCoins, label: 'Projetos (Outplacement)' },
     { to: '/formatacao-cv', icon: FileText, label: 'Formatação de CV' },
     { to: '/chrome-extension', icon: Radar, label: 'Extensão Chrome' },

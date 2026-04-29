@@ -40,6 +40,7 @@ const ProjetoDetail = lazy(() => import("./pages/ProjetoDetail"));
 
 const PropostaOutplacement = lazy(() => import("./pages/PropostaOutplacement"));
 const PptInstitucional = lazy(() => import("./pages/PptInstitucional"));
+const Avaliacoes = lazy(() => import("./pages/Avaliacoes"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
@@ -130,6 +131,7 @@ const App = () => (
                 <Route path="/pessoas" element={<Pessoas />} />
                 <Route path="/recrutamento" element={<RecrutamentoDashboard />} />
                 <Route path="/vagas" element={<Vagas />} />
+                <Route path="/avaliacoes" element={<Avaliacoes />} />
                 <Route path="/projetos" element={<Projetos />} />
                 <Route path="/projetos/:id" element={<ProjetoDetail />} />
                 <Route path="/jobs/:id/shortlist-presentation" element={<ShortlistPresentation />} />

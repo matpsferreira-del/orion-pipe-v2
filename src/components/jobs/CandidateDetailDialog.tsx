@@ -26,6 +26,7 @@ import {
   applicationStatusLabels, ApplicationStatus, sourceLabels 
 } from '@/types/ats';
 import { CandidateCVSection } from './CandidateCVSection';
+import { CandidateAssessmentsTab } from './CandidateAssessmentsTab';
 import { useUpdateApplication, useUpdateApplicationStatus, useUpdateApplicationStage } from '@/hooks/useApplications';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -260,9 +261,10 @@ export function CandidateDetailDialog({
           </div>
 
           <Tabs defaultValue="details" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="details">Detalhes</TabsTrigger>
               <TabsTrigger value="history">Histórico</TabsTrigger>
+              <TabsTrigger value="assessments">Avaliações</TabsTrigger>
             </TabsList>
 
             <TabsContent value="details" className="space-y-6 mt-4">
@@ -529,6 +531,16 @@ export function CandidateDetailDialog({
 
             <TabsContent value="history" className="mt-4">
               {party && <PartyHistoryTimeline partyId={party.id} email={party.email_raw} />}
+            </TabsContent>
+
+            <TabsContent value="assessments" className="mt-4">
+              {party && (
+                <CandidateAssessmentsTab
+                  partyId={party.id}
+                  candidateName={party.full_name}
+                  candidateEmail={party.email_raw}
+                />
+              )}
             </TabsContent>
           </Tabs>
         </div>
