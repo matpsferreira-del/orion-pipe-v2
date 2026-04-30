@@ -63,6 +63,7 @@ export interface OutplacementContact {
   updated_at: string;
   ai_validated_at: string | null;
   pathly_synced_at: string | null;
+  pathly_removed_at: string | null;
 }
 
 export interface OutplacementActivity {

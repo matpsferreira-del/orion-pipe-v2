@@ -22,6 +22,14 @@ const tierColor: Record<string, string> = {
   C: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30',
 };
 
+function PathlyRemovedBadge() {
+  return (
+    <Badge variant="outline" className="text-xs bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/30 whitespace-nowrap">
+      Removido no Pathly
+    </Badge>
+  );
+}
+
 export function ContactList({ contacts, onEdit, showProject, projectNameMap = {} }: Props) {
   const update = useUpdateOutplacementContact();
   const del = useDeleteOutplacementContact();
@@ -31,7 +39,7 @@ export function ContactList({ contacts, onEdit, showProject, projectNameMap = {}
       {/* Mobile cards */}
       <div className="md:hidden space-y-2">
         {contacts.map(c => (
-          <div key={c.id} className="bg-card border rounded-lg p-3 space-y-2">
+          <div key={c.id} className={cn('bg-card border rounded-lg p-3 space-y-2', c.pathly_removed_at && 'opacity-60')}>
             <div className="flex items-start justify-between gap-2">
               <div className="flex-1 min-w-0">
                 <h4 className="font-semibold text-sm truncate">{c.name}</h4>
@@ -40,6 +48,7 @@ export function ContactList({ contacts, onEdit, showProject, projectNameMap = {}
               </div>
               <Badge variant="outline" className={cn('text-xs', tierColor[c.tier])}>{c.tier}</Badge>
             </div>
+            {c.pathly_removed_at && <PathlyRemovedBadge />}
             {showProject && projectNameMap[c.project_id] && (
               <Badge variant="secondary" className="text-xs">{projectNameMap[c.project_id]}</Badge>
             )}
@@ -84,8 +93,13 @@ export function ContactList({ contacts, onEdit, showProject, projectNameMap = {}
           </TableHeader>
           <TableBody>
             {contacts.map(c => (
-              <TableRow key={c.id}>
-                <TableCell className="font-medium">{c.name}</TableCell>
+              <TableRow key={c.id} className={cn(c.pathly_removed_at && 'opacity-60')}>
+                <TableCell className="font-medium">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span>{c.name}</span>
+                    {c.pathly_removed_at && <PathlyRemovedBadge />}
+                  </div>
+                </TableCell>
                 <TableCell className="text-sm text-muted-foreground">{c.current_position || '—'}</TableCell>
                 <TableCell className="text-sm text-muted-foreground">{c.company_name || '—'}</TableCell>
                 {showProject && (
