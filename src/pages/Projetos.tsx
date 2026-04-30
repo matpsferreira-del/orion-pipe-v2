@@ -21,6 +21,7 @@ import { ProjectDialog } from '@/components/projetos/ProjectDialog';
 import { ContactList } from '@/components/projetos/ContactList';
 import { ContactValidationDialog } from '@/components/projetos/ContactValidationDialog';
 import { useValidateContacts, ContactSuggestion } from '@/hooks/useContactValidation';
+import { usePathlyReverseSync } from '@/hooks/usePathlyReverseSync';
 import { toast } from 'sonner';
 
 const ALL = 'all';
@@ -46,6 +47,7 @@ export default function Projetos() {
   const [syncingProjectId, setSyncingProjectId] = useState<string | null>(null);
   const [mirroringAll, setMirroringAll] = useState(false);
   const validate = useValidateContacts();
+  usePathlyReverseSync(projects);
 
   const handleMirrorAll = async () => {
     if (projects.length === 0) {
