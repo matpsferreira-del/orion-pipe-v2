@@ -117,14 +117,19 @@ Deno.serve(async (req) => {
     if (!planId) continue;
 
     try {
-      const result = await callBridge("list_mentee_contributions", { plan_id: planId });
+      // list_plan_data returns ALL contacts; we filter out source='orion'
+      // (those were pushed by us) to avoid circular sync.
+      const result = await callBridge("list_plan_data", { plan_id: planId });
       if (result?.error) {
         summary.errors.push(`plan ${planId}: ${result.error}`);
         continue;
       }
 
-      const contacts: PathlyContact[] = result.contacts ?? [];
-      const marketJobs: PathlyMarketJob[] = [];
+      const allContacts: PathlyContact[] = result.contacts ?? [];
+      const contacts = allContacts.filter((c) => c.source !== "orion");
+      const marketJobs: PathlyMarketJob[] = (result.market_jobs ?? []).filter(
+        (j: PathlyMarketJob & { source?: string }) => j.source !== "orion",
+      );
 
       // ===== CONTACTS =====
       // Carrega contatos existentes do projeto para deduplicar
