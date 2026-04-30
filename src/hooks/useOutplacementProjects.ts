@@ -322,22 +322,8 @@ export function useCreateOutplacementContact() {
         );
 
         if (match) {
-          // Merge: update only fields that have new values, preserving existing data
-          const updates: Record<string, any> = {};
-          (['name', 'current_position', 'company_name', 'email', 'phone', 'city', 'state', 'notes', 'contact_type', 'tier', 'kanban_stage'] as const).forEach((k) => {
-            const v = (input as any)[k];
-            if (v !== undefined && v !== null && v !== '') updates[k] = v;
-          });
-          const { data: updated, error: updErr } = await supabase
-            .from('outplacement_contacts')
-            .update(updates)
-            .eq('id', match.id)
-            .select()
-            .single();
-          if (updErr) throw updErr;
-          const contact = updated as OutplacementContact;
-          syncContactIfLinked(contact);
-          return { contact, wasUpdated: true };
+          // Return the existing contact without touching it — UI will show a confirmation dialog
+          return { contact: match as OutplacementContact, isDuplicate: true };
         }
       }
 
@@ -345,12 +331,14 @@ export function useCreateOutplacementContact() {
       if (error) throw error;
       const contact = data as OutplacementContact;
       syncContactIfLinked(contact); // fire-and-forget
-      return { contact, wasUpdated: false };
+      return { contact, isDuplicate: false };
     },
-    onSuccess: ({ contact, wasUpdated }) => {
-      qc.invalidateQueries({ queryKey: ['outplacement-contacts'] });
-      qc.invalidateQueries({ queryKey: ['outplacement-contacts', contact.project_id] });
-      toast.success(wasUpdated ? 'Perfil já existia — dados atualizados!' : 'Contato adicionado!');
+    onSuccess: ({ contact, isDuplicate }) => {
+      if (!isDuplicate) {
+        qc.invalidateQueries({ queryKey: ['outplacement-contacts'] });
+        qc.invalidateQueries({ queryKey: ['outplacement-contacts', contact.project_id] });
+        toast.success('Contato adicionado!');
+      }
     },
     onError: (e: Error) => toast.error('Erro: ' + e.message),
   });

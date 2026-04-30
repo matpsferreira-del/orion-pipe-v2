@@ -1,9 +1,9 @@
 // Edge function: pathly-pull
 // Para cada outplacement_project com pathly_plan_id:
-//   1. Busca todos os contatos do Pathly via list_plan_data (exclui source='orion')
-//   2. Novos contatos → INSERT em outplacement_contacts
-//   3. Contatos existentes → UPDATE kanban_stage se mudou; limpa pathly_removed_at se voltou
-//   4. Contatos que sumiram do Pathly → marca pathly_removed_at (soft delete)
+//   1. Busca TODOS os contatos do Pathly via list_plan_data
+//   2. Usa TODOS (incluindo source='orion') para detectar quem ainda existe → evita falso "removido"
+//   3. Só insere/atualiza estágio para contatos source !== 'orion' (não duplicar o que veio do Orion)
+//   4. Contatos que sumiram do Pathly → pathly_removed_at (soft delete)
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
@@ -70,6 +70,13 @@ async function callBridge(action: string, payload: Record<string, unknown>) {
   try { return JSON.parse(text); } catch { return { error: text }; }
 }
 
+function normLinkedin(url: string | null): string {
+  return (url || "").toLowerCase().replace(/\/+$/, "");
+}
+function normNameCompany(name: string | null, company: string | null): string {
+  return `${(name || "").toLowerCase().trim()}|${(company || "").toLowerCase().trim()}`;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -106,9 +113,11 @@ Deno.serve(async (req) => {
       const result = await callBridge("list_plan_data", { plan_id: planId });
       if (result?.error) { summary.errors.push(`plan ${planId}: ${result.error}`); continue; }
 
-      const allContacts: PathlyContact[] = result.contacts ?? [];
-      // Exclude contacts pushed by Orion to prevent circular sync
-      const pathlyContacts = allContacts.filter((c) => c.source !== "orion");
+      // ALL contacts from Pathly (including source='orion' which are Orion-pushed contacts)
+      const allPathlyContacts: PathlyContact[] = result.contacts ?? [];
+      // Only non-orion contacts are candidates for insert/stage-update into Orion
+      const pathlyContactsForSync = allPathlyContacts.filter((c) => c.source !== "orion");
+
       const marketJobs: PathlyMarketJob[] = (result.market_jobs ?? []).filter(
         (j: PathlyMarketJob & { source?: string }) => j.source !== "orion",
       );
@@ -121,41 +130,45 @@ Deno.serve(async (req) => {
 
       const existing = existingRaw ?? [];
 
-      // Build lookup maps: normalized key → contact row
+      // Build lookup maps from existing OrionPipe contacts
       const linkedinToExisting = new Map<string, typeof existing[0]>();
       const nameCompanyToExisting = new Map<string, typeof existing[0]>();
       for (const ec of existing) {
-        const lk = (ec.linkedin_url || "").toLowerCase().replace(/\/+$/, "");
+        const lk = normLinkedin(ec.linkedin_url);
         if (lk) linkedinToExisting.set(lk, ec);
-        const nk = `${(ec.name || "").toLowerCase().trim()}|${(ec.company_name || "").toLowerCase().trim()}`;
-        nameCompanyToExisting.set(nk, ec);
+        nameCompanyToExisting.set(normNameCompany(ec.name, ec.company_name), ec);
       }
 
+      // Build matchedOrionIds from ALL Pathly contacts (including source='orion').
+      // This prevents contacts that were pushed from Orion→Pathly (source='orion') from being
+      // incorrectly flagged as "removed" — they exist in Pathly, just with a different source tag.
       const matchedOrionIds = new Set<string>();
+      for (const c of allPathlyContacts) {
+        const lk = normLinkedin(c.linkedin_url);
+        const nk = normNameCompany(c.name, c.company);
+        const matched = (lk ? linkedinToExisting.get(lk) : undefined) ?? nameCompanyToExisting.get(nk);
+        if (matched) matchedOrionIds.add(matched.id);
+      }
+
       const toInsert: Record<string, unknown>[] = [];
       const toUpdateStage: { id: string; kanban_stage: string }[] = [];
       const toReactivate: string[] = [];
 
-      for (const c of pathlyContacts) {
-        const linkedinNorm = (c.linkedin_url || "").toLowerCase().replace(/\/+$/, "");
-        const nameKey = `${(c.name || "").toLowerCase().trim()}|${(c.company || "").toLowerCase().trim()}`;
-
-        const existingByLinkedin = linkedinNorm ? linkedinToExisting.get(linkedinNorm) : undefined;
-        const existingByName = !existingByLinkedin ? nameCompanyToExisting.get(nameKey) : undefined;
-        const matched = existingByLinkedin ?? existingByName;
+      // Process insert/update only for contacts that originated in Pathly (not pushed by Orion)
+      for (const c of pathlyContactsForSync) {
+        const lk = normLinkedin(c.linkedin_url);
+        const nk = normNameCompany(c.name, c.company);
+        const matched = (lk ? linkedinToExisting.get(lk) : undefined) ?? nameCompanyToExisting.get(nk);
 
         if (matched) {
-          matchedOrionIds.add(matched.id);
           const newStage = STAGE_REVERSE[c.status ?? "identified"] ?? "identificado";
           if (matched.kanban_stage !== newStage) {
             toUpdateStage.push({ id: matched.id, kanban_stage: newStage });
           }
-          // If previously flagged as removed but now back in Pathly → reactivate
           if (matched.pathly_removed_at) {
             toReactivate.push(matched.id);
           }
         } else {
-          // New contact from Pathly — insert
           toInsert.push({
             project_id: project.id,
             name: c.name,
@@ -171,14 +184,12 @@ Deno.serve(async (req) => {
         }
       }
 
-      // Insert new contacts
       if (toInsert.length > 0) {
         const { error: insErr } = await supabase.from("outplacement_contacts").insert(toInsert);
-        if (insErr) summary.errors.push(`contacts insert plan ${planId}: ${insErr.message}`);
+        if (insErr) summary.errors.push(`insert plan ${planId}: ${insErr.message}`);
         else summary.contacts_inserted += toInsert.length;
       }
 
-      // Update kanban_stage for existing contacts whose stage changed in Pathly
       for (const upd of toUpdateStage) {
         const { error: updErr } = await supabase
           .from("outplacement_contacts")
@@ -188,7 +199,6 @@ Deno.serve(async (req) => {
         else summary.contacts_updated++;
       }
 
-      // Reactivate contacts that came back to Pathly after being removed
       if (toReactivate.length > 0) {
         const { error: reErr } = await supabase
           .from("outplacement_contacts")
@@ -198,15 +208,16 @@ Deno.serve(async (req) => {
         else summary.contacts_reactivated += toReactivate.length;
       }
 
-      // Soft-delete: contacts with pathly_synced_at that are no longer in Pathly's list
+      // Soft-delete: OrionPipe contacts with pathly_synced_at that are no longer in Pathly at all
+      // (not even as source='orion') → flag them as removed
       const toFlag = existing.filter(
-        ec => ec.pathly_synced_at && !ec.pathly_removed_at && !matchedOrionIds.has(ec.id)
+        (ec) => ec.pathly_synced_at && !ec.pathly_removed_at && !matchedOrionIds.has(ec.id),
       );
       if (toFlag.length > 0) {
         const { error: flagErr } = await supabase
           .from("outplacement_contacts")
           .update({ pathly_removed_at: now })
-          .in("id", toFlag.map(ec => ec.id));
+          .in("id", toFlag.map((ec) => ec.id));
         if (flagErr) summary.errors.push(`flag removed plan ${planId}: ${flagErr.message}`);
         else summary.contacts_flagged_removed += toFlag.length;
       }
@@ -232,7 +243,6 @@ Deno.serve(async (req) => {
         const titleKey = `${(j.job_title || "").toLowerCase().trim()}|${(j.company_name || "").toLowerCase().trim()}`;
         const dup = (urlNorm && urlSet.has(urlNorm)) || (!urlNorm && titleCompanySet.has(titleKey));
         if (dup) continue;
-
         toInsertJobs.push({
           project_id: project.id,
           job_title: j.job_title,
@@ -244,7 +254,6 @@ Deno.serve(async (req) => {
           notes: j.notes ?? null,
           pathly_synced_at: now,
         });
-
         if (urlNorm) urlSet.add(urlNorm);
         else titleCompanySet.add(titleKey);
       }

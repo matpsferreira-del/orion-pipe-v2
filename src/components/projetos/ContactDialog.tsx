@@ -29,6 +29,8 @@ export function ProjectContactDialog({ open, onOpenChange, projectId, contact, o
     email: '', phone: '', city: '', state: '',
     contact_type: 'decisor', tier: 'B', kanban_stage: 'identificado', notes: '',
   });
+  // Existing contact found during create — pending user confirmation
+  const [dupContact, setDupContact] = useState<OutplacementContact | null>(null);
 
   useEffect(() => {
     if (contact) {
@@ -47,6 +49,7 @@ export function ProjectContactDialog({ open, onOpenChange, projectId, contact, o
         contact_type: 'decisor', tier: 'B', kanban_stage: 'identificado', notes: '',
       });
     }
+    setDupContact(null);
   }, [contact, open]);
 
   const handleSave = async () => {
@@ -67,11 +70,39 @@ export function ProjectContactDialog({ open, onOpenChange, projectId, contact, o
     };
     if (contact) {
       await update.mutateAsync({ id: contact.id, ...payload });
+      onOpenChange(false);
     } else {
       const result: any = await create.mutateAsync({ ...payload, project_id: projectId, created_by: profile?.id || null } as any);
+      if (result?.isDuplicate) {
+        // Contact already exists — show confirmation inline
+        setDupContact(result.contact as OutplacementContact);
+        return;
+      }
       const newId = result?.contact?.id ?? result?.id;
       if (onCreated && newId) onCreated(newId);
+      onOpenChange(false);
     }
+  };
+
+  // Update existing contact without touching kanban_stage
+  const handleDupConfirm = async () => {
+    if (!dupContact) return;
+    const { kanban_stage: _stage, ...fieldsToUpdate } = {
+      name: form.name.trim(),
+      current_position: form.current_position.trim() || null,
+      company_name: form.company_name.trim() || null,
+      linkedin_url: form.linkedin_url.trim() || null,
+      email: form.email.trim() || null,
+      phone: form.phone.trim() || null,
+      city: form.city.trim() || null,
+      state: form.state.trim() || null,
+      contact_type: form.contact_type,
+      tier: form.tier,
+      notes: form.notes.trim() || null,
+      kanban_stage: dupContact.kanban_stage,
+    };
+    await update.mutateAsync({ id: dupContact.id, ...fieldsToUpdate });
+    setDupContact(null);
     onOpenChange(false);
   };
 
@@ -81,6 +112,27 @@ export function ProjectContactDialog({ open, onOpenChange, projectId, contact, o
         <DialogHeader>
           <DialogTitle>{contact ? 'Editar Contato' : 'Novo Contato'}</DialogTitle>
         </DialogHeader>
+
+        {/* Duplicate confirmation banner */}
+        {dupContact && (
+          <div className="border border-amber-300 bg-amber-50 dark:bg-amber-900/20 rounded-lg p-4 space-y-2">
+            <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
+              Contato já existe: {dupContact.name}
+            </p>
+            <p className="text-xs text-amber-700 dark:text-amber-400">
+              Deseja atualizar nome, cargo, empresa e demais dados? O estágio no kanban não será alterado.
+            </p>
+            <div className="flex gap-2 pt-1">
+              <Button size="sm" onClick={handleDupConfirm} disabled={update.isPending}>
+                Atualizar dados
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => setDupContact(null)}>
+                Cancelar
+              </Button>
+            </div>
+          </div>
+        )}
+
         <div className="space-y-4">
           <div>
             <Label>Nome *</Label>
@@ -162,9 +214,11 @@ export function ProjectContactDialog({ open, onOpenChange, projectId, contact, o
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button onClick={handleSave} disabled={!form.name.trim() || create.isPending || update.isPending}>
-            {contact ? 'Salvar' : 'Adicionar'}
-          </Button>
+          {!dupContact && (
+            <Button onClick={handleSave} disabled={!form.name.trim() || create.isPending || update.isPending}>
+              {contact ? 'Salvar' : 'Adicionar'}
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
